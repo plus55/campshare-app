@@ -20,13 +20,10 @@
     }
   ],
 
-  // R2 bucket for van photos (used in Sprint 3)
-  "r2_buckets": [
-    {
-      "binding": "PHOTOS",
-      "bucket_name": "campshare-photos"
-    }
-  ],
+  // R2 bucket for van photos — enable R2 in Cloudflare Dashboard before Sprint 3
+  // "r2_buckets": [
+  //   { "binding": "PHOTOS", "bucket_name": "campshare-photos" }
+  // ],
 
   "vars": {
     "BETTER_AUTH_URL": "https://app.campshare.co.nz",
