@@ -20,6 +20,9 @@ const schema = z.object({
   region: z.string().min(1),
   features: z.array(z.string()).default([]),
   houseRules: z.string().default(""),
+  pickupLocationText: z.string().max(120).optional(),
+  pickupLat: z.number().min(-90).max(90).optional(),
+  pickupLng: z.number().min(-180).max(180).optional(),
 });
 
 function bad(message: string, status = 400) {
@@ -59,14 +62,17 @@ export async function POST(req: Request) {
       `INSERT INTO van_listing
          (id, hostUserId, slug, name, vanType, year, sleeps, seats,
           fixedToilet, petFriendly, description, nightlyRate, minimumNights,
-          instantBook, status, region, island, features, houseRules, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)`
+          instantBook, status, region, island, features, houseRules,
+          pickupLocationText, pickupLat, pickupLng, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id, session.user.id, slug, d.name, d.vanType, d.year, d.sleeps, d.seats,
       d.fixedToilet ? 1 : 0, d.petFriendly ? 1 : 0, d.description,
       d.nightlyRate, d.minimumNights, d.instantBook ? 1 : 0,
-      d.region, island, JSON.stringify(d.features), d.houseRules, now, now
+      d.region, island, JSON.stringify(d.features), d.houseRules,
+      d.pickupLocationText ?? null, d.pickupLat ?? null, d.pickupLng ?? null,
+      now, now
     )
     .run();
 

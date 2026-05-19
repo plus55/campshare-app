@@ -246,3 +246,6 @@ p  { margin: 0 0 12px; color: var(--ink-700); }
   font-size: 14px;
   margin-bottom: 16px;
 }
+
+/* Search page */
+@media (max-width: 768px) { .cs-search-map { display: none !important; } }

@@ -28,6 +28,7 @@ interface FormState {
   region: string;
   features: string[];
   houseRules: string;
+  pickupLocationText: string;
 }
 
 function fromListing(l: VanListing | null): FormState {
@@ -36,7 +37,7 @@ function fromListing(l: VanListing | null): FormState {
       name: "", vanType: "", year: "", sleeps: "", seats: "",
       fixedToilet: false, petFriendly: false, description: "",
       nightlyRate: "", minimumNights: "2", instantBook: false,
-      region: "", features: [], houseRules: "",
+      region: "", features: [], houseRules: "", pickupLocationText: "",
     };
   }
   let features: string[] = [];
@@ -48,6 +49,7 @@ function fromListing(l: VanListing | null): FormState {
     description: l.description, nightlyRate: String(Math.round(l.nightlyRate / 100)),
     minimumNights: String(l.minimumNights), instantBook: !!l.instantBook,
     region: l.region, features, houseRules: l.houseRules,
+    pickupLocationText: l.pickupLocationText ?? "",
   };
 }
 
@@ -101,6 +103,7 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
       region: form.region,
       features: form.features,
       houseRules: form.houseRules,
+      pickupLocationText: form.pickupLocationText || undefined,
     };
 
     const res = await fetch(
@@ -236,6 +239,11 @@ function StepVan({ form, update, island }: StepProps & { island: "North" | "Sout
           {NZ_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
         {form.region && <p className="cs-muted cs-small" style={{ marginTop: 6 }}>{island} Island</p>}
+      </div>
+      <div className="cs-field">
+        <label className="cs-label">Pickup location <span className="cs-muted">(optional)</span></label>
+        <input className="cs-input" placeholder="e.g. Christchurch Airport, Rolleston" value={form.pickupLocationText} onChange={(e) => update("pickupLocationText", e.target.value)} />
+        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>Where guests collect the van. Shown on your listing.</p>
       </div>
       <div className="cs-field">
         <label className="cs-label">Description</label>

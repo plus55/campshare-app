@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@better-auth/kysely-adapter": "^1.6.11",
+    "@types/mapbox-gl": "^3.4.1",
     "better-auth": "^1.2.7",
     "kysely": "^0.28.17",
     "kysely-d1": "^0.4.0",
+    "mapbox-gl": "^3.24.0",
     "nanoid": "^5.1.11",
     "next": "15.5.18",
     "react": "^19.0.0",

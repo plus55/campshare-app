@@ -5,16 +5,19 @@ import { sendBrandedEmail } from "./email";
 
 async function buildAuth() {
   const { env } = await getCloudflareContext({ async: true });
-  const d1 = (env as unknown as { DB: D1Database }).DB;
+  const typedEnv = env as unknown as {
+    DB: D1Database;
+    BETTER_AUTH_SECRET?: string;
+    GOOGLE_CLIENT_ID?: string;
+    GOOGLE_CLIENT_SECRET?: string;
+  };
 
   return betterAuth({
     appName: "CampShare",
     baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-    secret: process.env.BETTER_AUTH_SECRET,
+    secret: typedEnv.BETTER_AUTH_SECRET ?? process.env.BETTER_AUTH_SECRET,
 
-    // Better Auth v1.6+ handles D1 natively via @better-auth/kysely-adapter's
-    // built-in D1SqliteDialect — pass the raw binding directly.
-    database: d1,
+    database: typedEnv.DB,
 
     emailAndPassword: {
       enabled: true,
@@ -51,8 +54,8 @@ async function buildAuth() {
 
     socialProviders: {
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+        clientId: typedEnv.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? "",
+        clientSecret: typedEnv.GOOGLE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET ?? "",
       },
     },
 

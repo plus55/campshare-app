@@ -20,6 +20,9 @@ const schema = z.object({
   features: z.array(z.string()).optional(),
   houseRules: z.string().optional(),
   status: z.enum(["draft", "paused", "archived"]).optional(),
+  pickupLocationText: z.string().max(120).optional(),
+  pickupLat: z.number().min(-90).max(90).optional(),
+  pickupLng: z.number().min(-180).max(180).optional(),
 });
 
 function bad(message: string, status = 400) {
@@ -72,6 +75,9 @@ export async function PATCH(
   if (d.features !== undefined) { sets.push("features = ?"); binds.push(JSON.stringify(d.features)); }
   if (d.houseRules !== undefined) { sets.push("houseRules = ?"); binds.push(d.houseRules); }
   if (d.status !== undefined) { sets.push("status = ?"); binds.push(d.status); }
+  if (d.pickupLocationText !== undefined) { sets.push("pickupLocationText = ?"); binds.push(d.pickupLocationText); }
+  if (d.pickupLat !== undefined) { sets.push("pickupLat = ?"); binds.push(d.pickupLat); }
+  if (d.pickupLng !== undefined) { sets.push("pickupLng = ?"); binds.push(d.pickupLng); }
 
   binds.push(id);
 

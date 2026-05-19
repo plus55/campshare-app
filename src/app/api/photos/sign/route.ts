@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
@@ -43,10 +44,11 @@ export async function POST(req: Request) {
     return bad(`Maximum ${MAX_PHOTOS_PER_LISTING} photos per listing`);
   }
 
-  // Credentials must be set as Worker secrets: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const { env } = await getCloudflareContext({ async: true });
+  const cfEnv = env as unknown as { R2_ACCOUNT_ID?: string; R2_ACCESS_KEY_ID?: string; R2_SECRET_ACCESS_KEY?: string };
+  const accountId = cfEnv.R2_ACCOUNT_ID ?? process.env.R2_ACCOUNT_ID;
+  const accessKeyId = cfEnv.R2_ACCESS_KEY_ID ?? process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = cfEnv.R2_SECRET_ACCESS_KEY ?? process.env.R2_SECRET_ACCESS_KEY;
   const bucket = "campshare-photos";
 
   if (!accountId || !accessKeyId || !secretAccessKey) {

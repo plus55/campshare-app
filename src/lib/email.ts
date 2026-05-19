@@ -1,17 +1,20 @@
 import { Resend } from "resend";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-const FROM =
-  process.env.EMAIL_FROM ?? "CampShare <hello@campshare.co.nz>";
+type CfEnv = { RESEND_API_KEY?: string; EMAIL_FROM?: string };
 
-let _resend: Resend | null = null;
-function client() {
-  if (!_resend) {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not set");
-    }
-    _resend = new Resend(process.env.RESEND_API_KEY);
-  }
-  return _resend;
+async function client(): Promise<Resend> {
+  const { env } = await getCloudflareContext({ async: true });
+  const cfEnv = env as unknown as CfEnv;
+  const apiKey = cfEnv.RESEND_API_KEY ?? process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY is not set");
+  return new Resend(apiKey);
+}
+
+async function fromAddress(): Promise<string> {
+  const { env } = await getCloudflareContext({ async: true });
+  const cfEnv = env as unknown as CfEnv;
+  return cfEnv.EMAIL_FROM ?? process.env.EMAIL_FROM ?? "CampShare <hello@campshare.co.nz>";
 }
 
 interface BrandedEmail {
@@ -28,10 +31,11 @@ interface BrandedEmail {
  * (sand background, clay accent, Fraunces heading + Outfit body).
  */
 export async function sendBrandedEmail(msg: BrandedEmail): Promise<void> {
+  const [resend, from] = await Promise.all([client(), fromAddress()]);
   const html = renderTemplate(msg);
 
-  await client().emails.send({
-    from: FROM,
+  await resend.emails.send({
+    from,
     to: msg.to,
     subject: msg.subject,
     html,

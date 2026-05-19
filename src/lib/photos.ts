@@ -1,8 +1,7 @@
-const R2_PUBLIC_URL = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
-
 export function photoUrl(r2Key: string): string {
-  if (!R2_PUBLIC_URL) return "";
-  return `${R2_PUBLIC_URL}/${r2Key}`;
+  const base = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
+  if (!base) return "";
+  return `${base}/${r2Key}`;
 }
 
 export function photoExtension(contentType: string): string {
