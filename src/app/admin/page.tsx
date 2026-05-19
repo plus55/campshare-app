@@ -2,58 +2,61 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/session";
 import { db } from "@/lib/db";
 
-interface AdminRow {
+interface ListingRow {
   id: string;
-  status: "pending" | "approved" | "rejected";
-  firstName: string;
-  lastName: string;
-  email: string;
-  vanName: string;
+  name: string;
+  vanType: string;
   region: string;
   island: string;
   nightlyRate: number;
-  submittedAt: number;
+  hostFirstName: string;
+  hostEmail: string;
+  createdAt: number;
+}
+
+function formatDate(epochSeconds: number): string {
+  return new Date(epochSeconds * 1000).toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default async function AdminPage() {
   await requireAdmin();
 
-  // Group order: pending first, then approved, then rejected (CASE sort).
-  const rows = await db()
+  const pendingListings = await db()
     .prepare(
-      `SELECT ha.id, ha.status, ha.firstName, ha.lastName,
-              u.email AS email, ha.vanName, ha.region, ha.island,
-              ha.nightlyRate, ha.submittedAt
-       FROM host_application ha
-       JOIN user u ON u.id = ha.userId
-       ORDER BY
-         CASE ha.status
-           WHEN 'pending'  THEN 0
-           WHEN 'approved' THEN 1
-           WHEN 'rejected' THEN 2
-         END,
-         ha.submittedAt DESC`
+      `SELECT vl.id, vl.name, vl.vanType, vl.region, vl.island,
+              vl.nightlyRate, vl.createdAt,
+              hp.firstName AS hostFirstName,
+              u.email  AS hostEmail
+       FROM van_listing vl
+       JOIN host_profile hp ON hp.userId = vl.hostUserId
+       JOIN user u ON u.id = vl.hostUserId
+       WHERE vl.status = 'pending_review'
+       ORDER BY vl.createdAt ASC`
     )
-    .all<AdminRow>();
+    .all<ListingRow>();
 
   return (
     <main className="cs-page">
       <div className="cs-container">
         <span className="cs-brand">CampShare · Admin</span>
-        <h1>Host applications</h1>
+        <h1>Admin</h1>
+
+        <h2 style={{ marginTop: 24 }}>Listings awaiting review</h2>
         <p className="cs-muted">
-          {rows.results.length} application
-          {rows.results.length === 1 ? "" : "s"} total
+          {pendingListings.results.length} listing{pendingListings.results.length === 1 ? "" : "s"} pending
         </p>
 
-        <div className="cs-card" style={{ marginTop: 24, padding: 16 }}>
+        <div className="cs-card" style={{ marginTop: 16, padding: 16 }}>
           <table className="cs-table">
             <thead>
               <tr>
-                <th>Status</th>
-                <th>Applicant</th>
-                <th>Email</th>
                 <th>Van</th>
+                <th>Type</th>
+                <th>Host</th>
                 <th>Location</th>
                 <th>Rate</th>
                 <th>Submitted</th>
@@ -61,39 +64,28 @@ export default async function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.results.map((r) => (
+              {pendingListings.results.map((r) => (
                 <tr key={r.id}>
+                  <td>{r.name}</td>
+                  <td className="cs-small">{r.vanType}</td>
                   <td>
-                    <span className={`cs-pill cs-pill-${r.status}`}>
-                      {r.status}
-                    </span>
+                    <div>{r.hostFirstName}</div>
+                    <div className="cs-muted cs-small">{r.hostEmail}</div>
                   </td>
+                  <td className="cs-small">{r.region} · {r.island}</td>
+                  <td>${Math.round(r.nightlyRate / 100)}/night</td>
+                  <td className="cs-muted cs-small">{formatDate(r.createdAt)}</td>
                   <td>
-                    {r.firstName} {r.lastName}
-                  </td>
-                  <td className="cs-muted cs-small">{r.email}</td>
-                  <td>{r.vanName}</td>
-                  <td className="cs-small">
-                    {r.region} · {r.island}
-                  </td>
-                  <td>${r.nightlyRate}</td>
-                  <td className="cs-muted cs-small">
-                    {formatDate(r.submittedAt)}
-                  </td>
-                  <td>
-                    <Link
-                      href={`/admin/applications/${r.id}`}
-                      className="cs-small"
-                    >
+                    <Link href={`/admin/listings/${r.id}`} className="cs-small">
                       Review →
                     </Link>
                   </td>
                 </tr>
               ))}
-              {rows.results.length === 0 && (
+              {pendingListings.results.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="cs-muted" style={{ padding: 24 }}>
-                    No applications yet.
+                  <td colSpan={7} className="cs-muted" style={{ padding: 24 }}>
+                    No listings awaiting review.
                   </td>
                 </tr>
               )}
@@ -103,12 +95,4 @@ export default async function AdminPage() {
       </div>
     </main>
   );
-}
-
-function formatDate(epochSeconds: number): string {
-  return new Date(epochSeconds * 1000).toLocaleDateString("en-NZ", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }

@@ -1,63 +1,7 @@
--- ---------------------------------------------------------------
--- CampShare D1 schema
--- Run:
---   wrangler d1 execute campshare-db --local  --file=src/db/schema.sql
---   wrangler d1 execute campshare-db --remote --file=src/db/schema.sql
--- ---------------------------------------------------------------
+-- Migration 001: split host_application into host_profile + van_listing
+-- Idempotent: safe to re-run against an already-migrated database.
 
--- Better Auth core tables ----------------------------------------
-
-CREATE TABLE IF NOT EXISTS user (
-    id            TEXT PRIMARY KEY,
-    name          TEXT NOT NULL,
-    email         TEXT NOT NULL UNIQUE,
-    emailVerified INTEGER NOT NULL DEFAULT 0,
-    image         TEXT,
-    createdAt     INTEGER NOT NULL,
-    updatedAt     INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS session (
-    id        TEXT PRIMARY KEY,
-    userId    TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-    token     TEXT NOT NULL UNIQUE,
-    expiresAt INTEGER NOT NULL,
-    ipAddress TEXT,
-    userAgent TEXT,
-    createdAt INTEGER NOT NULL,
-    updatedAt INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_session_user ON session(userId);
-
-CREATE TABLE IF NOT EXISTS account (
-    id                    TEXT PRIMARY KEY,
-    userId                TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-    providerId            TEXT NOT NULL,
-    accountId             TEXT NOT NULL,
-    accessToken           TEXT,
-    refreshToken          TEXT,
-    accessTokenExpiresAt  INTEGER,
-    refreshTokenExpiresAt INTEGER,
-    scope                 TEXT,
-    idToken               TEXT,
-    password              TEXT,
-    createdAt             INTEGER NOT NULL,
-    updatedAt             INTEGER NOT NULL,
-    UNIQUE(providerId, accountId)
-);
-CREATE INDEX IF NOT EXISTS idx_account_user ON account(userId);
-
-CREATE TABLE IF NOT EXISTS verification (
-    id         TEXT PRIMARY KEY,
-    identifier TEXT NOT NULL,
-    value      TEXT NOT NULL,
-    expiresAt  INTEGER NOT NULL,
-    createdAt  INTEGER NOT NULL,
-    updatedAt  INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_verification_identifier ON verification(identifier);
-
--- Host profile (one per host user) ---------------------------------
+-- 1. Create new tables (IF NOT EXISTS makes re-runs safe) ---------
 
 CREATE TABLE IF NOT EXISTS host_profile (
     userId            TEXT PRIMARY KEY REFERENCES user(id) ON DELETE CASCADE,
@@ -73,8 +17,6 @@ CREATE TABLE IF NOT EXISTS host_profile (
     updatedAt         INTEGER NOT NULL
 );
 
--- Van listings ---------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS van_listing (
     id                TEXT PRIMARY KEY,
     hostUserId        TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
@@ -87,7 +29,7 @@ CREATE TABLE IF NOT EXISTS van_listing (
     fixedToilet       INTEGER NOT NULL DEFAULT 0,
     petFriendly       INTEGER NOT NULL DEFAULT 0,
     description       TEXT NOT NULL,
-    nightlyRate       INTEGER NOT NULL,   -- NZD cents
+    nightlyRate       INTEGER NOT NULL,
     minimumNights     INTEGER NOT NULL,
     instantBook       INTEGER NOT NULL DEFAULT 0,
     status            TEXT NOT NULL DEFAULT 'draft'
@@ -98,7 +40,7 @@ CREATE TABLE IF NOT EXISTS van_listing (
     pickupLocationText TEXT,
     pickupLat         REAL,
     pickupLng         REAL,
-    features          TEXT NOT NULL DEFAULT '[]',  -- JSON array
+    features          TEXT NOT NULL DEFAULT '[]',
     houseRules        TEXT NOT NULL DEFAULT '',
     publishedAt       INTEGER,
     createdAt         INTEGER NOT NULL,
@@ -108,8 +50,6 @@ CREATE TABLE IF NOT EXISTS van_listing (
 CREATE INDEX IF NOT EXISTS idx_van_listing_host   ON van_listing(hostUserId);
 CREATE INDEX IF NOT EXISTS idx_van_listing_status ON van_listing(status);
 CREATE INDEX IF NOT EXISTS idx_van_listing_slug   ON van_listing(slug);
-
--- Van photos -----------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS van_photo (
     id            TEXT PRIMARY KEY,
@@ -122,16 +62,75 @@ CREATE TABLE IF NOT EXISTS van_photo (
 
 CREATE INDEX IF NOT EXISTS idx_van_photo_listing ON van_photo(vanListingId);
 
--- Availability blocks --------------------------------------------
-
 CREATE TABLE IF NOT EXISTS availability_block (
     id            TEXT PRIMARY KEY,
     vanListingId  TEXT NOT NULL REFERENCES van_listing(id) ON DELETE CASCADE,
-    startDate     INTEGER NOT NULL,  -- unix ms at NZ midnight
-    endDate       INTEGER NOT NULL,  -- unix ms at NZ midnight
+    startDate     INTEGER NOT NULL,
+    endDate       INTEGER NOT NULL,
     reason        TEXT NOT NULL CHECK (reason IN ('booking','host-blocked','maintenance')),
-    bookingId     TEXT,              -- FK to future booking table
+    bookingId     TEXT,
     createdAt     INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_availability_listing ON availability_block(vanListingId);
+
+-- 2. Backfill host_profile from approved applications --------------
+--    INSERT OR IGNORE: if userId already exists (re-run), skip.
+
+INSERT OR IGNORE INTO host_profile
+    (userId, firstName, lastName, phone, region, island, createdAt, updatedAt)
+SELECT
+    ha.userId,
+    ha.firstName,
+    ha.lastName,
+    ha.phone,
+    ha.region,
+    ha.island,
+    ha.submittedAt,
+    ha.submittedAt
+FROM host_application ha
+WHERE ha.status = 'approved';
+
+-- 3. Backfill van_listing from approved applications ---------------
+--    Slug: sanitised lower-case name + first 6 chars of the application ID.
+
+INSERT OR IGNORE INTO van_listing
+    (id, hostUserId, slug, name, vanType, year, sleeps, seats,
+     fixedToilet, petFriendly, description, nightlyRate, minimumNights,
+     instantBook, status, adminNote, region, island, features, houseRules,
+     publishedAt, createdAt, updatedAt)
+SELECT
+    ha.id,
+    ha.userId,
+    lower(
+        replace(replace(replace(replace(replace(
+            ha.vanName,
+        ' ', '-'), '.', ''), '''', ''), '"', ''), '/', '-')
+    ) || '-' || lower(substr(ha.id, 1, 6)),
+    ha.vanName,
+    ha.vanType,
+    ha.vanYear,
+    ha.sleeps,
+    ha.seats,
+    ha.fixedToilet,
+    ha.petFriendly,
+    ha.description,
+    ha.nightlyRate,
+    ha.minimumNights,
+    ha.instantBook,
+    'published',
+    ha.adminNote,
+    ha.region,
+    ha.island,
+    ha.features,
+    ha.houseRules,
+    ha.reviewedAt,
+    ha.submittedAt,
+    ha.submittedAt
+FROM host_application ha
+WHERE ha.status = 'approved';
+
+-- 4. Drop the old table -------------------------------------------
+--    IF EXISTS makes this safe to re-run after the table is already gone.
+
+DROP TABLE IF EXISTS host_application;
