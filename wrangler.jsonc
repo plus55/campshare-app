@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "campshare-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-02-14",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // Cloudflare D1 database — replace database_id after running:
+  //   wrangler d1 create campshare-db
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "campshare-db",
+      "database_id": "a1a0059a-fdac-4f2b-858f-b8d563728d67"
+    }
+  ],
+
+  // R2 bucket for van photos (used in Sprint 3)
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "campshare-photos"
+    }
+  ],
+
+  "vars": {
+    "BETTER_AUTH_URL": "https://app.campshare.co.nz",
+    "ADMIN_EMAIL": "jontydavies7@gmail.com"
+  },
+
+  "routes": [
+    {
+      "pattern": "app.campshare.co.nz",
+      "custom_domain": true
+    }
+  ]
+}
