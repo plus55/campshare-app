@@ -168,3 +168,4 @@ Sprint 7 scope is in `docs/context/06-roadmap.md` under "Trust & safety (S7-ish)
 18. **`onboard/page.tsx` must be a Client Component** — Server Components cannot redirect to external URLs; use API route + `window.location.href` pattern.
 19. **Stripe Connect must be explicitly enabled** at dashboard.stripe.com/connect — not automatic on new accounts.
 20. **Deploy fails with EBUSY** if `workerd` process is running — kill with `Stop-Process -Name "workerd" -Force` first.
+21. **`NEXT_PUBLIC_*` vars must be in `.env.local`** — Next.js inlines them at build time. Having them only in `wrangler.jsonc` vars means the browser bundle gets `undefined`. Publishable keys (Stripe, R2 URL, Mapbox) must be in both places.
