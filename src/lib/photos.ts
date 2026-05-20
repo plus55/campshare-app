@@ -1,5 +1,5 @@
 export function photoUrl(r2Key: string): string {
-  const base = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? "").replace(/\/$/, "");
   if (!base) return "";
   return `${base}/${r2Key}`;
 }
