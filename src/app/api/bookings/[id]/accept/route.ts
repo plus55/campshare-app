@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
-import { sendBookingAcceptedEmail } from "@/lib/email";
-import type { Booking } from "@/lib/types";
+import { stripe } from "@/lib/stripe";
+import { sendPaymentCapturedEmail } from "@/lib/email";
+import type { Booking, HostProfile } from "@/lib/types";
 
 function bad(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -35,7 +36,6 @@ export async function POST(
     return bad("Booking request has expired");
   }
 
-  // Check no conflicting accepted booking for these dates
   const conflict = await db()
     .prepare(
       `SELECT COUNT(*) AS cnt FROM availability_block
@@ -49,12 +49,26 @@ export async function POST(
     return bad("Those dates are no longer available — another booking was accepted first");
   }
 
-  // Transition to accepted + create availability block atomically
+  // Capture payment
+  if (booking.paymentIntentId) {
+    const s = await stripe();
+    let captureResult;
+    try {
+      captureResult = await s.paymentIntents.capture(booking.paymentIntentId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Payment capture failed";
+      return NextResponse.json({ error: `Could not charge payment: ${msg}` }, { status: 402 });
+    }
+    if (captureResult.status !== "succeeded") {
+      return NextResponse.json({ error: "Payment capture did not succeed" }, { status: 402 });
+    }
+  }
+
   await db()
     .prepare(
-      `UPDATE booking SET status = 'accepted', respondedAt = ?, updatedAt = ? WHERE id = ?`
+      `UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?`
     )
-    .bind(nowSec, nowSec, id)
+    .bind(nowSec, booking.paymentIntentId ? nowSec : null, nowSec, id)
     .run();
 
   const blockId = crypto.randomUUID();
@@ -66,7 +80,6 @@ export async function POST(
     .bind(blockId, booking.vanListingId, booking.startDate, booking.endDate, id, nowSec)
     .run();
 
-  // Fetch guest details for email
   const guest = await db()
     .prepare("SELECT email, name FROM user WHERE id = ?")
     .bind(booking.guestUserId)
@@ -75,7 +88,7 @@ export async function POST(
   const hp = await db()
     .prepare("SELECT firstName FROM host_profile WHERE userId = ?")
     .bind(session.user.id)
-    .first<{ firstName: string }>();
+    .first<Pick<HostProfile, "firstName">>();
 
   const hostUser = await db()
     .prepare("SELECT name FROM user WHERE id = ?")
@@ -89,7 +102,7 @@ export async function POST(
 
   if (guest) {
     try {
-      await sendBookingAcceptedEmail({
+      await sendPaymentCapturedEmail({
         guestEmail: guest.email,
         guestName: guest.name,
         hostFirstName: hp?.firstName ?? hostUser?.name?.split(" ")[0] ?? "Your host",
@@ -98,10 +111,14 @@ export async function POST(
         startDate: booking.startDate,
         endDate: booking.endDate,
         nights: booking.nights,
+        subtotalCents: booking.subtotalCents ?? booking.totalCents,
+        serviceFeeCents: booking.serviceFeeCents ?? 0,
+        gstOnFeeCents: booking.gstOnFeeCents ?? 0,
         totalCents: booking.totalCents,
+        depositCents: booking.depositCents,
       });
     } catch (e) {
-      console.error("Failed to send booking accepted email", e);
+      console.error("Failed to send payment captured email", e);
     }
   }
 

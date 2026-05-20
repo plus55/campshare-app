@@ -67,6 +67,8 @@ export interface AvailabilityBlock {
 export type BookingStatus =
   | "requested"
   | "accepted"
+  | "in_progress"
+  | "completed"
   | "declined"
   | "cancelled_by_guest"
   | "cancelled_by_host"
@@ -82,12 +84,25 @@ export interface Booking {
   nights: number;
   guestCount: number;
   nightlyRateCents: number;
+  subtotalCents: number | null;
+  serviceFeeCents: number | null;
+  gstOnFeeCents: number | null;
+  hostPayoutCents: number | null;
   totalCents: number;
+  depositCents: number;
+  cancellationPolicy: string;
   guestMessage: string | null;
   status: BookingStatus;
   statusReason: string | null;
+  paymentIntentId: string | null;
+  depositPaymentIntentId: string | null;
+  depositPaymentMethodId: string | null;
+  customerStripeId: string | null;
   requestedAt: number;
   respondedAt: number | null;
+  paidAt: number | null;
+  startedAt: number | null;
+  completedAt: number | null;
   cancelledAt: number | null;
   expiresAt: number;
   createdAt: number;
@@ -100,5 +115,33 @@ export interface BookingMessage {
   senderUserId: string;
   body: string;
   readAt: number | null;
+  createdAt: number;
+}
+
+export interface UserPaymentProfile {
+  userId: string;
+  stripeCustomerId: string;
+  createdAt: number;
+}
+
+export interface Payout {
+  id: string;
+  bookingId: string;
+  hostUserId: string;
+  amountCents: number;
+  stripeTransferId: string | null;
+  status: "pending" | "paid" | "failed" | "reversed";
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PaymentEvent {
+  id: string;
+  stripeEventId: string;
+  eventType: string;
+  bookingId: string | null;
+  payload: string;
+  status: "pending" | "processed" | "failed";
+  processedAt: number | null;
   createdAt: number;
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
-import type { HostProfile, VanListing } from "@/lib/types";
+import type { VanListing } from "@/lib/types";
 
 interface ListingRow {
   id: string;
@@ -19,7 +19,10 @@ export default async function DashboardPage() {
   const profile = await db()
     .prepare("SELECT * FROM host_profile WHERE userId = ?")
     .bind(session.user.id)
-    .first<HostProfile>();
+    .first<{
+      firstName: string; lastName: string; region: string; bio: string | null;
+      stripeAccountId: string | null; stripeOnboardingCompleted: number;
+    }>();
 
   const listingsResult = profile
     ? await db()
@@ -114,13 +117,33 @@ export default async function DashboardPage() {
           )}
 
           {profile && (
-            <div className="cs-card">
-              <h2>Bookings</h2>
-              <p className="cs-muted cs-small">View and respond to booking requests on your listings.</p>
-              <Link href="/dashboard/bookings" className="cs-btn cs-btn-ghost" style={{ marginTop: 12, display: "inline-block" }}>
-                View bookings
-              </Link>
-            </div>
+            <>
+              {(!profile.stripeAccountId || !profile.stripeOnboardingCompleted) && (
+                <div className="cs-card" style={{ background: "#fef3c7" }}>
+                  <h2 style={{ margin: "0 0 8px", color: "#92400e" }}>Connect your bank account</h2>
+                  <p className="cs-muted cs-small" style={{ margin: "0 0 12px" }}>
+                    Set up Stripe to receive payouts when guests book your van.
+                  </p>
+                  <Link href="/dashboard/payouts/onboard" className="cs-btn cs-btn-primary">
+                    Set up payouts
+                  </Link>
+                </div>
+              )}
+              <div className="cs-card">
+                <h2>Bookings</h2>
+                <p className="cs-muted cs-small">View and respond to booking requests on your listings.</p>
+                <Link href="/dashboard/bookings" className="cs-btn cs-btn-ghost" style={{ marginTop: 12, display: "inline-block" }}>
+                  View bookings
+                </Link>
+              </div>
+              <div className="cs-card">
+                <h2>Payouts</h2>
+                <p className="cs-muted cs-small">View your earnings and payout history.</p>
+                <Link href="/dashboard/payouts" className="cs-btn cs-btn-ghost" style={{ marginTop: 12, display: "inline-block" }}>
+                  View payouts
+                </Link>
+              </div>
+            </>
           )}
 
           <div className="cs-card">

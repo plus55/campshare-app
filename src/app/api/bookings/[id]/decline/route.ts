@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { stripe } from "@/lib/stripe";
 import { sendBookingDeclinedEmail } from "@/lib/email";
 import type { Booking } from "@/lib/types";
 
@@ -33,6 +34,16 @@ export async function POST(
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   const reason = parsed.success ? (parsed.data.reason?.trim() || null) : null;
+
+  // Cancel the PaymentIntent to release the authorization hold
+  if (booking.paymentIntentId) {
+    try {
+      const s = await stripe();
+      await s.paymentIntents.cancel(booking.paymentIntentId);
+    } catch (e) {
+      console.error("Failed to cancel PaymentIntent on decline", e);
+    }
+  }
 
   const nowSec = Math.floor(Date.now() / 1000);
   await db()

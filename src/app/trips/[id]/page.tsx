@@ -64,7 +64,7 @@ export default async function TripDetailPage({
     .bind(id)
     .all<BookingMessage & { senderName: string }>();
 
-  const isActive = booking.status === "requested" || booking.status === "accepted";
+  const isActive = ["requested", "accepted", "in_progress"].includes(booking.status);
 
   return (
     <main className="cs-page">
@@ -94,8 +94,13 @@ export default async function TripDetailPage({
               <p style={{ margin: 0 }}>{booking.nights} night{booking.nights !== 1 ? "s" : ""}</p>
             </div>
             <div>
-              <p className="cs-label" style={{ margin: 0 }}>Total</p>
+              <p className="cs-label" style={{ margin: 0 }}>Total paid</p>
               <p style={{ margin: 0, fontWeight: 600 }}>${(booking.totalCents / 100).toFixed(0)} NZD</p>
+              {booking.serviceFeeCents != null && (
+                <p className="cs-muted cs-small" style={{ margin: 0 }}>
+                  incl. ${((booking.serviceFeeCents + (booking.gstOnFeeCents ?? 0)) / 100).toFixed(0)} service fee
+                </p>
+              )}
             </div>
             <div>
               <p className="cs-label" style={{ margin: 0 }}>Guests</p>

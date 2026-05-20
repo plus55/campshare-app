@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { stripe } from "@/lib/stripe";
+import { calcBookingTotals } from "@/lib/money";
 import { sendBookingRequestedEmail } from "@/lib/email";
 import type { Booking, VanListing } from "@/lib/types";
 
@@ -11,6 +13,7 @@ const schema = z.object({
   endDate:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "endDate must be YYYY-MM-DD"),
   guestCount: z.number().int().min(1).max(20),
   message: z.string().max(2000).optional().nullable(),
+  paymentIntentId: z.string().min(1),
 });
 
 function bad(message: string, status = 400) {
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error.issues[0]?.message ?? "Invalid payload");
 
-  const { listingId, startDate, endDate, guestCount, message } = parsed.data;
+  const { listingId, startDate, endDate, guestCount, message, paymentIntentId } = parsed.data;
 
   const startMs = parseDateToMs(startDate);
   const endMs   = parseDateToMs(endDate);
@@ -57,7 +60,25 @@ export async function POST(req: Request) {
 
   if ((overlap?.cnt ?? 0) > 0) return bad("Those dates are not available");
 
-  const totalCents = nights * listing.nightlyRate;
+  // Verify the PaymentIntent is properly authorized
+  const s = await stripe();
+  const pi = await s.paymentIntents.retrieve(paymentIntentId);
+
+  if (pi.status !== "requires_capture") {
+    return bad("Payment authorization not confirmed. Please complete payment before requesting.");
+  }
+
+  // Verify PI belongs to this user
+  const paymentMethod = pi.payment_method as string | null;
+  const customerStripeId = pi.customer as string | null;
+
+  const totals = calcBookingTotals(listing.nightlyRate, nights);
+
+  // Sanity-check PI amount matches expected total
+  if (pi.amount !== totals.totalCents) {
+    return bad("Payment amount mismatch. Please start the booking again.");
+  }
+
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + 48 * 60 * 60;
   const bookingId = crypto.randomUUID();
@@ -67,14 +88,21 @@ export async function POST(req: Request) {
       `INSERT INTO booking
          (id, vanListingId, guestUserId, hostUserId,
           startDate, endDate, nights, guestCount,
-          nightlyRateCents, totalCents, guestMessage, status,
+          nightlyRateCents, subtotalCents, serviceFeeCents, gstOnFeeCents,
+          hostPayoutCents, totalCents, depositCents, cancellationPolicy,
+          guestMessage, status,
+          paymentIntentId, depositPaymentMethodId, customerStripeId,
           requestedAt, expiresAt, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       bookingId, listingId, session.user.id, listing.hostUserId,
       startMs, endMs, nights, guestCount,
-      listing.nightlyRate, totalCents, message ?? null,
+      listing.nightlyRate,
+      totals.subtotalCents, totals.serviceFeeCents, totals.gstOnFeeCents,
+      totals.hostPayoutCents, totals.totalCents, totals.depositCents, "standard_v1",
+      message ?? null,
+      paymentIntentId, paymentMethod ?? null, customerStripeId ?? null,
       now, expiresAt, now, now
     )
     .run();
@@ -100,7 +128,7 @@ export async function POST(req: Request) {
         startDate: startMs,
         endDate: endMs,
         nights,
-        totalCents,
+        totalCents: totals.totalCents,
       });
     } catch (e) {
       console.error("Failed to send booking request email", e);
@@ -112,7 +140,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   const session = await getSession();
-  if (!session) return bad("Sign in required", 401);
+  if (!session) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
 
   const url = new URL(req.url);
   const role = url.searchParams.get("role");

@@ -146,11 +146,44 @@ export async function sendBookingAcceptedEmail(opts: {
 }): Promise<void> {
   await sendBrandedEmail({
     to: opts.guestEmail,
-    subject: `Your booking for ${opts.vanName} is accepted`,
-    heading: "Your booking request was accepted",
+    subject: `Your booking for ${opts.vanName} is confirmed`,
+    heading: "Your booking is confirmed",
     intro: `Kia ora ${escapeHtml(opts.guestName)}, ${escapeHtml(opts.hostFirstName)} has accepted your request for ${escapeHtml(opts.vanName)}.`,
     cta: { label: "View booking", href: `${appUrl()}/trips/${opts.bookingId}` },
-    body: `<p>${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)} · ${opts.nights} night${opts.nights !== 1 ? "s" : ""} · ${fmtDollars(opts.totalCents)} total</p><p style="color:#6b5d4f;font-size:13px;">Payment will be enabled soon — we'll let you know when it's ready.</p>`,
+    body: `<p>${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)} · ${opts.nights} night${opts.nights !== 1 ? "s" : ""} · ${fmtDollars(opts.totalCents)} total</p>`,
+  });
+}
+
+export async function sendPaymentCapturedEmail(opts: {
+  guestEmail: string;
+  guestName: string;
+  hostFirstName: string;
+  vanName: string;
+  bookingId: string;
+  startDate: number;
+  endDate: number;
+  nights: number;
+  subtotalCents: number;
+  serviceFeeCents: number;
+  gstOnFeeCents: number;
+  totalCents: number;
+  depositCents: number;
+}): Promise<void> {
+  const breakdown = [
+    `Van hire: ${fmtDollars(opts.subtotalCents)}`,
+    `Service fee: ${fmtDollars(opts.serviceFeeCents)}`,
+    `GST on fee: ${fmtDollars(opts.gstOnFeeCents)}`,
+    `<strong>Total charged: ${fmtDollars(opts.totalCents)}</strong>`,
+    `Security deposit authorised (not charged): ${fmtDollars(opts.depositCents)} — released after your trip`,
+  ].join("<br>");
+
+  await sendBrandedEmail({
+    to: opts.guestEmail,
+    subject: `Booking confirmed and payment received — ${opts.vanName}`,
+    heading: "Booking confirmed — payment received",
+    intro: `Kia ora ${escapeHtml(opts.guestName)}, ${escapeHtml(opts.hostFirstName)} has accepted your request for ${escapeHtml(opts.vanName)} and your payment has been processed.`,
+    cta: { label: "View booking", href: `${appUrl()}/trips/${opts.bookingId}` },
+    body: `<p>${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)} · ${opts.nights} night${opts.nights !== 1 ? "s" : ""}</p><p style="background:#f5ede0;border-radius:8px;padding:12px 16px;">${breakdown}</p>`,
   });
 }
 
@@ -187,6 +220,74 @@ export async function sendBookingCancelledEmail(opts: {
     heading: "Booking cancelled",
     intro: `Kia ora ${escapeHtml(opts.recipientName)}, ${who} has cancelled the booking for ${escapeHtml(opts.vanName)} (${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)}).`,
     cta: { label: "Browse vans", href: `${appUrl()}/vans` },
+  });
+}
+
+export async function sendRefundProcessedEmail(opts: {
+  guestEmail: string;
+  guestName: string;
+  vanName: string;
+  bookingId: string;
+  refundCents: number;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.guestEmail,
+    subject: `Refund processed — ${opts.vanName}`,
+    heading: "Your refund is on the way",
+    intro: `Kia ora ${escapeHtml(opts.guestName)}, a refund of ${fmtDollars(opts.refundCents)} for your ${escapeHtml(opts.vanName)} booking has been initiated.`,
+    cta: { label: "View booking", href: `${appUrl()}/trips/${opts.bookingId}` },
+    body: `<p style="color:#6b5d4f;font-size:13px;">Refunds typically appear in 5–10 business days depending on your bank.</p>`,
+  });
+}
+
+export async function sendDepositHoldEmail(opts: {
+  guestEmail: string;
+  guestName: string;
+  vanName: string;
+  bookingId: string;
+  depositCents: number;
+  endDate: number;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.guestEmail,
+    subject: `Security deposit held — ${opts.vanName}`,
+    heading: "Your trip has started — deposit held",
+    intro: `Kia ora ${escapeHtml(opts.guestName)}, your ${escapeHtml(opts.vanName)} trip has started. A security deposit of ${fmtDollars(opts.depositCents)} has been authorised on your card (not charged).`,
+    cta: { label: "View booking", href: `${appUrl()}/trips/${opts.bookingId}` },
+    body: `<p style="color:#6b5d4f;font-size:13px;">The hold will be automatically released after your return on ${fmtDate(opts.endDate)} if no damage is reported.</p>`,
+  });
+}
+
+export async function sendDepositReleasedEmail(opts: {
+  guestEmail: string;
+  guestName: string;
+  vanName: string;
+  bookingId: string;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.guestEmail,
+    subject: `Security deposit released — ${opts.vanName}`,
+    heading: "Deposit released — trip complete",
+    intro: `Kia ora ${escapeHtml(opts.guestName)}, your ${escapeHtml(opts.vanName)} trip is complete. The security deposit hold has been released from your card.`,
+    cta: { label: "Leave a review", href: `${appUrl()}/trips/${opts.bookingId}` },
+    body: `<p style="color:#6b5d4f;font-size:13px;">Thanks for travelling with CampShare.</p>`,
+  });
+}
+
+export async function sendPayoutSentEmail(opts: {
+  hostEmail: string;
+  hostName: string;
+  vanName: string;
+  bookingId: string;
+  amountCents: number;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.hostEmail,
+    subject: `Payout sent — ${opts.vanName}`,
+    heading: "Your payout is on the way",
+    intro: `Kia ora ${escapeHtml(opts.hostName)}, a payout of ${fmtDollars(opts.amountCents)} for your ${escapeHtml(opts.vanName)} booking has been transferred to your bank account.`,
+    cta: { label: "View earnings", href: `${appUrl()}/dashboard/payouts` },
+    body: `<p style="color:#6b5d4f;font-size:13px;">Funds typically arrive in 2–5 business days depending on your bank.</p>`,
   });
 }
 

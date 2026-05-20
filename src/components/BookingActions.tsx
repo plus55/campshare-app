@@ -91,7 +91,7 @@ export function BookingActions({ bookingId, status, viewerRole }: Props) {
     );
   }
 
-  if (status === "accepted" && (viewerRole === "guest" || viewerRole === "host")) {
+  if ((status === "accepted" || status === "in_progress") && (viewerRole === "guest" || viewerRole === "host")) {
     return (
       <div>
         {error && <p className="cs-error">{error}</p>}

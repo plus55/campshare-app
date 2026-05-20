@@ -27,7 +27,12 @@
   "vars": {
     "BETTER_AUTH_URL": "https://app.campshare.co.nz",
     "ADMIN_EMAIL": "jontydavies7@gmail.com",
-    "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-4433449fb7ff44d2b0ecb6d7e21faafa.r2.dev"
+    "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-4433449fb7ff44d2b0ecb6d7e21faafa.r2.dev",
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51TZ1CtL0Mn9hYRhmN0PBuIp31pa59AZ1zckkmeHxECKRFpgDsKUS1xSpQgJNQ2tutULhq9kMukjU0Ihz50ux78iK00Qk67U4cp"
+  },
+
+  "triggers": {
+    "crons": ["0 0 * * *"]
   },
 
   "routes": [

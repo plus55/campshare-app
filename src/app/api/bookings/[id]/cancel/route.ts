@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
-import { sendBookingCancelledEmail } from "@/lib/email";
+import { stripe } from "@/lib/stripe";
+import { computeRefundCents } from "@/lib/cancellation";
+import { sendBookingCancelledEmail, sendRefundProcessedEmail } from "@/lib/email";
 import type { Booking } from "@/lib/types";
 
 function bad(message: string, status = 400) {
@@ -28,11 +30,56 @@ export async function POST(
   const isHost  = booking.hostUserId  === session.user.id;
   if (!isGuest && !isHost) return bad("Forbidden", 403);
 
-  const cancellable = booking.status === "requested" || booking.status === "accepted";
+  const cancellable = ["requested", "accepted", "in_progress"].includes(booking.status);
   if (!cancellable) return bad("Booking cannot be cancelled in its current state");
 
   const nowSec = Math.floor(Date.now() / 1000);
+  const nowMs  = nowSec * 1000;
   const newStatus = isGuest ? "cancelled_by_guest" : "cancelled_by_host";
+
+  // Handle Stripe: cancel or refund PI
+  let refundCents = 0;
+  if (booking.paymentIntentId) {
+    const s = await stripe();
+
+    if (booking.status === "requested") {
+      // PI is still in requires_capture — cancel it (no money moved)
+      try {
+        await s.paymentIntents.cancel(booking.paymentIntentId);
+      } catch (e) {
+        console.error("Failed to cancel PI on cancel", e);
+      }
+    } else {
+      // accepted or in_progress — PI was captured; issue a refund per policy
+      // Host cancellation always gives 100% back; guest follows platform policy
+      if (isHost) {
+        refundCents = booking.totalCents;
+      } else {
+        const { refundCents: rc } = computeRefundCents(booking.totalCents, nowMs, booking.startDate);
+        refundCents = rc;
+      }
+
+      if (refundCents > 0) {
+        try {
+          await s.refunds.create({
+            payment_intent: booking.paymentIntentId,
+            amount: refundCents,
+          });
+        } catch (e) {
+          console.error("Failed to create Stripe refund", e);
+        }
+      }
+
+      // Cancel deposit hold PI if it exists
+      if (booking.depositPaymentIntentId) {
+        try {
+          await s.paymentIntents.cancel(booking.depositPaymentIntentId);
+        } catch (e) {
+          console.error("Failed to cancel deposit PI", e);
+        }
+      }
+    }
+  }
 
   await db()
     .prepare(
@@ -41,8 +88,7 @@ export async function POST(
     .bind(newStatus, nowSec, nowSec, id)
     .run();
 
-  // If it was accepted, remove the linked availability block
-  if (booking.status === "accepted") {
+  if (booking.status === "accepted" || booking.status === "in_progress") {
     await db()
       .prepare("DELETE FROM availability_block WHERE bookingId = ?")
       .bind(id)
@@ -71,6 +117,21 @@ export async function POST(
       });
     } catch (e) {
       console.error("Failed to send booking cancelled email", e);
+    }
+  }
+
+  // Email the guest about their refund if applicable
+  if (refundCents > 0 && guest && booking.paymentIntentId) {
+    try {
+      await sendRefundProcessedEmail({
+        guestEmail: guest.email,
+        guestName: guest.name,
+        vanName: listing?.name ?? "",
+        bookingId: id,
+        refundCents,
+      });
+    } catch (e) {
+      console.error("Failed to send refund email", e);
     }
   }
 
