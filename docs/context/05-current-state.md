@@ -50,6 +50,7 @@ The app supports: auth, host onboarding, van listings, photo upload to R2, avail
 | `src/app/dashboard/payouts/page.tsx` | Payout history list |
 | `src/app/dashboard/payouts/onboard/page.tsx` | **Client Component** — POSTs to API then `window.location.href` (Server Components cannot redirect to external URLs) |
 | `src/components/StripeDashboardButton.tsx` | Client button for Stripe Express dashboard |
+| `src/components/SignOutButton.tsx` | Client sign-out button — Better Auth requires `application/json`; `<form method="post">` was rejected |
 
 ### Modified files
 
@@ -93,7 +94,8 @@ requested (PI confirmed, capture_method=manual; PM saved via setup_future_usage)
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` wrangler var | ✅ Set |
 | Webhook endpoint registered | ✅ `https://app.campshare.co.nz/api/webhooks/stripe` |
 | Stripe Connect enabled on platform | ✅ Enabled |
-| Jonty's Stripe Express onboarding | ⚠️ In progress — check `stripeOnboardingCompleted` on host_profile |
+| Jonty's Stripe Express onboarding | ✅ Complete (`stripeOnboardingCompleted = 1`, `acct_1TZ1saLvfKPKgWbz`) |
+| E2E sandbox booking test | ✅ Passed (2026-05-20) — booking `1259b781`, PI `pi_3TZ7d1L0Mn9hYRhm1830mQ14` captured |
 
 ---
 
@@ -101,8 +103,8 @@ requested (PI confirmed, capture_method=manual; PM saved via setup_future_usage)
 
 | Resource | Status | Detail |
 |---|---|---|
-| GitHub repo | Sprint 6 | Latest commit `9773f5e` |
-| Cloudflare Worker | S1–S6 live | `app.campshare.co.nz`, version `de9e9a5a` |
+| GitHub repo | Sprint 6 + fixes | Latest commit `0d8fec3` |
+| Cloudflare Worker | S1–S6 live | `app.campshare.co.nz`, version `d49d8bd7` |
 | D1 remote | Sprint 6 schema | 13 tables |
 | Worker secrets | All set | See table below |
 | wrangler.jsonc vars | All set | See table below |
@@ -140,9 +142,9 @@ requested (PI confirmed, capture_method=manual; PM saved via setup_future_usage)
 
 ## What's next — Sprint 7
 
-**KYC + reviews + disputes + report/block + admin audit log.** Requires completed bookings in sandbox (S6 e2e test) before reviews and dispute flows can be fully validated.
+**KYC + reviews + disputes + report/block + admin audit log.** S6 e2e test passed — unblocked. S7 scope covers all four areas (Jonty confirmed scope 2026-05-20).
 
-Sprint 7 scope is in `docs/context/06-roadmap.md` under "Trust & safety (S7-ish)".
+Sprint 7 scope is in `docs/context/06-roadmap.md` under "Trust & safety (S7 — next)".
 
 ---
 
