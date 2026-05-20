@@ -1,124 +1,98 @@
 # 05 — Current State
 
-> Snapshot as of **2026-05-19 (Sprint 3 in progress)**. Verify with `git log` and the Cloudflare dashboard before acting on anything load-bearing here.
+> Snapshot as of **2026-05-20 (Sprints 1–4 deployed)**. Verify with `git log` and the Cloudflare dashboard before acting on anything load-bearing here.
 
 ## Headline
 
-**Sprint 3 code is written but NOT yet deployed.** The migration (`001_split_host_application.sql`) has NOT been applied to local or remote D1 — do not run `npm run dev` against the existing local DB until the migration is applied. Sprint 1 + 2 remain live at https://app.campshare.co.nz.
+**Sprints 1–4 are deployed and live at https://app.campshare.co.nz** (Cloudflare Worker, version `9d577a7c`).
 
-**Two production blockers Jonty must resolve before deploy:**
-1. Google OAuth `invalid_client` error — GOOGLE_CLIENT_ID Worker secret may not match Google Cloud Console.
-2. R2 bucket `campshare-photos` not yet created — needed for photo upload to work.
+The app supports: auth, host onboarding, van listings, photo upload to R2, availability calendars, a public search page with Mapbox map, and 16 location landing pages. Sprint 5 (bookings + messaging) is next.
 
 ---
 
-## Sprint 2 — complete + deployed (2026-05-19)
+## What is deployed and working
 
-| Feature | Where | Status |
+| Sprint | Scope | Status |
 |---|---|---|
-| Email + password signup/login/reset | `(auth)/` routes | ✅ Deployed |
-| Google OAuth | `(auth)/login`, `(auth)/signup` | ✅ Working locally; broken on prod (invalid_client) |
-| User dashboard | `dashboard/page.tsx` | ✅ Deployed |
-| 4-step host application form | `apply/page.tsx`, `api/apply/` | ✅ Deployed (now redirects to new flow) |
-| Admin: list + approve/reject applications | `admin/page.tsx`, `admin/applications/` | ✅ Deployed (replaced in Sprint 3) |
-| Transactional email | `lib/email.ts` | ✅ Deployed |
+| S1 | Auth — email+password, Google OAuth, magic link, reset | ✅ Deployed |
+| S2 | Host application form, admin approval/rejection, transactional email | ✅ Deployed |
+| S3 | Host profile, van listing CRUD, R2 photo upload, availability calendar, public `/vans/[slug]` page, admin moderation queue | ✅ Deployed |
+| S4 | Search page `/vans` with filters, Mapbox map, `/hire/[region]` SEO landing pages, homepage redirect | ✅ Deployed |
 
 ---
 
-## Sprint 3 — code complete, migration pending
+## Sprint 4 — what was built (deployed 2026-05-20)
 
-### New files added
+### New files
 
 | File | Purpose |
 |---|---|
-| `src/lib/types.ts` | `HostProfile`, `VanListing`, `VanPhoto`, `AvailabilityBlock` TS interfaces |
-| `src/lib/photos.ts` | `photoUrl()` helper + upload constants |
-| `src/db/schema.sql` | Updated: `host_application` replaced with 4 new tables |
-| `src/db/migrations/001_split_host_application.sql` | Idempotent migration: create tables → backfill → DROP host_application |
-| `src/components/ModerationButtons.tsx` | Parameterised approve/reject client component |
-| `src/app/api/profile/route.ts` | POST upsert host_profile |
-| `src/app/api/listings/route.ts` | POST create draft van_listing |
-| `src/app/api/listings/[id]/route.ts` | PATCH update listing |
-| `src/app/api/listings/[id]/submit/route.ts` | POST submit for review → pending_review |
-| `src/app/api/admin/listings/[id]/route.ts` | PATCH approve/reject listing |
-| `src/app/api/photos/sign/route.ts` | POST generate R2 presigned PUT URL (SigV4, no AWS SDK) |
-| `src/app/api/photos/route.ts` | POST persist photo metadata |
-| `src/app/api/photos/[id]/route.ts` | PATCH caption/position, DELETE |
-| `src/app/api/listings/[id]/availability/route.ts` | GET/POST availability blocks |
-| `src/app/api/listings/[id]/availability/[blockId]/route.ts` | DELETE block |
-| `src/app/dashboard/profile/page.tsx` + `EditProfileForm.tsx` | Host profile create/edit |
-| `src/app/dashboard/listings/ListingForm.tsx` | 3-step listing form (shared) |
-| `src/app/dashboard/listings/new/page.tsx` | New listing page |
-| `src/app/dashboard/listings/[id]/page.tsx` | Edit listing + nav |
-| `src/app/dashboard/listings/[id]/ListingActions.tsx` | Submit/pause/archive controls |
-| `src/app/dashboard/listings/[id]/photos/page.tsx` + `PhotoManager.tsx` | Photo upload UI |
-| `src/app/dashboard/listings/[id]/calendar/page.tsx` + `AvailabilityCalendar.tsx` | Availability block UI |
-| `src/app/admin/listings/[id]/page.tsx` | Admin listing detail + moderation |
-| `src/app/vans/[slug]/page.tsx` | Public listing page (server-rendered, OG tags) |
-| `src/app/sitemap.ts` | Lists all published van slugs |
-| `src/app/robots.ts` | Allows `/vans/`, blocks `/dashboard/`, `/admin/`, `/api/` |
+| `src/app/vans/page.tsx` | Search + filter page (split-view list + map) |
+| `src/app/vans/SearchFilters.tsx` | Filter panel (region, type, sleeps, price, dates, pets, instant-book) |
+| `src/app/vans/ListingCard.tsx` | Listing card component |
+| `src/app/vans/MapView.tsx` | Server-side map wrapper |
+| `src/app/vans/MapViewClient.tsx` | Mapbox GL client component (dynamic, ssr:false) |
+| `src/app/hire/[region]/page.tsx` | SEO location landing pages (16 NZ regions) |
+| `src/lib/constants.ts` | Added `REGION_COORDS` (lat/lng for all 16 regions) |
+| `src/lib/regionSlug.ts` | Region ↔ slug conversion helpers |
 
 ### Modified files
 
 | File | Change |
 |---|---|
-| `src/app/dashboard/page.tsx` | Rewritten: profile card + listings table |
-| `src/app/admin/page.tsx` | Rewritten: pending_review listings queue |
-| `src/app/apply/page.tsx` | Now redirects to `/dashboard/listings/new` |
-| `src/app/api/apply/route.ts` | Returns 410 Gone |
-| `src/app/admin/applications/[id]/page.tsx` | Redirects to `/admin` |
-| `src/app/api/admin/applications/[id]/route.ts` | Returns 410 Gone |
-
-### Dependencies added
-
-- `zod` — API payload validation
-- `nanoid` — slug suffix generation
+| `src/app/page.tsx` | Redirects unauthenticated visitors to `/vans` instead of `/login` |
+| `src/app/api/listings/route.ts` | Added `pickupLocationText`, `pickupLat`, `pickupLng` to POST |
+| `src/app/api/listings/[id]/route.ts` | Added location fields to PATCH |
+| `src/app/dashboard/listings/ListingForm.tsx` | Added location inputs |
+| `src/app/sitemap.ts` | Added `/hire/[region]` entries |
+| `src/lib/photos.ts` | Renamed `R2_PUBLIC_URL` → `NEXT_PUBLIC_R2_PUBLIC_URL` |
+| `wrangler.jsonc` | Uncommented R2 binding, added `NEXT_PUBLIC_R2_PUBLIC_URL` var |
 
 ---
 
-## What must happen before Sprint 3 deploys
-
-### Jonty actions (Cloudflare + Google dashboards)
-
-1. **Fix Google OAuth `invalid_client` on prod** — In Cloudflare Workers → campshare-app → Settings → Variables, confirm `GOOGLE_CLIENT_ID` exactly matches the OAuth client ID in Google Cloud Console. `invalid_client` means Google doesn't recognise the ID at all (not a redirect URI error).
-2. **Add production redirect URI** `https://app.campshare.co.nz/api/auth/callback/google` to Google Cloud Console → APIs & Services → Credentials → OAuth client → Authorized redirect URIs.
-3. **Enable R2** in Cloudflare dashboard → R2 → Create bucket `campshare-photos`.
-4. **Uncomment R2 block** in `wrangler.jsonc` (lines 23–26) after bucket is created.
-5. **Set R2 secrets** as Worker secrets: `R2_ACCOUNT_ID` (your Cloudflare account ID), `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (from an R2 API token with `r2:write` on `campshare-photos`). Also set `R2_PUBLIC_URL` (enable public access on bucket → copy the `pub-*.r2.dev` URL).
-
-### Code steps (Claude Code)
-
-1. Run typecheck: `npx tsc --noEmit` — was in progress when session ended.
-2. Apply migration locally: `npx wrangler d1 execute campshare-db --local --file=src/db/migrations/001_split_host_application.sql`
-3. Run `npm run dev` and smoke test all Sprint 3 flows.
-4. Apply migration remotely: `npx wrangler d1 execute campshare-db --remote --file=src/db/migrations/001_split_host_application.sql`
-5. Deploy: `npm run deploy`
-
----
-
-## Infrastructure state
+## Infrastructure state (2026-05-20)
 
 | Resource | Status | Detail |
 |---|---|---|
-| GitHub repo | Pre-Sprint-3 | Latest deployed commit `671411e`; Sprint 3 not yet pushed |
-| Cloudflare Worker | Sprint 2 | `app.campshare.co.nz`, version `ce38b9e5` |
-| D1 remote | Sprint 2 schema | 5 tables (incl. `host_application`); migration not yet applied |
-| D1 local | Sprint 2 schema | Must apply migration before running dev |
-| Worker secrets | Sprint 2 complete | `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` |
-| R2 | ❌ Not created | Bucket `campshare-photos` does not exist. Binding commented in `wrangler.jsonc` |
-| Google OAuth (prod) | ❌ Broken | `invalid_client` error — GOOGLE_CLIENT_ID mismatch or deleted client |
-| R2 secrets | ❌ Not set | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_URL` needed |
+| GitHub repo | Sprint 4 | Latest commit `3a3252b` |
+| Cloudflare Worker | S1–S4 live | `app.campshare.co.nz`, version `9d577a7c` |
+| D1 remote | Sprint 3 schema | 8 tables (user, session, account, verification, host_profile, van_listing, van_photo, availability_block) |
+| Worker secrets | All set | BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RESEND_API_KEY, EMAIL_FROM, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY |
+| wrangler.jsonc vars | All set | BETTER_AUTH_URL, ADMIN_EMAIL, NEXT_PUBLIC_R2_PUBLIC_URL |
+| R2 bucket | ✅ Created + public | `campshare-photos`, public URL `https://pub-4433449fb7ff44d2b0ecb6d7e21faafa.r2.dev` |
+| Google OAuth (prod) | ✅ Working | GOOGLE_CLIENT_ID set correctly via Bash; redirect URI verified |
+| Resend email | ✅ Working | campshare.co.nz domain verified |
+| Mapbox map | ⚠️ Token missing | Map panel blank until `NEXT_PUBLIC_MAPBOX_TOKEN` is added |
+
+### Mapbox token — Jonty action needed
+
+The `/vans` map panel is blank because `NEXT_PUBLIC_MAPBOX_TOKEN` is not set. The list view works fine without it. To fix:
+1. Create a free token at mapbox.com (starts with `pk.`)
+2. Add `NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx` to `.env.local`
+3. Add `NEXT_PUBLIC_MAPBOX_TOKEN` as a Cloudflare Worker **variable** (not secret) in the Cloudflare dashboard → Workers → campshare-app → Settings → Variables
+
+---
+
+## What's next — Sprint 5
+
+**Bookings + minimal messaging.** Guests can request a van from the public listing page. Hosts accept/decline from their dashboard. Both parties can message each other in a booking-scoped thread. No payments in S5 — that's S6 (Stripe Connect).
+
+Sprint 5 scope and design are in `docs/context/06-roadmap.md` under Sprint 5.
 
 ---
 
 ## Critical gotchas (do not undo)
 
-1. **Better Auth: `database: d1`** — pass raw D1 binding to auth; do NOT wrap in Kysely constructor.
-2. **Auth route lazy-init** — `auth()` must be called inside async handlers, not at module top level.
-3. **UTF-8 only** — no null bytes in source files.
-4. **`@opennextjs/cloudflare` v1.x** — requires `next >= 15.5.18`, `wrangler >= 4.86.0`, `open-next.config.ts`.
-5. **Local D1 must be initialized** before first `npm run dev` — apply migration, don't re-run `schema.sql` (it will fail on the DROP TABLE).
-6. **Zod uses `.issues` not `.errors`** — all Sprint 3 API routes use `parsed.error.issues[0]?.message`.
-7. **Raw D1 queries** — all DB calls use `db().prepare(...).bind(...).run()`, not Kysely fluent API (despite what 04-database.md says).
-8. **`van_listing.nightlyRate` is NZD cents** — UI inputs dollars, API receives dollars × 100 → cents.
-9. **Slug is permanent** — generated once on listing creation; does not update when name changes.
+1. **Cloudflare Worker secrets must be read from `getCloudflareContext().env`** — not `process.env`. Vars (wrangler.jsonc `vars`) ARE available via `process.env`. Secrets are not.
+2. **Never use PowerShell to pipe secrets to wrangler** — use Bash `printf '...' | npx wrangler secret put NAME`. PowerShell adds a UTF-8 BOM that silently corrupts the value.
+3. **Better Auth uses raw D1 binding** — `src/lib/auth.ts` passes `database: d1` directly.
+4. **Auth route lazy-initialises per request** — don't hoist `auth()` to module level.
+5. **All source files must be UTF-8, no null bytes.**
+6. **`@opennextjs/cloudflare` v1.x** requires `next >= 15.5.18`, `wrangler >= 4.86.0`, `open-next.config.ts`.
+7. **Local D1 must be initialized** before first `npm run dev` — apply any new migration files; don't re-run `schema.sql`.
+8. **Zod `.issues` not `.errors`** — all API routes use `.issues[0]?.message`.
+9. **DB queries are raw D1** — `db().prepare(...).bind(...).run()` pattern. No Kysely.
+10. **`van_listing.nightlyRate` is NZD cents** — UI divides by 100; DB stores cents.
+11. **Slug is permanent** — set on create, never updated. Protects public URLs.
+12. **`NEXT_PUBLIC_` prefix required for client-side env vars** — vars used in `"use client"` components must be prefixed `NEXT_PUBLIC_` or they are `undefined` in the browser.
+13. **`availability_block` dates are unix ms via `Date.UTC(year, month, day)`** — UTC midnight, not NZ midnight (despite the schema comment). The code is authoritative.

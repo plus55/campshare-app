@@ -2,52 +2,82 @@
 
 ## Reading this doc
 
-Sprint 1 (auth foundations) and Sprint 2 (host onboarding + admin) are *done in code*. Sprint 3 is the next scheduled chunk. Everything below Sprint 3 is the **marketplace-complete backlog** — the full set of features a "standard" P2P camper rental site needs to be at competitor parity. Per Jonty's directive (2026-05-19), the backlog is the real target, not Sprint 3 alone.
+Sprints 1–4 are deployed and live. Sprint 5 is the next scheduled chunk. Everything below Sprint 5 is the **marketplace-complete backlog** — the full set of features a "standard" P2P camper rental site needs to be at competitor parity. Per Jonty's directive (2026-05-19), the backlog is the real target, not Sprint 5 alone.
 
 Use this doc to plan the next sprint, not as a fixed delivery schedule.
 
-## Sprint 1 — Auth foundations (done)
+## Sprint 1 — Auth foundations (done, deployed)
 
 - Project skeleton (Next.js 15 App Router on Cloudflare Workers via OpenNext).
-- Better Auth integration with D1 (after the Kysely + D1Dialect fix).
+- Better Auth integration with D1.
 - Email + password signup, login, verification, forgot-password.
 - Google OAuth.
 - Session helpers (`getSession` / `requireSession` / `requireAdmin`).
 - Resend wired up for transactional email.
 
-## Sprint 2 — Host onboarding + admin approval (done, pre-deploy)
+## Sprint 2 — Host onboarding + admin approval (done, deployed)
 
 - 4-step host application form (about you → van → pricing → features/rules).
-- Application stored in `host_application` table.
+- Application stored in `host_application` table (now replaced by Sprint 3 schema).
 - Admin list view at `/admin`.
 - Admin single-application view with approve/reject buttons.
 - Approval/rejection emails sent via Resend.
 - Branded HTML email template.
 
-Code complete on commit `0f8b67d`. Not yet smoke-tested or deployed — see [`05-current-state.md`](05-current-state.md).
+## Sprint 3 — Listings, photos, calendar, public profile (done, deployed)
 
-## Sprint 3 — Listings, photos, calendar, public profile (next)
+1. Split `host_application` into `host_profile` + `van_listing` (migration `001_split_host_application.sql`).
+2. Van listing CRUD from the host dashboard. Multiple listings per host.
+3. Photo upload direct to R2 via signed PUT URLs. `van_photo` table.
+4. Availability calendar. `availability_block` table + calendar UI.
+5. Public van profile page `/vans/[slug]` — server-rendered, indexable.
+6. Listing moderation queue for admin. Status machine: `draft → pending_review → published / paused / archived`.
 
-Scope as currently planned:
+## Sprint 4 — Search, map, location landing pages (done, deployed)
 
-1. **Split `host_application` into `host_profile` + `van_listing`.** The current table conflates approval data with listing data. New migration creates `host_profile` (the person) and `van_listing` (the van). Existing approved applications get backfilled into both.
-2. **Van listing CRUD from the host dashboard.** Approved hosts can create / edit / archive listings. Multiple listings per host allowed from day one.
-3. **Photo upload to R2.** Create the `campshare-photos` bucket. Build an upload endpoint that signs an R2 PUT URL, accepts a photo, stores its key in `van_photo`. Limit dimensions and total count per listing.
-4. **Availability calendar.** `availability_block` table + a calendar UI in the host dashboard with drag-to-block. Show in read-only form on the public listing page.
-5. **Public van profile page.** `/vans/[slug]` server-rendered, indexable. Replaces the static `vans.js` placeholder on the marketing site.
-6. **Listing moderation queue (admin).** New listings start in `draft` or `pending_review`; admin approves before they go public. Reuses the admin pattern from Sprint 2.
+1. Full-text + filter search at `/vans`: region, dates, price, sleeps, van type, pet-friendly, instant-book.
+2. Mapbox map view with price-bubble markers. (Map is blank until `NEXT_PUBLIC_MAPBOX_TOKEN` is set — Jonty action.)
+3. SEO location landing pages `/hire/[region]` for all 16 NZ regions.
+4. Homepage redirects unauthenticated visitors to `/vans`.
 
-**Decisions to make before starting Sprint 3:**
+## Sprint 5 — Bookings + minimal messaging (next)
 
-- Photo storage strategy: direct browser-to-R2 with signed PUT, or upload via Worker? Direct is cheaper but harder to validate (image type, dimensions, malware).
-- Slug strategy for public URLs: `/vans/<region>/<slug>` for SEO, or flat `/vans/<slug>`?
-- Whether to ship "request to book" inquiries in Sprint 3 (no payments, just a contact form per listing) to start collecting demand signal before the booking flow is built.
+### Goal
+
+Unlock the first revenue-shaped action on CampShare: a guest can request a booking, a host can accept/decline, and both parties can message in a booking-scoped thread. No payments in S5 — that's S6.
+
+### State machine
+
+```
+requested ──host accepts──▶ accepted ──(future: paid → confirmed → in_progress → completed)
+   │                            │
+   │                            ├──host cancels──▶ cancelled_by_host
+   │                            └──guest cancels─▶ cancelled_by_guest
+   │
+   ├──host declines──▶ declined
+   ├──guest cancels──▶ cancelled_by_guest
+   └──auto-expire 48h──▶ expired  (lazy: expires on read)
+```
+
+### What gets built
+
+1. **Migration `002_bookings_and_messages.sql`** — new `booking` table (frozen price, state machine, 48h expiry) and `booking_message` table. The `availability_block` table already has `bookingId` + `reason='booking'` pre-wired.
+2. **API routes under `/api/bookings/`** — POST create, GET detail, POST accept/decline/cancel, GET/POST messages.
+3. **`BookingRequestForm`** client component on `/vans/[slug]` — date pickers, guest count, message, total preview.
+4. **Guest trips pages** — `/trips` (list) and `/trips/[id]` (detail + thread + cancel button).
+5. **Host booking pages** — `/dashboard/bookings` (queue) and `/dashboard/bookings/[id]` (detail + accept/decline/cancel + thread).
+6. **Transactional emails** for new request, accept, decline, cancel, new message.
+
+### Availability integration
+
+On **accept**: insert `availability_block` with `reason='booking'`, `bookingId=<id>`. The existing search NOT EXISTS subquery in `/vans/page.tsx` automatically excludes booked dates — no change needed to search.
+On **cancel** (post-accept): delete the linked availability block.
 
 ## Marketplace-complete backlog
 
-Beyond Sprint 3, these are the features a P2P camper rental site is generally expected to have. Order is rough — adjust based on what unlocks revenue, what unblocks the next thing, and what's painful to retrofit.
+These are the features a P2P camper rental site is generally expected to have. Order is rough — adjust based on what unlocks revenue, what unblocks the next thing, and what's painful to retrofit.
 
-### Discovery & search (S4-ish)
+### Discovery & search (done in S4)
 
 - Full-text + filter search: region, dates available, price range, sleeps, van type, features, pet-friendly, instant-book.
 - Sort: price, rating, distance from a pickup point.
