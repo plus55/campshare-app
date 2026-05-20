@@ -1,12 +1,12 @@
 # 05 — Current State
 
-> Snapshot as of **2026-05-20 (Sprints 1–5 deployed)**. Verify with `git log` and the Cloudflare dashboard before acting on anything load-bearing here.
+> Snapshot as of **2026-05-20 (Sprints 1–6 deployed)**. Verify with `git log` and the Cloudflare dashboard before acting on anything load-bearing here.
 
 ## Headline
 
-**Sprints 1–5 are deployed and live at https://app.campshare.co.nz** (Cloudflare Worker, version `79bcc460`).
+**Sprints 1–6 are deployed and live at https://app.campshare.co.nz** (Cloudflare Worker, version `de9e9a5a`).
 
-The app supports: auth, host onboarding, van listings, photo upload to R2, availability calendars, a public search page with Mapbox map, 16 location landing pages, and booking requests with booking-scoped messaging. At least one van listing is published and visible in `/vans`. Sprint 6 (Stripe Connect + payments) is next.
+The app supports: auth, host onboarding, van listings, photo upload to R2, availability calendars, public search with Mapbox map, 16 location landing pages, booking requests with booking-scoped messaging, and Stripe Connect payments with security deposit, payouts, and NZ GST. Sprint 7 (KYC + reviews + disputes) is next.
 
 ---
 
@@ -19,35 +19,81 @@ The app supports: auth, host onboarding, van listings, photo upload to R2, avail
 | S3 | Host profile, van listing CRUD, R2 photo upload, availability calendar, public `/vans/[slug]` page, admin moderation queue | ✅ Deployed |
 | S4 | Search page `/vans` with filters, Mapbox map, `/hire/[region]` SEO landing pages, homepage redirect | ✅ Deployed |
 | S5 | Booking requests, accept/decline/cancel, availability block integration, booking-scoped messaging, transactional emails | ✅ Deployed |
+| S6 | Stripe Connect, payments, security deposit, payouts, NZ GST, cron lifecycle, cancellation policy | ✅ Deployed |
 
 ---
 
-## Sprint 4 — what was built (deployed 2026-05-20)
+## Sprint 6 — what was built (deployed 2026-05-20)
+
+### Product decisions
+
+- Commission: 12% guest-side + 5% host-side (~17% platform take)
+- Charge timing: on host accept (PaymentIntent pre-authorised at request, captured at accept)
+- GST: 15% on platform fees only
+- Security deposit: $500 NZD, SetupIntent → deposit hold PI at trip start
+- Payout timing: trip completion + 24h holdback (cron advances state daily)
+- Cancellation policy: single platform-wide — `standard_v1` (>7d = 100%, 2–7d = 50%, <48h = 0%)
 
 ### New files
 
 | File | Purpose |
 |---|---|
-| `src/app/vans/page.tsx` | Search + filter page (split-view list + map) |
-| `src/app/vans/SearchFilters.tsx` | Filter panel (region, type, sleeps, price, dates, pets, instant-book) |
-| `src/app/vans/ListingCard.tsx` | Listing card component |
-| `src/app/vans/MapView.tsx` | Server-side map wrapper |
-| `src/app/vans/MapViewClient.tsx` | Mapbox GL client component (dynamic, ssr:false) |
-| `src/app/hire/[region]/page.tsx` | SEO location landing pages (16 NZ regions) |
-| `src/lib/constants.ts` | Added `REGION_COORDS` (lat/lng for all 16 regions) |
-| `src/lib/regionSlug.ts` | Region ↔ slug conversion helpers |
+| `src/db/migrations/003_payments_and_payouts.sql` | Rebuilds `booking` with payment columns; adds `payment_event`, `payout`, `user_payment_profile`; adds `host_profile.stripeOnboardingCompleted` |
+| `src/lib/stripe.ts` | Lazy Stripe client using `Stripe.createFetchHttpClient()` (required for Workers) |
+| `src/lib/money.ts` | `calcBookingTotals()`, fee constants (`COMMISSION_GUEST_PCT=12`, `COMMISSION_HOST_PCT=5`, `GST_PCT=15`), `fmtNzd()` |
+| `src/lib/cancellation.ts` | `refundPercent()`, `computeRefundCents()` — standard_v1 policy |
+| `src/app/api/bookings/payment-intent/route.ts` | Creates Stripe Customer + PaymentIntent (manual capture, setup_future_usage=off_session) |
+| `src/app/api/webhooks/stripe/route.ts` | Idempotent Stripe webhook handler; stores events in `payment_event` |
+| `src/app/api/cron/booking-lifecycle/route.ts` | Daily cron: accepted→in_progress (deposit hold), in_progress→completed (deposit release + transfer) |
+| `src/app/api/host/stripe/onboard/route.ts` | Connect Express onboarding — POST returns URL, GET returns status |
+| `src/app/api/host/stripe/dashboard/route.ts` | Stripe Express dashboard login link |
+| `src/app/dashboard/payouts/page.tsx` | Payout history list |
+| `src/app/dashboard/payouts/onboard/page.tsx` | **Client Component** — POSTs to API then `window.location.href` (Server Components cannot redirect to external URLs) |
+| `src/components/StripeDashboardButton.tsx` | Client button for Stripe Express dashboard |
 
 ### Modified files
 
 | File | Change |
 |---|---|
-| `src/app/page.tsx` | Redirects unauthenticated visitors to `/vans` instead of `/login` |
-| `src/app/api/listings/route.ts` | Added `pickupLocationText`, `pickupLat`, `pickupLng` to POST |
-| `src/app/api/listings/[id]/route.ts` | Added location fields to PATCH |
-| `src/app/dashboard/listings/ListingForm.tsx` | Added location inputs |
-| `src/app/sitemap.ts` | Added `/hire/[region]` entries |
-| `src/lib/photos.ts` | Renamed `R2_PUBLIC_URL` → `NEXT_PUBLIC_R2_PUBLIC_URL` |
-| `wrangler.jsonc` | Uncommented R2 binding, added `NEXT_PUBLIC_R2_PUBLIC_URL` var |
+| `src/app/api/bookings/route.ts` | Booking creation computes Stripe totals via `calcBookingTotals()` |
+| `src/app/api/bookings/[id]/accept/route.ts` | Captures PI on accept |
+| `src/app/api/bookings/[id]/decline/route.ts` | Cancels PI on decline |
+| `src/app/api/bookings/[id]/cancel/route.ts` | Refund logic per cancellation policy |
+| `src/app/vans/[slug]/BookingRequestForm.tsx` | Stripe Elements integration (CardElement, PaymentIntent confirmation) |
+| `src/app/dashboard/bookings/[id]/page.tsx` | Shows payment status |
+| `src/app/trips/[id]/page.tsx` | Shows payment status |
+| `src/app/dashboard/page.tsx` | Payouts nav link + Stripe onboarding prompt |
+| `src/components/BookingActions.tsx` | New states |
+| `src/components/BookingStatusBadge.tsx` | New states (`in_progress`, `completed`) |
+| `src/lib/email.ts` | Payment-related transactional emails |
+| `src/lib/types.ts` | Extended booking types |
+| `wrangler.jsonc` | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` var + `triggers.crons: ["0 0 * * *"]` |
+
+### Booking state machine (v2)
+
+```
+requested (PI confirmed, capture_method=manual; PM saved via setup_future_usage)
+  ├── host accepts ── PI captured → accepted (paid)
+  │       ├── cron: startDate reached → in_progress + deposit hold PI ($500)
+  │       │       └── cron: endDate + 24h → completed + deposit released + Connect transfer
+  │       ├── host cancels → 100% refund → cancelled_by_host
+  │       └── guest cancels → per policy (>7d=100%, 2-7d=50%, <48h=0%) → cancelled_by_guest
+  ├── host declines → PI cancelled → declined
+  ├── guest cancels → PI cancelled → cancelled_by_guest
+  └── 48h expire → PI cancelled → expired
+```
+
+### Stripe setup status (as of 2026-05-20)
+
+| Item | Status |
+|---|---|
+| Stripe sandbox account | ✅ Created |
+| `STRIPE_SECRET_KEY` Worker secret | ✅ Set |
+| `STRIPE_WEBHOOK_SECRET` Worker secret | ✅ Set |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` wrangler var | ✅ Set |
+| Webhook endpoint registered | ✅ `https://app.campshare.co.nz/api/webhooks/stripe` |
+| Stripe Connect enabled on platform | ✅ Enabled |
+| Jonty's Stripe Express onboarding | ⚠️ In progress — check `stripeOnboardingCompleted` on host_profile |
 
 ---
 
@@ -55,37 +101,55 @@ The app supports: auth, host onboarding, van listings, photo upload to R2, avail
 
 | Resource | Status | Detail |
 |---|---|---|
-| GitHub repo | Sprint 5 | Latest commit `48f523a` |
-| Cloudflare Worker | S1–S5 live | `app.campshare.co.nz`, version `79bcc460` |
-| D1 remote | Sprint 5 schema | 10 tables (+ booking, booking_message) |
-| Worker secrets | All set | BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RESEND_API_KEY, EMAIL_FROM, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY |
-| wrangler.jsonc vars | All set | BETTER_AUTH_URL, ADMIN_EMAIL, NEXT_PUBLIC_R2_PUBLIC_URL |
-| R2 bucket | ✅ Created + public | `campshare-photos`, public URL `https://pub-4433449fb7ff44d2b0ecb6d7e21faafa.r2.dev` |
-| Google OAuth (prod) | ✅ Working | GOOGLE_CLIENT_ID set correctly via Bash; redirect URI verified |
+| GitHub repo | Sprint 6 | Latest commit `9773f5e` |
+| Cloudflare Worker | S1–S6 live | `app.campshare.co.nz`, version `de9e9a5a` |
+| D1 remote | Sprint 6 schema | 13 tables |
+| Worker secrets | All set | See table below |
+| wrangler.jsonc vars | All set | See table below |
+| R2 bucket | ✅ Created + public | `campshare-photos`, `https://pub-4433449fb7ff44d2b0ecb6d7e21faafa.r2.dev` |
+| Google OAuth (prod) | ✅ Working | |
 | Resend email | ✅ Working | campshare.co.nz domain verified |
 | Mapbox map | ⚠️ Token missing | Map panel blank until `NEXT_PUBLIC_MAPBOX_TOKEN` is added |
+| Stripe Connect | ✅ Connected | Sandbox — test mode only |
 
-### Mapbox token — Jonty action needed
+### Worker secrets
 
-The `/vans` map panel is blank because `NEXT_PUBLIC_MAPBOX_TOKEN` is not set. The list view works fine without it. To fix:
-1. Create a free token at mapbox.com (starts with `pk.`)
-2. Add `NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx` to `.env.local`
-3. Add `NEXT_PUBLIC_MAPBOX_TOKEN` as a Cloudflare Worker **variable** (not secret) in the Cloudflare dashboard → Workers → campshare-app → Settings → Variables
+| Secret | Purpose |
+|---|---|
+| `BETTER_AUTH_SECRET` | Signs auth sessions |
+| `GOOGLE_CLIENT_ID` | Google OAuth |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth |
+| `RESEND_API_KEY` | Email |
+| `EMAIL_FROM` | Email from address |
+| `R2_ACCOUNT_ID` | R2 SigV4 |
+| `R2_ACCESS_KEY_ID` | R2 token |
+| `R2_SECRET_ACCESS_KEY` | R2 token |
+| `STRIPE_SECRET_KEY` | Stripe API (test key) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signature verification |
+
+### wrangler.jsonc vars
+
+| Var | Value |
+|---|---|
+| `BETTER_AUTH_URL` | `https://app.campshare.co.nz` |
+| `ADMIN_EMAIL` | `jontydavies7@gmail.com` |
+| `NEXT_PUBLIC_R2_PUBLIC_URL` | `https://pub-4433449fb7ff44d2b0ecb6d7e21faafa.r2.dev` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_51TZ1CtL0Mn9...` |
 
 ---
 
-## What's next — Sprint 6
+## What's next — Sprint 7
 
-**Stripe Connect + payments.** Guests pay when a booking is accepted. Hosts receive payouts. Platform takes a commission. Includes security deposit hold, NZ GST handling, refund flow, and Stripe webhook handling.
+**KYC + reviews + disputes + report/block + admin audit log.** Requires completed bookings in sandbox (S6 e2e test) before reviews and dispute flows can be fully validated.
 
-Sprint 6 scope is in `docs/context/06-roadmap.md` under "Payments (S6-ish)".
+Sprint 7 scope is in `docs/context/06-roadmap.md` under "Trust & safety (S7-ish)".
 
 ---
 
 ## Critical gotchas (do not undo)
 
 1. **Cloudflare Worker secrets must be read from `getCloudflareContext().env`** — not `process.env`. Vars (wrangler.jsonc `vars`) ARE available via `process.env`. Secrets are not.
-2. **Never use PowerShell to pipe secrets to wrangler** — use Bash `printf '...' | npx wrangler secret put NAME`. PowerShell adds a UTF-8 BOM that silently corrupts the value.
+2. **Never use PowerShell to pipe secrets to wrangler** — use Bash `printf '...' | npx wrangler secret put NAME`. PowerShell adds a UTF-16 BOM that silently corrupts the value.
 3. **Better Auth uses raw D1 binding** — `src/lib/auth.ts` passes `database: d1` directly.
 4. **Auth route lazy-initialises per request** — don't hoist `auth()` to module level.
 5. **All source files must be UTF-8, no null bytes.**
@@ -96,4 +160,11 @@ Sprint 6 scope is in `docs/context/06-roadmap.md` under "Payments (S6-ish)".
 10. **`van_listing.nightlyRate` is NZD cents** — UI divides by 100; DB stores cents.
 11. **Slug is permanent** — set on create, never updated. Protects public URLs.
 12. **`NEXT_PUBLIC_` prefix required for client-side env vars** — vars used in `"use client"` components must be prefixed `NEXT_PUBLIC_` or they are `undefined` in the browser.
-13. **`availability_block` dates are unix ms via `Date.UTC(year, month, day)`** — UTC midnight, not NZ midnight (despite the schema comment). The code is authoritative.
+13. **`availability_block` dates are unix ms via `Date.UTC(year, month, day)`** — UTC midnight, not NZ midnight.
+14. **Booking expiry is lazy** — checked on read, not via a cron job.
+15. **Stripe client uses `Stripe.createFetchHttpClient()`** — required for Workers; standard Node.js HTTP client is not available.
+16. **`setup_future_usage: 'off_session'` on booking PI** saves PM to Customer for deposit charges.
+17. **Cron trigger** calls `GET /api/cron/booking-lifecycle` on the `0 0 * * *` schedule (daily at midnight UTC).
+18. **`onboard/page.tsx` must be a Client Component** — Server Components cannot redirect to external URLs; use API route + `window.location.href` pattern.
+19. **Stripe Connect must be explicitly enabled** at dashboard.stripe.com/connect — not automatic on new accounts.
+20. **Deploy fails with EBUSY** if `workerd` process is running — kill with `Stop-Process -Name "workerd" -Force` first.

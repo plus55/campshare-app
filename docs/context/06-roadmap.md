@@ -2,7 +2,7 @@
 
 ## Reading this doc
 
-Sprints 1–4 are deployed and live. Sprint 5 is the next scheduled chunk. Everything below Sprint 5 is the **marketplace-complete backlog** — the full set of features a "standard" P2P camper rental site needs to be at competitor parity. Per Jonty's directive (2026-05-19), the backlog is the real target, not Sprint 5 alone.
+Sprints 1–6 are deployed and live. Sprint 7 is the next scheduled chunk. Everything below Sprint 7 is the **marketplace-complete backlog** — the full set of features a "standard" P2P camper rental site needs to be at competitor parity. Per Jonty's directive (2026-05-19), the backlog is the real target, not Sprint 7 alone.
 
 Use this doc to plan the next sprint, not as a fixed delivery schedule.
 
@@ -40,38 +40,18 @@ Use this doc to plan the next sprint, not as a fixed delivery schedule.
 3. SEO location landing pages `/hire/[region]` for all 16 NZ regions.
 4. Homepage redirects unauthenticated visitors to `/vans`.
 
-## Sprint 5 — Bookings + minimal messaging (next)
+## Sprint 5 — Bookings + minimal messaging (done, deployed)
 
-### Goal
+Booking requests, accept/decline/cancel, availability block integration, booking-scoped messaging, transactional emails. State machine: `requested → accepted`, plus `declined`, `cancelled_by_*`, `expired` (lazy 48h).
 
-Unlock the first revenue-shaped action on CampShare: a guest can request a booking, a host can accept/decline, and both parties can message in a booking-scoped thread. No payments in S5 — that's S6.
+## Sprint 6 — Stripe Connect + payments (done, deployed)
 
-### State machine
+Stripe Connect (Express), guest payment via PaymentIntent (manual capture at accept), security deposit ($500 hold SetupIntent), host payouts via Connect transfer at trip completion + 24h, NZ GST on platform fees, cancellation refund policy, daily cron lifecycle, idempotent webhook handler.
 
-```
-requested ──host accepts──▶ accepted ──(future: paid → confirmed → in_progress → completed)
-   │                            │
-   │                            ├──host cancels──▶ cancelled_by_host
-   │                            └──guest cancels─▶ cancelled_by_guest
-   │
-   ├──host declines──▶ declined
-   ├──guest cancels──▶ cancelled_by_guest
-   └──auto-expire 48h──▶ expired  (lazy: expires on read)
-```
-
-### What gets built
-
-1. **Migration `002_bookings_and_messages.sql`** — new `booking` table (frozen price, state machine, 48h expiry) and `booking_message` table. The `availability_block` table already has `bookingId` + `reason='booking'` pre-wired.
-2. **API routes under `/api/bookings/`** — POST create, GET detail, POST accept/decline/cancel, GET/POST messages.
-3. **`BookingRequestForm`** client component on `/vans/[slug]` — date pickers, guest count, message, total preview.
-4. **Guest trips pages** — `/trips` (list) and `/trips/[id]` (detail + thread + cancel button).
-5. **Host booking pages** — `/dashboard/bookings` (queue) and `/dashboard/bookings/[id]` (detail + accept/decline/cancel + thread).
-6. **Transactional emails** for new request, accept, decline, cancel, new message.
-
-### Availability integration
-
-On **accept**: insert `availability_block` with `reason='booking'`, `bookingId=<id>`. The existing search NOT EXISTS subquery in `/vans/page.tsx` automatically excludes booked dates — no change needed to search.
-On **cancel** (post-accept): delete the linked availability block.
+Key product decisions frozen on the booking row:
+- Commission: 12% guest / 5% host / 15% GST on fees
+- Cancellation: `standard_v1` (>7d=100%, 2–7d=50%, <48h=0%)
+- Deposit: $500 NZD
 
 ## Marketplace-complete backlog
 
@@ -95,7 +75,7 @@ These are the features a P2P camper rental site is generally expected to have. O
 - Extras / add-ons (bedding, BBQ, child seats, off-road insurance, generator, etc.) — host or platform-defined.
 - Booking detail page (guest + host views of the same booking).
 
-### Payments (S6-ish, blocks revenue)
+### Payments (done in S6)
 
 - **Stripe Connect** (or equivalent — Adyen for Platforms, Stripe is the default) for marketplace payouts.
 - Platform commission / service fee — guest-side and host-side splits.
@@ -106,7 +86,7 @@ These are the features a P2P camper rental site is generally expected to have. O
 - Currency: NZD only initially.
 - Webhooks: payment_intent.succeeded, charge.refunded, account.updated. Idempotent handlers stored in a `payment_event` table.
 
-### Trust & safety (S7-ish, blocks first paid booking)
+### Trust & safety (S7 — next)
 
 - Guest identity / driver's licence verification (Stripe Identity, Onfido, or a NZ-specific KYC provider).
 - Host KYC for payouts (Stripe Connect handles most of this).
@@ -179,15 +159,15 @@ These are the features a P2P camper rental site is generally expected to have. O
 ## Suggested high-level ordering
 
 ```
-Sprint 3   Listings + photos + calendar + public profile  (Q3 2026)
-Sprint 4   Search + filters + map + location landing pages  (Q3 2026)
-Sprint 5   Bookings (request flow only, no payments)  (Q3 2026)
-Sprint 6   Stripe Connect + payments + deposits + payouts + GST  (Q4 2026)
-Sprint 7   KYC + reviews + dispute workflow  (Q4 2026)
-Sprint 8   Messaging + notifications  (Q4 2026)
-Sprint 9   Host earnings + dynamic pricing + iCal sync  (Q1 2027)
-Sprint 10  Insurance + condition reports  (Q1 2027)
-Sprint 11  Admin moderation + analytics + audit log  (Q1 2027)
+Sprint 3   Listings + photos + calendar + public profile        ✅ done
+Sprint 4   Search + filters + map + location landing pages      ✅ done
+Sprint 5   Bookings (request flow only, no payments)            ✅ done
+Sprint 6   Stripe Connect + payments + deposits + payouts + GST ✅ done
+Sprint 7   KYC + reviews + dispute workflow + report/audit log  ← next
+Sprint 8   Messaging + notifications  (Q3 2026)
+Sprint 9   Host earnings + dynamic pricing + iCal sync  (Q3 2026)
+Sprint 10  Insurance + condition reports  (Q4 2026)
+Sprint 11  Admin moderation + analytics + audit log  (Q4 2026)
 ```
 
 Quarter labels are guesses, not commitments. The point is the dependencies: payments need a working booking flow; reviews need completed bookings; dynamic pricing needs payment data; analytics need everything.

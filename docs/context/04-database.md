@@ -6,294 +6,302 @@
 - DB name: `campshare-db`
 - DB ID: `a1a0059a-fdac-4f2b-858f-b8d563728d67`
 - Driver: D1 (SQLite-compatible, async)
-- ORM: Kysely with `kysely-d1`'s `D1Dialect`
-- Source of truth for schema: `src/db/schema.sql`
+- ORM: raw D1 — `db().prepare(...).bind(...).run()` (no Kysely in route files)
+- Source of truth for schema: `src/db/schema.sql` (initial) + `src/db/migrations/00*.sql`
 
-## Current schema (as of 2026-05-19)
+## Current schema (as of 2026-05-20, post-Sprint-6)
 
-Five tables — four for Better Auth, one for the host onboarding flow.
+13 tables — 4 Better Auth tables + 9 application tables. Applied via `schema.sql` then migrations 001, 002, 003 in order.
 
-### `user`
+### Better Auth tables (managed by Better Auth, don't edit directly)
 
+**`user`** — one row per person (host, guest, admin).
 ```sql
-id            TEXT PRIMARY KEY
-name          TEXT NOT NULL
-email         TEXT NOT NULL UNIQUE
-emailVerified INTEGER NOT NULL DEFAULT 0   -- 0/1 boolean
-image         TEXT
-createdAt     INTEGER NOT NULL              -- unix ms
-updatedAt     INTEGER NOT NULL
+id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, emailVerified INTEGER, image TEXT, createdAt INTEGER, updatedAt INTEGER
+```
+Admin is `email === ADMIN_EMAIL`. Host status derived from `host_profile` existence.
+
+**`session`** — cookie-based sessions signed with `BETTER_AUTH_SECRET`.
+```sql
+id TEXT PRIMARY KEY, userId FK user, token TEXT UNIQUE, expiresAt INTEGER, ipAddress TEXT, userAgent TEXT, createdAt INTEGER, updatedAt INTEGER
+INDEX idx_session_user(userId)
 ```
 
-A user is a person — host, guest, or admin. Roles are not stored on this table; admin is determined by `email === ADMIN_EMAIL`, host status is derived from `host_application.status = 'approved'`. This will need to grow into a proper roles model when there are more than one admin.
-
-### `session`
-
+**`account`** — one row per auth method per user (`email-password` or `google`).
 ```sql
-id        TEXT PRIMARY KEY
-userId    TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
-token     TEXT NOT NULL UNIQUE
-expiresAt INTEGER NOT NULL
-ipAddress TEXT
-userAgent TEXT
-createdAt INTEGER NOT NULL
-updatedAt INTEGER NOT NULL
-
-INDEX idx_session_user ON session(userId)
-```
-
-Better Auth stores its session tokens here. Cookie-based, signed with `BETTER_AUTH_SECRET`.
-
-### `account`
-
-```sql
-id                    TEXT PRIMARY KEY
-userId                TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
-providerId            TEXT NOT NULL                   -- 'email-password' | 'google'
-accountId             TEXT NOT NULL                   -- provider's user ID
-accessToken           TEXT
-refreshToken          TEXT
-accessTokenExpiresAt  INTEGER
-refreshTokenExpiresAt INTEGER
-scope                 TEXT
-idToken               TEXT
-password              TEXT                            -- bcrypt-hashed for email-password
-createdAt             INTEGER NOT NULL
-updatedAt             INTEGER NOT NULL
-
+id TEXT PRIMARY KEY, userId FK user, providerId TEXT, accountId TEXT, accessToken TEXT, refreshToken TEXT, password TEXT, createdAt INTEGER, updatedAt INTEGER
 UNIQUE(providerId, accountId)
-INDEX idx_account_user ON account(userId)
 ```
 
-One row per auth method per user. A user with both email+password and Google linked has two rows.
+**`verification`** — email verification + password reset tokens.
+```sql
+id TEXT PRIMARY KEY, identifier TEXT, value TEXT, expiresAt INTEGER, createdAt INTEGER, updatedAt INTEGER
+```
 
-### `verification`
+---
+
+### `host_profile` (migration 001)
+
+Created when admin approves a host application. Holds the person, not the van.
 
 ```sql
-id         TEXT PRIMARY KEY
-identifier TEXT NOT NULL          -- usually the email
-value      TEXT NOT NULL          -- the token
-expiresAt  INTEGER NOT NULL
-createdAt  INTEGER NOT NULL
-updatedAt  INTEGER NOT NULL
-
-INDEX idx_verification_identifier ON verification(identifier)
+userId                    TEXT PRIMARY KEY REFERENCES user(id) ON DELETE CASCADE
+firstName                 TEXT NOT NULL
+lastName                  TEXT NOT NULL
+phone                     TEXT NOT NULL
+region                    TEXT NOT NULL
+island                    TEXT NOT NULL CHECK (island IN ('North', 'South'))
+bio                       TEXT
+verifiedIdentity          INTEGER NOT NULL DEFAULT 0   -- KYC flag (S7)
+stripeAccountId           TEXT                          -- Stripe Connect account ID
+stripeOnboardingCompleted INTEGER NOT NULL DEFAULT 0   -- 1 once Express onboarding done
+createdAt                 INTEGER NOT NULL
+updatedAt                 INTEGER NOT NULL
 ```
 
-Used for email verification and password reset.
+### `van_listing` (migration 001)
 
-### `host_application`
+One listing per van (host may have multiple).
 
 ```sql
 id                TEXT PRIMARY KEY
-userId            TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
-
--- Step 1: about you
-firstName         TEXT NOT NULL
-lastName          TEXT NOT NULL
-phone             TEXT NOT NULL
-region            TEXT NOT NULL                       -- one of NZ_REGIONS
-island            TEXT NOT NULL CHECK (island IN ('North', 'South'))
-
--- Step 2: van
-vanName           TEXT NOT NULL
-vanType           TEXT NOT NULL                       -- one of VAN_TYPES.value
-vanYear           INTEGER NOT NULL
+hostUserId        TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
+slug              TEXT NOT NULL UNIQUE       -- permanent, set on create
+name              TEXT NOT NULL
+vanType           TEXT NOT NULL
+year              INTEGER NOT NULL
 sleeps            INTEGER NOT NULL
 seats             INTEGER NOT NULL
 fixedToilet       INTEGER NOT NULL DEFAULT 0
-description      TEXT NOT NULL
-
--- Step 3: pricing & availability
-nightlyRate       INTEGER NOT NULL                    -- NZD cents
-minimumNights     INTEGER NOT NULL                    -- one of MINIMUM_NIGHTS
-availableFrom     INTEGER                             -- unix ms
-availableTo       INTEGER
-instantBook       INTEGER NOT NULL DEFAULT 0
-
--- Step 4: features & rules
-features          TEXT NOT NULL DEFAULT '[]'          -- JSON array of strings
-houseRules        TEXT NOT NULL DEFAULT ''
 petFriendly       INTEGER NOT NULL DEFAULT 0
-
--- Review workflow
-status            TEXT NOT NULL DEFAULT 'pending'
-                  CHECK (status IN ('pending', 'approved', 'rejected'))
+description       TEXT NOT NULL
+nightlyRate       INTEGER NOT NULL           -- NZD cents
+minimumNights     INTEGER NOT NULL
+instantBook       INTEGER NOT NULL DEFAULT 0
+status            TEXT NOT NULL DEFAULT 'draft'
+                  CHECK (status IN ('draft','pending_review','published','paused','archived'))
 adminNote         TEXT
-submittedAt       INTEGER NOT NULL
-reviewedAt        INTEGER
+region            TEXT NOT NULL
+island            TEXT NOT NULL CHECK (island IN ('North', 'South'))
+pickupLocationText TEXT
+pickupLat         REAL
+pickupLng         REAL
+features          TEXT NOT NULL DEFAULT '[]'  -- JSON array
+houseRules        TEXT NOT NULL DEFAULT ''
+publishedAt       INTEGER
+createdAt         INTEGER NOT NULL
+updatedAt         INTEGER NOT NULL
 
-INDEX idx_host_application_user   ON host_application(userId)
-INDEX idx_host_application_status ON host_application(status)
+INDEX idx_van_listing_host(hostUserId)
+INDEX idx_van_listing_status(status)
+INDEX idx_van_listing_slug(slug)
 ```
 
-**Important: this table is doing two things and will need to split.** It holds the *application* (about the host and their first van) and the *first van's listing data*. In Sprint 3, the van fields move into a new `van_listing` table, and `host_application` shrinks to just the personal/approval data. The current shape is a deliberate shortcut to ship onboarding before listings — don't model new flows on top of it.
+### `van_photo` (migration 001)
 
-## Planned schema (marketplace-complete)
-
-This is a rough sketch, not a migration plan. Refine when each slice is being built. All columns assume `id TEXT PRIMARY KEY`, `createdAt INTEGER NOT NULL`, `updatedAt INTEGER NOT NULL` unless noted.
-
-### `host_profile`
-
-Stripped-down version of the current `host_application`, holding only the *person*. The application form populates this on approval.
-
-```
-userId                FK user
-firstName, lastName, phone, region, island
-verifiedIdentity      INTEGER (KYC status)
-stripeAccountId       TEXT  (Stripe Connect)
-bio                   TEXT
+```sql
+id            TEXT PRIMARY KEY
+vanListingId  TEXT NOT NULL REFERENCES van_listing(id) ON DELETE CASCADE
+r2Key         TEXT NOT NULL         -- path in R2 bucket
+position      INTEGER NOT NULL DEFAULT 0
+caption       TEXT
+createdAt     INTEGER NOT NULL
 ```
 
-### `van_listing`
+### `availability_block` (migration 001)
 
-```
-hostUserId            FK user
-slug                  TEXT UNIQUE          (for /vans/<slug> public URL)
-name, vanType, year
-sleeps, seats, fixedToilet, petFriendly
-description
-nightlyRate           INTEGER (NZD cents)
-minimumNights
-instantBook           INTEGER
-status                TEXT  (draft | published | paused | archived)
-region, island, pickupLocationText, pickupLat, pickupLng
-features              TEXT  (JSON array)
-houseRules            TEXT
+Calendar is union of all blocks. Inserted/deleted by booking accept/cancel.
+
+```sql
+id           TEXT PRIMARY KEY
+vanListingId TEXT NOT NULL REFERENCES van_listing(id) ON DELETE CASCADE
+startDate    INTEGER NOT NULL   -- unix ms, Date.UTC midnight
+endDate      INTEGER NOT NULL   -- unix ms, Date.UTC midnight
+reason       TEXT NOT NULL CHECK (reason IN ('booking','host-blocked','maintenance'))
+bookingId    TEXT               -- FK booking (nullable)
+createdAt    INTEGER NOT NULL
 ```
 
-### `van_photo`
+### `booking` (migration 002, rebuilt in 003)
 
-```
-vanListingId          FK van_listing
-r2Key                 TEXT  (path in R2 bucket)
-position              INTEGER  (sort order)
-caption               TEXT
-```
+```sql
+id                      TEXT PRIMARY KEY
+vanListingId            TEXT NOT NULL REFERENCES van_listing(id) ON DELETE CASCADE
+guestUserId             TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
+hostUserId              TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
+startDate               INTEGER NOT NULL   -- unix ms UTC midnight
+endDate                 INTEGER NOT NULL   -- unix ms UTC midnight
+nights                  INTEGER NOT NULL
+guestCount              INTEGER NOT NULL
+nightlyRateCents        INTEGER NOT NULL   -- frozen at request time
+subtotalCents           INTEGER
+serviceFeeCents         INTEGER
+gstOnFeeCents           INTEGER
+hostPayoutCents         INTEGER
+totalCents              INTEGER NOT NULL
+depositCents            INTEGER NOT NULL DEFAULT 50000   -- $500 NZD
+cancellationPolicy      TEXT NOT NULL DEFAULT 'standard_v1'
+guestMessage            TEXT
+status                  TEXT NOT NULL DEFAULT 'requested'
+                        CHECK (status IN (
+                          'requested','accepted','in_progress','completed',
+                          'declined','cancelled_by_guest','cancelled_by_host','expired'
+                        ))
+statusReason            TEXT
+paymentIntentId         TEXT   -- Stripe PI for the booking amount
+depositPaymentIntentId  TEXT   -- Stripe PI for $500 deposit hold
+depositPaymentMethodId  TEXT   -- saved PM for deposit charge
+customerStripeId        TEXT   -- Stripe Customer ID
+requestedAt             INTEGER NOT NULL
+respondedAt             INTEGER
+paidAt                  INTEGER
+startedAt               INTEGER
+completedAt             INTEGER
+cancelledAt             INTEGER
+expiresAt               INTEGER NOT NULL   -- requestedAt + 48h
+createdAt               INTEGER NOT NULL
+updatedAt               INTEGER NOT NULL
 
-### `availability_block`
-
-```
-vanListingId          FK van_listing
-startDate             INTEGER (unix day)
-endDate               INTEGER
-reason                TEXT  (booking | host-blocked | maintenance)
-bookingId             FK booking NULLABLE
-```
-
-Calendar is the union of all blocks. iCal import/export feeds this table.
-
-### `booking`
-
-```
-vanListingId          FK van_listing
-guestUserId           FK user
-hostUserId            FK user (denormalised for queries)
-startDate             INTEGER (unix day)
-endDate               INTEGER
-nightCount            INTEGER
-nightlyRate           INTEGER  (frozen at booking time)
-subtotal, serviceFee, hostPayout, securityDeposit, total  (all NZD cents)
-gstAmount             INTEGER  (NZ GST)
-status                TEXT
-                      (requested | accepted | declined | paid | confirmed |
-                       in_progress | completed | cancelled_by_guest |
-                       cancelled_by_host | refunded | disputed)
-paymentIntentId       TEXT  (Stripe)
-depositChargeId       TEXT
-cancellationPolicy    TEXT  (flexible | moderate | strict — frozen at booking)
-acceptedAt, paidAt, startedAt, completedAt, cancelledAt   INTEGER
-```
-
-### `message`
-
-```
-bookingId             FK booking
-senderUserId          FK user
-body                  TEXT
-attachments           TEXT  (JSON)
-readAt                INTEGER NULLABLE
+INDEX idx_booking_listing(vanListingId)
+INDEX idx_booking_guest(guestUserId)
+INDEX idx_booking_host(hostUserId)
+INDEX idx_booking_status(status)
 ```
 
-Messaging is per-booking, not per-user-pair, so dispute records have a clean conversation thread.
+### `booking_message` (migration 002)
 
-### `review`
-
-```
-bookingId             FK booking
-authorUserId          FK user      (guest reviewing host, or host reviewing guest)
-subjectUserId         FK user
-direction             TEXT  (guest_to_host | host_to_guest)
-rating                INTEGER  (1–5)
-body                  TEXT
-publishedAt           INTEGER  (both reviews hidden until both are submitted or window closes)
+```sql
+id           TEXT PRIMARY KEY
+bookingId    TEXT NOT NULL REFERENCES booking(id) ON DELETE CASCADE
+senderUserId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
+body         TEXT NOT NULL
+readAt       INTEGER
+createdAt    INTEGER NOT NULL
 ```
 
-### `payout`
+### `user_payment_profile` (migration 003)
 
-```
-hostUserId            FK user
-stripeTransferId      TEXT
-amount                INTEGER (NZD cents)
-bookingId             FK booking
-status                TEXT  (pending | paid | failed | reversed)
-```
+Stripe Customer ID per user.
 
-### `dispute`
-
-```
-bookingId             FK booking
-openedByUserId        FK user
-reason                TEXT
-status                TEXT  (open | investigating | resolved | escalated)
-resolution            TEXT
-adminUserId           FK user
+```sql
+userId           TEXT PRIMARY KEY REFERENCES user(id) ON DELETE CASCADE
+stripeCustomerId TEXT NOT NULL
+createdAt        INTEGER NOT NULL
 ```
 
-### `audit_log` (admin)
+### `payment_event` (migration 003)
+
+Idempotent webhook handler — one row per Stripe event received.
+
+```sql
+id            TEXT PRIMARY KEY
+stripeEventId TEXT NOT NULL UNIQUE
+eventType     TEXT NOT NULL
+bookingId     TEXT REFERENCES booking(id)
+payload       TEXT NOT NULL   -- raw JSON
+status        TEXT NOT NULL DEFAULT 'pending'
+processedAt   INTEGER
+createdAt     INTEGER NOT NULL
+
+INDEX idx_payment_event_stripe(stripeEventId)
+INDEX idx_payment_event_booking(bookingId)
+```
+
+### `payout` (migration 003)
+
+One row per Connect transfer to a host.
+
+```sql
+id               TEXT PRIMARY KEY
+bookingId        TEXT NOT NULL REFERENCES booking(id)
+hostUserId       TEXT NOT NULL REFERENCES user(id)
+amountCents      INTEGER NOT NULL
+stripeTransferId TEXT
+status           TEXT NOT NULL DEFAULT 'pending'
+createdAt        INTEGER NOT NULL
+updatedAt        INTEGER NOT NULL
+
+INDEX idx_payout_booking(bookingId)
+INDEX idx_payout_host(hostUserId)
+```
+
+---
+
+## Planned tables (not yet built)
+
+These are sketched for future sprints — refine when each slice is built.
+
+### `review` (S7)
 
 ```
-adminUserId           FK user
-action                TEXT
-targetTable           TEXT
-targetId              TEXT
-detail                TEXT (JSON)
+bookingId      FK booking
+authorUserId   FK user      -- guest reviewing host, or host reviewing guest
+subjectUserId  FK user
+direction      TEXT         -- guest_to_host | host_to_guest
+rating         INTEGER      -- 1–5
+body           TEXT
+publishedAt    INTEGER      -- double-blind: hidden until both submitted or 14-day window closes
 ```
 
-### Suggested additions for completeness
+### `dispute` (S7)
 
-- `notification` — in-app notification queue.
-- `wishlist` — guest-saved listings.
-- `feature_flag` — runtime flags for staged rollouts.
-- `coupon` / `referral` — promotional codes.
+```
+bookingId       FK booking
+openedByUserId  FK user
+reason          TEXT
+status          TEXT    -- open | investigating | resolved | escalated
+resolution      TEXT
+adminUserId     FK user
+```
+
+### `audit_log` (S7)
+
+```
+adminUserId  FK user
+action       TEXT
+targetTable  TEXT
+targetId     TEXT
+detail       TEXT  -- JSON
+```
+
+### Suggested additions for later sprints
+
+- `notification` — in-app notification queue (S8)
+- `wishlist` — guest-saved listings
+- `feature_flag` — runtime flags for staged rollouts
+- `coupon` / `referral` — promotional codes
 
 ## Schema apply commands
 
 ```bash
-# Remote (production D1)
-wrangler d1 execute campshare-db --remote --file=src/db/schema.sql
+# Apply initial schema (first-time only)
+npx wrangler d1 execute campshare-db --remote --file=src/db/schema.sql
+npx wrangler d1 execute campshare-db --local  --file=src/db/schema.sql
 
-# Local (development D1, used by `npm run dev`)
-wrangler d1 execute campshare-db --local --file=src/db/schema.sql
+# Apply a numbered migration
+npx wrangler d1 execute campshare-db --remote --file=src/db/migrations/003_payments_and_payouts.sql
+npx wrangler d1 execute campshare-db --local  --file=src/db/migrations/003_payments_and_payouts.sql
 
 # Ad-hoc query
-wrangler d1 execute campshare-db --remote --command="SELECT count(*) FROM user"
+npx wrangler d1 execute campshare-db --remote --command="SELECT count(*) FROM user"
 ```
-
-The current `schema.sql` uses `CREATE TABLE IF NOT EXISTS`, so re-running it is safe. Once migrations are introduced, switch to numbered, idempotent migration files and a small runner.
 
 ## Query patterns
 
-All DB calls go through Kysely (configured in `src/lib/db.ts` + `src/lib/auth.ts`):
+All application DB calls use raw D1 — not Kysely. Better Auth still uses Kysely internally via its adapter.
 
 ```ts
-const db = await getDB();
-const apps = await db
-  .selectFrom("host_application")
-  .selectAll()
-  .where("status", "=", "pending")
-  .orderBy("submittedAt", "desc")
-  .execute();
+import { db } from '@/lib/db';
+
+const booking = await db()
+  .prepare('SELECT * FROM booking WHERE id = ?')
+  .bind(id)
+  .first();
+
+const results = await db()
+  .prepare('SELECT * FROM booking WHERE hostUserId = ? AND status = ?')
+  .bind(userId, 'requested')
+  .all();
 ```
 
-Avoid raw SQL strings in route files. If a query is awkward in Kysely, isolate it in `src/lib/` with a typed function signature, so the route stays clean.
+`db()` is a helper in `src/lib/db.ts` that calls `getCloudflareContext().env.DB` and returns the D1 binding. Never call `getCloudflareContext()` at module level — it must be called inside a request handler.
