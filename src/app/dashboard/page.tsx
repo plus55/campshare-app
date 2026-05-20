@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import SignOutButton from "@/components/SignOutButton";
 import type { VanListing } from "@/lib/types";
 
 interface ListingRow {
@@ -166,11 +167,9 @@ export default async function DashboardPage() {
             <h2>Profile</h2>
             <p className="cs-muted cs-small">{session.user.name}</p>
             <p className="cs-muted cs-small">{session.user.email}</p>
-            <form action="/api/auth/sign-out" method="post" style={{ marginTop: 12 }}>
-              <button type="submit" className="cs-btn cs-btn-ghost">
-                Sign out
-              </button>
-            </form>
+            <div style={{ marginTop: 12 }}>
+              <SignOutButton />
+            </div>
           </div>
         </div>
       </div>
