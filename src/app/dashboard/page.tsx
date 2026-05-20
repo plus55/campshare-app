@@ -113,12 +113,30 @@ export default async function DashboardPage() {
             </>
           )}
 
+          {profile && (
+            <div className="cs-card">
+              <h2>Bookings</h2>
+              <p className="cs-muted cs-small">View and respond to booking requests on your listings.</p>
+              <Link href="/dashboard/bookings" className="cs-btn cs-btn-ghost" style={{ marginTop: 12, display: "inline-block" }}>
+                View bookings
+              </Link>
+            </div>
+          )}
+
+          <div className="cs-card">
+            <h2>My trips</h2>
+            <p>Your van bookings across Aotearoa.</p>
+            <Link href="/trips" className="cs-btn cs-btn-ghost" style={{ display: "inline-block" }}>
+              View trips
+            </Link>
+          </div>
+
           <div className="cs-card">
             <h2>Find a van</h2>
             <p>Browse self-contained campers across Aotearoa.</p>
-            <a href="https://www.campshare.co.nz/browse" className="cs-btn cs-btn-ghost">
+            <Link href="/vans" className="cs-btn cs-btn-ghost">
               Browse vans
-            </a>
+            </Link>
           </div>
 
           <div className="cs-card">

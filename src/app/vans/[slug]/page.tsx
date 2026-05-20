@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import { photoUrl } from "@/lib/photos";
 import type { AvailabilityBlock, VanListing, VanPhoto } from "@/lib/types";
+import { BookingRequestForm } from "./BookingRequestForm";
 
 interface ListingWithHost extends VanListing {
   hostFirstName: string;
@@ -47,8 +49,11 @@ export default async function VanPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const listing = await getListing(slug);
+  const [listing, session] = await Promise.all([getListing(slug), getSession()]);
   if (!listing) notFound();
+
+  const isOwner = session?.user.id === listing.hostUserId;
+  const isLoggedIn = !!session;
 
   const photos = await db()
     .prepare("SELECT * FROM van_photo WHERE vanListingId = ? ORDER BY position ASC, createdAt ASC")
@@ -146,8 +151,22 @@ export default async function VanPage({
           {listing.hostBio && <p className="cs-muted">{listing.hostBio}</p>}
         </div>
 
-        <div className="cs-card" style={{ marginTop: 16, textAlign: "center" }}>
-          <p className="cs-muted">Booking coming soon — check back shortly.</p>
+        <div className="cs-card" style={{ marginTop: 16 }}>
+          <h2 style={{ marginBottom: 16 }}>Book this van</h2>
+          {isOwner ? (
+            <p className="cs-muted">This is your listing.</p>
+          ) : isLoggedIn ? (
+            <BookingRequestForm
+              listingId={listing.id}
+              nightlyRateCents={listing.nightlyRate}
+              minimumNights={listing.minimumNights}
+            />
+          ) : (
+            <div style={{ textAlign: "center" }}>
+              <p className="cs-muted" style={{ marginBottom: 16 }}>Sign in to request a booking.</p>
+              <a href="/login" className="cs-btn cs-btn-primary">Sign in to book</a>
+            </div>
+          )}
         </div>
 
         <p className="cs-muted cs-small" style={{ marginTop: 24, textAlign: "center" }}>

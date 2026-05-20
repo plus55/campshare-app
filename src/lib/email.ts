@@ -99,3 +99,115 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+function fmtDate(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-NZ", {
+    day: "numeric", month: "long", year: "numeric", timeZone: "Pacific/Auckland",
+  });
+}
+
+function fmtDollars(cents: number): string {
+  return `$${(cents / 100).toFixed(0)}`;
+}
+
+const appUrl = () => process.env.BETTER_AUTH_URL ?? "https://app.campshare.co.nz";
+
+export async function sendBookingRequestedEmail(opts: {
+  hostEmail: string;
+  hostFirstName: string;
+  guestName: string;
+  vanName: string;
+  bookingId: string;
+  startDate: number;
+  endDate: number;
+  nights: number;
+  totalCents: number;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.hostEmail,
+    subject: `New booking request for ${opts.vanName}`,
+    heading: "You have a new booking request",
+    intro: `Kia ora ${escapeHtml(opts.hostFirstName)}, ${escapeHtml(opts.guestName)} has requested to book ${escapeHtml(opts.vanName)}.`,
+    cta: { label: "View request", href: `${appUrl()}/dashboard/bookings/${opts.bookingId}` },
+    body: `<p>${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)} · ${opts.nights} night${opts.nights !== 1 ? "s" : ""} · ${fmtDollars(opts.totalCents)} total</p><p style="color:#6b5d4f;font-size:13px;">Respond within 48 hours or the request will expire.</p>`,
+  });
+}
+
+export async function sendBookingAcceptedEmail(opts: {
+  guestEmail: string;
+  guestName: string;
+  hostFirstName: string;
+  vanName: string;
+  bookingId: string;
+  startDate: number;
+  endDate: number;
+  nights: number;
+  totalCents: number;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.guestEmail,
+    subject: `Your booking for ${opts.vanName} is accepted`,
+    heading: "Your booking request was accepted",
+    intro: `Kia ora ${escapeHtml(opts.guestName)}, ${escapeHtml(opts.hostFirstName)} has accepted your request for ${escapeHtml(opts.vanName)}.`,
+    cta: { label: "View booking", href: `${appUrl()}/trips/${opts.bookingId}` },
+    body: `<p>${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)} · ${opts.nights} night${opts.nights !== 1 ? "s" : ""} · ${fmtDollars(opts.totalCents)} total</p><p style="color:#6b5d4f;font-size:13px;">Payment will be enabled soon — we'll let you know when it's ready.</p>`,
+  });
+}
+
+export async function sendBookingDeclinedEmail(opts: {
+  guestEmail: string;
+  guestName: string;
+  vanName: string;
+  bookingId: string;
+  reason: string | null;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.guestEmail,
+    subject: `Update on your booking request for ${opts.vanName}`,
+    heading: "Booking request declined",
+    intro: `Kia ora ${escapeHtml(opts.guestName)}, unfortunately your request for ${escapeHtml(opts.vanName)} wasn't available for those dates.`,
+    cta: { label: "Find another van", href: `${appUrl()}/vans` },
+    body: opts.reason ? `<p><strong>Host's note:</strong> ${escapeHtml(opts.reason)}</p>` : undefined,
+  });
+}
+
+export async function sendBookingCancelledEmail(opts: {
+  recipientEmail: string;
+  recipientName: string;
+  cancelledByRole: "guest" | "host";
+  vanName: string;
+  bookingId: string;
+  startDate: number;
+  endDate: number;
+}): Promise<void> {
+  const who = opts.cancelledByRole === "guest" ? "The guest" : "The host";
+  await sendBrandedEmail({
+    to: opts.recipientEmail,
+    subject: `Booking for ${opts.vanName} cancelled`,
+    heading: "Booking cancelled",
+    intro: `Kia ora ${escapeHtml(opts.recipientName)}, ${who} has cancelled the booking for ${escapeHtml(opts.vanName)} (${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)}).`,
+    cta: { label: "Browse vans", href: `${appUrl()}/vans` },
+  });
+}
+
+export async function sendBookingMessageEmail(opts: {
+  recipientEmail: string;
+  recipientName: string;
+  senderName: string;
+  vanName: string;
+  bookingId: string;
+  messagePreview: string;
+  viewerRole: "guest" | "host";
+}): Promise<void> {
+  const href = opts.viewerRole === "guest"
+    ? `${appUrl()}/trips/${opts.bookingId}`
+    : `${appUrl()}/dashboard/bookings/${opts.bookingId}`;
+  await sendBrandedEmail({
+    to: opts.recipientEmail,
+    subject: `New message about your CampShare booking`,
+    heading: "New message",
+    intro: `Kia ora ${escapeHtml(opts.recipientName)}, ${escapeHtml(opts.senderName)} sent you a message about the booking for ${escapeHtml(opts.vanName)}.`,
+    cta: { label: "View message", href },
+    body: `<p style="background:#f5ede0;border-radius:8px;padding:12px 16px;font-style:italic;">"${escapeHtml(opts.messagePreview.slice(0, 200))}${opts.messagePreview.length > 200 ? "…" : ""}"</p>`,
+  });
+}

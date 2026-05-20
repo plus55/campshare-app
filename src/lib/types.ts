@@ -63,3 +63,42 @@ export interface AvailabilityBlock {
   bookingId: string | null;
   createdAt: number;
 }
+
+export type BookingStatus =
+  | "requested"
+  | "accepted"
+  | "declined"
+  | "cancelled_by_guest"
+  | "cancelled_by_host"
+  | "expired";
+
+export interface Booking {
+  id: string;
+  vanListingId: string;
+  guestUserId: string;
+  hostUserId: string;
+  startDate: number;
+  endDate: number;
+  nights: number;
+  guestCount: number;
+  nightlyRateCents: number;
+  totalCents: number;
+  guestMessage: string | null;
+  status: BookingStatus;
+  statusReason: string | null;
+  requestedAt: number;
+  respondedAt: number | null;
+  cancelledAt: number | null;
+  expiresAt: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface BookingMessage {
+  id: string;
+  bookingId: string;
+  senderUserId: string;
+  body: string;
+  readAt: number | null;
+  createdAt: number;
+}
