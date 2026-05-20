@@ -1,12 +1,12 @@
 # 05 — Current State
 
-> Snapshot as of **2026-05-20 (Sprints 1–4 deployed)**. Verify with `git log` and the Cloudflare dashboard before acting on anything load-bearing here.
+> Snapshot as of **2026-05-20 (Sprints 1–5 deployed)**. Verify with `git log` and the Cloudflare dashboard before acting on anything load-bearing here.
 
 ## Headline
 
-**Sprints 1–4 are deployed and live at https://app.campshare.co.nz** (Cloudflare Worker, version `9d577a7c`).
+**Sprints 1–5 are deployed and live at https://app.campshare.co.nz** (Cloudflare Worker, version `79bcc460`).
 
-The app supports: auth, host onboarding, van listings, photo upload to R2, availability calendars, a public search page with Mapbox map, and 16 location landing pages. Sprint 5 (bookings + messaging) is next.
+The app supports: auth, host onboarding, van listings, photo upload to R2, availability calendars, a public search page with Mapbox map, 16 location landing pages, and booking requests with booking-scoped messaging. At least one van listing is published and visible in `/vans`. Sprint 6 (Stripe Connect + payments) is next.
 
 ---
 
@@ -18,6 +18,7 @@ The app supports: auth, host onboarding, van listings, photo upload to R2, avail
 | S2 | Host application form, admin approval/rejection, transactional email | ✅ Deployed |
 | S3 | Host profile, van listing CRUD, R2 photo upload, availability calendar, public `/vans/[slug]` page, admin moderation queue | ✅ Deployed |
 | S4 | Search page `/vans` with filters, Mapbox map, `/hire/[region]` SEO landing pages, homepage redirect | ✅ Deployed |
+| S5 | Booking requests, accept/decline/cancel, availability block integration, booking-scoped messaging, transactional emails | ✅ Deployed |
 
 ---
 
@@ -54,9 +55,9 @@ The app supports: auth, host onboarding, van listings, photo upload to R2, avail
 
 | Resource | Status | Detail |
 |---|---|---|
-| GitHub repo | Sprint 4 | Latest commit `3a3252b` |
-| Cloudflare Worker | S1–S4 live | `app.campshare.co.nz`, version `9d577a7c` |
-| D1 remote | Sprint 3 schema | 8 tables (user, session, account, verification, host_profile, van_listing, van_photo, availability_block) |
+| GitHub repo | Sprint 5 | Latest commit `48f523a` |
+| Cloudflare Worker | S1–S5 live | `app.campshare.co.nz`, version `79bcc460` |
+| D1 remote | Sprint 5 schema | 10 tables (+ booking, booking_message) |
 | Worker secrets | All set | BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RESEND_API_KEY, EMAIL_FROM, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY |
 | wrangler.jsonc vars | All set | BETTER_AUTH_URL, ADMIN_EMAIL, NEXT_PUBLIC_R2_PUBLIC_URL |
 | R2 bucket | ✅ Created + public | `campshare-photos`, public URL `https://pub-4433449fb7ff44d2b0ecb6d7e21faafa.r2.dev` |
@@ -73,11 +74,11 @@ The `/vans` map panel is blank because `NEXT_PUBLIC_MAPBOX_TOKEN` is not set. Th
 
 ---
 
-## What's next — Sprint 5
+## What's next — Sprint 6
 
-**Bookings + minimal messaging.** Guests can request a van from the public listing page. Hosts accept/decline from their dashboard. Both parties can message each other in a booking-scoped thread. No payments in S5 — that's S6 (Stripe Connect).
+**Stripe Connect + payments.** Guests pay when a booking is accepted. Hosts receive payouts. Platform takes a commission. Includes security deposit hold, NZ GST handling, refund flow, and Stripe webhook handling.
 
-Sprint 5 scope and design are in `docs/context/06-roadmap.md` under Sprint 5.
+Sprint 6 scope is in `docs/context/06-roadmap.md` under "Payments (S6-ish)".
 
 ---
 
