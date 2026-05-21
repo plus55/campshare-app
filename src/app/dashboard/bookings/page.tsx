@@ -91,7 +91,6 @@ export default async function DashboardBookingsPage() {
   return (
     <main className="cs-page">
       <div className="cs-container">
-        <span className="cs-brand">CampShare</span>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <h1>Bookings</h1>
@@ -111,9 +110,6 @@ export default async function DashboardBookingsPage() {
           </>
         )}
 
-        <p style={{ marginTop: 24 }}>
-          <Link href="/dashboard" className="cs-muted cs-small">← Dashboard</Link>
-        </p>
       </div>
     </main>
   );

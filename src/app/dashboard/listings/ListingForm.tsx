@@ -29,6 +29,8 @@ interface FormState {
   features: string[];
   houseRules: string;
   pickupLocationText: string;
+  pickupLat: number | null;
+  pickupLng: number | null;
 }
 
 function fromListing(l: VanListing | null): FormState {
@@ -38,6 +40,7 @@ function fromListing(l: VanListing | null): FormState {
       fixedToilet: false, petFriendly: false, description: "",
       nightlyRate: "", minimumNights: "2", instantBook: false,
       region: "", features: [], houseRules: "", pickupLocationText: "",
+      pickupLat: null, pickupLng: null,
     };
   }
   let features: string[] = [];
@@ -50,6 +53,8 @@ function fromListing(l: VanListing | null): FormState {
     minimumNights: String(l.minimumNights), instantBook: !!l.instantBook,
     region: l.region, features, houseRules: l.houseRules,
     pickupLocationText: l.pickupLocationText ?? "",
+    pickupLat: l.pickupLat ?? null,
+    pickupLng: l.pickupLng ?? null,
   };
 }
 
@@ -60,6 +65,10 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
   const [form, setForm] = useState<FormState>(() => fromListing(listing));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodedLabel, setGeocodedLabel] = useState<string | null>(
+    listing?.pickupLat ? (listing.pickupLocationText ?? null) : null
+  );
 
   const island = useMemo(
     () => (NORTH_ISLAND_REGIONS.has(form.region) ? "North" : "South"),
@@ -77,6 +86,31 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
         ? f.features.filter((x) => x !== name)
         : [...f.features, name],
     }));
+  }
+
+  async function geocodePickup(text: string) {
+    if (!text.trim()) {
+      setForm((f) => ({ ...f, pickupLat: null, pickupLng: null }));
+      setGeocodedLabel(null);
+      return;
+    }
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token) return;
+
+    setGeocoding(true);
+    try {
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(text)}.json?country=NZ&limit=1&access_token=${token}`;
+      const res = await fetch(url);
+      const data = await res.json() as { features?: { geometry: { coordinates: [number, number] }; place_name: string }[] };
+      const feature = data.features?.[0];
+      if (feature) {
+        const [lng, lat] = feature.geometry.coordinates;
+        setForm((f) => ({ ...f, pickupLat: lat, pickupLng: lng }));
+        setGeocodedLabel(feature.place_name);
+      }
+    } catch { /* non-critical — coords stay null */ } finally {
+      setGeocoding(false);
+    }
   }
 
   function canAdvance(): boolean {
@@ -104,6 +138,8 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
       features: form.features,
       houseRules: form.houseRules,
       pickupLocationText: form.pickupLocationText || undefined,
+      pickupLat: form.pickupLat ?? undefined,
+      pickupLng: form.pickupLng ?? undefined,
     };
 
     const res = await fetch(
@@ -146,7 +182,7 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
       <div className="cs-card">
         {error && <div className="cs-error">{error}</div>}
 
-        {step === 1 && <StepVan form={form} update={update} island={island} />}
+        {step === 1 && <StepVan form={form} update={update} island={island} onPickupBlur={geocodePickup} geocoding={geocoding} geocodedLabel={geocodedLabel} />}
         {step === 2 && <StepPricing form={form} update={update} />}
         {step === 3 && <StepFeatures form={form} update={update} toggleFeature={toggleFeature} island={island} />}
 
@@ -189,7 +225,12 @@ interface StepProps {
   update: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
 }
 
-function StepVan({ form, update, island }: StepProps & { island: "North" | "South" }) {
+function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel }: StepProps & {
+  island: "North" | "South";
+  onPickupBlur: (text: string) => void;
+  geocoding: boolean;
+  geocodedLabel: string | null;
+}) {
   return (
     <>
       <h2>Your van</h2>
@@ -242,8 +283,20 @@ function StepVan({ form, update, island }: StepProps & { island: "North" | "Sout
       </div>
       <div className="cs-field">
         <label className="cs-label">Pickup location <span className="cs-muted">(optional)</span></label>
-        <input className="cs-input" placeholder="e.g. Christchurch Airport, Rolleston" value={form.pickupLocationText} onChange={(e) => update("pickupLocationText", e.target.value)} />
-        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>Where guests collect the van. Shown on your listing.</p>
+        <input
+          className="cs-input"
+          placeholder="e.g. Christchurch Airport, Rolleston"
+          value={form.pickupLocationText}
+          onChange={(e) => update("pickupLocationText", e.target.value)}
+          onBlur={(e) => onPickupBlur(e.target.value)}
+        />
+        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>
+          {geocoding
+            ? "Locating…"
+            : geocodedLabel
+            ? `✓ Located: ${geocodedLabel}`
+            : "Where guests collect the van. Shown as an approximate area on your listing."}
+        </p>
       </div>
       <div className="cs-field">
         <label className="cs-label">Description</label>

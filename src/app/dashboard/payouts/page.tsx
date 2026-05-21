@@ -60,11 +60,6 @@ export default async function PayoutsPage() {
   return (
     <main className="cs-page">
       <div className="cs-container">
-        <span className="cs-brand">CampShare</span>
-        <p style={{ marginBottom: 8 }}>
-          <Link href="/dashboard" className="cs-muted cs-small">← Dashboard</Link>
-        </p>
-
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <h1 style={{ margin: 0 }}>Payouts</h1>
           {hp?.stripeAccountId && hp.stripeOnboardingCompleted ? (

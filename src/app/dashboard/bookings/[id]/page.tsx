@@ -68,11 +68,6 @@ export default async function DashboardBookingDetailPage({
   return (
     <main className="cs-page">
       <div className="cs-container" style={{ maxWidth: 700 }}>
-        <span className="cs-brand">CampShare</span>
-        <p style={{ marginBottom: 8 }}>
-          <Link href="/dashboard/bookings" className="cs-muted cs-small">← Bookings</Link>
-        </p>
-
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
           <h1 style={{ margin: 0, fontSize: 28 }}>{booking.vanName}</h1>
           <BookingStatusBadge status={booking.status} />

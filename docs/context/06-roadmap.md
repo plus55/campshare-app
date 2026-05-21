@@ -2,7 +2,7 @@
 
 ## Reading this doc
 
-Sprints 1–6 are deployed and live. Sprint 7 is the next scheduled chunk. Everything below Sprint 7 is the **marketplace-complete backlog** — the full set of features a "standard" P2P camper rental site needs to be at competitor parity. Per Jonty's directive (2026-05-19), the backlog is the real target, not Sprint 7 alone.
+Sprints 1–6 are deployed and live. Sprint 7 (app chrome + navigation) is implemented locally on 2026-05-21 and pending deploy. Sprint 8 (trust & safety) is next. Everything below Sprint 8 is the **marketplace-complete backlog** — the full set of features a "standard" P2P camper rental site needs to be at competitor parity. Per Jonty's directive (2026-05-19), the backlog is the real target, not any one sprint.
 
 Use this doc to plan the next sprint, not as a fixed delivery schedule.
 
@@ -53,6 +53,35 @@ Key product decisions frozen on the booking row:
 - Cancellation: `standard_v1` (>7d=100%, 2–7d=50%, <48h=0%)
 - Deposit: $500 NZD
 
+## Sprint 7 — App chrome + navigation + homepage facelift (deployed 2026-05-21)
+
+**Scope change:** S7 was originally planned as KYC + reviews + disputes. On 2026-05-21 Jonty flagged that the app's lack of shared chrome (different header per page, dead-end navigation, visual mismatch with the marketing site) was blocking his ability to demo and test. S7 was redirected to fix this; trust-and-safety work moved to **S8**. Mid-sprint, after a UI audit of Camplify AU+NZ, Goboony, and Quirky Campers, an additional "Phase B" facelift was bundled into S7 to close the most visible discovery gaps (no homepage, listing cards lacked owner attribution).
+
+### Phase A — shared chrome (deployed 2026-05-21, version `cb1e024b`)
+
+- Marketing site palette + chrome (`.site-header`, `.nav`, `.brand-mark`, `.btn` family, `.site-footer`, `.footer-grid`, `.wrap`) ported from `https://github.com/plus55/campshare/blob/main/styles.css` into `src/app/globals.css`. Existing `.cs-*` tokens re-pointed onto the marketing palette — zero page rewrites needed.
+- Shared `SiteHeader` (session-aware: logged-out shows Browse · Hire · Become a host · Log in · Sign up; logged-in shows Browse · My trips · Dashboard · avatar menu).
+- `SiteFooter` with 4 columns (Hire · Own · Company · Legal), in-app routes where they exist and marketing-site links elsewhere.
+- Mobile hamburger menu, user-menu dropdown (Dashboard / Bookings / My trips / Payouts / Profile / Sign out), `aria-current` active-link state via a small client island.
+- Inline brand marks and redundant `← Dashboard` back-links stripped from 16 page files.
+- `/vans` browse page refactored to share viewport with the sticky global header (`height: calc(100vh - var(--header-h))`).
+
+### Phase B — marketing homepage + listing card facelift (deployed 2026-05-21, version `e4d9c4ab`)
+
+- `src/app/page.tsx` no longer a redirect for logged-out visitors; renders a 7-section marketing homepage. Logged-in still redirects to `/dashboard`.
+- New `src/components/home/` dir, each section a server component:
+  - `HomeHero` — pill-shaped search form (region select, check-in date, check-out date) wrapped in `<form action="/vans" method="get">`. Pure HTML — works without JS. Mobile breakpoint at 720px stacks vertically (rule in `globals.css`, keyed off `.home-hero-form`).
+  - `TrustBanner` — forest-deep strip with live van count from D1 + trust messaging.
+  - `FeaturedVans` — 6 most-recently-published listings via `ListingCard`.
+  - `HowItWorks` — three numbered cards (Search → Book → Hit the road).
+  - `CategoryCards` — 4 deep-linked filters (Pet-friendly, Family-size, Self-contained, Instant book) → `/vans?petFriendly=1` etc.
+  - `RegionGrid` — 16 regions split North/South, each linking to existing `/hire/[region]`.
+  - `HomepageFaq` — `<details>` accordion, 6 Q&As (3 traveller, 3 owner).
+- `ListingCard` (`src/app/vans/ListingCard.tsx`) extended with `hostFirstName`, `hostImage`, `avgRating`, `reviewCount`. Renders owner avatar (24px round, falls back to initial) + first name above the title; renders star+rating row only when `reviewCount > 0` (reserved slot for Phase D reviews — no card revisit needed when reviews ship).
+- SELECTs in `src/app/vans/page.tsx`, `src/app/hire/[region]/page.tsx`, and `FeaturedVans` all LEFT JOIN `host_profile` + `user`; review fields stubbed as `NULL`/`0`.
+
+Full detail in `docs/context/05-current-state.md` → "Sprint 7 — what was built".
+
 ## Marketplace-complete backlog
 
 These are the features a P2P camper rental site is generally expected to have. Order is rough — adjust based on what unlocks revenue, what unblocks the next thing, and what's painful to retrofit.
@@ -86,7 +115,7 @@ These are the features a P2P camper rental site is generally expected to have. O
 - Currency: NZD only initially.
 - Webhooks: payment_intent.succeeded, charge.refunded, account.updated. Idempotent handlers stored in a `payment_event` table.
 
-### Trust & safety (S7 — next)
+### Trust & safety (S8 — next)
 
 - Guest identity / driver's licence verification (Stripe Identity, Onfido, or a NZ-specific KYC provider).
 - Host KYC for payouts (Stripe Connect handles most of this).
@@ -96,21 +125,21 @@ These are the features a P2P camper rental site is generally expected to have. O
 - Dispute workflow with admin queue.
 - Audit log of admin actions on user-facing data.
 
-### Insurance & condition reports (S7/8)
+### Insurance & condition reports (S8/9)
 
 - Pre- and post-rental vehicle condition reports with photos, signed by both parties.
 - Damage claim workflow tied to the security deposit.
 - Insurance: either pass-through to a NZ third-party insurer (Cove, NZI, etc.) or build platform-provided cover. Regulatory + capital decision — talk to a broker before committing.
 - Required documents per booking: licence photo, age confirmation, sometimes proof of overseas licence.
 
-### Messaging (S8-ish)
+### Messaging (S9-ish)
 
 - In-app messaging tied to a booking — not free-form host↔guest chat (prevents off-platform booking).
 - Notifications on new message (email + in-app).
 - Attachments (PDF pickup instructions, location maps).
 - Template responses ("Pickup instructions", "Late return policy").
 
-### Host tools (S9-ish, retention)
+### Host tools (S10-ish, retention)
 
 - Earnings dashboard — gross, fees, payouts, time-period filters.
 - Occupancy rate per listing.
@@ -159,16 +188,25 @@ These are the features a P2P camper rental site is generally expected to have. O
 ## Suggested high-level ordering
 
 ```
-Sprint 3   Listings + photos + calendar + public profile        ✅ done
-Sprint 4   Search + filters + map + location landing pages      ✅ done
-Sprint 5   Bookings (request flow only, no payments)            ✅ done
-Sprint 6   Stripe Connect + payments + deposits + payouts + GST ✅ done
-Sprint 7   KYC + reviews + dispute workflow + report/audit log  ← next
-Sprint 8   Messaging + notifications  (Q3 2026)
-Sprint 9   Host earnings + dynamic pricing + iCal sync  (Q3 2026)
-Sprint 10  Insurance + condition reports  (Q4 2026)
-Sprint 11  Admin moderation + analytics + audit log  (Q4 2026)
+Sprint 3      Listings + photos + calendar + public profile         ✅ done
+Sprint 4      Search + filters + map + location landing pages       ✅ done
+Sprint 5      Bookings (request flow only, no payments)             ✅ done
+Sprint 6      Stripe Connect + payments + deposits + payouts + GST  ✅ done
+Sprint 7A     App chrome + shared nav + marketing style alignment   ✅ done
+Sprint 7B     Marketing homepage + listing card facelift            ✅ done
+Sprint 7C     PDP polish (two-column, lightbox, sticky CTA, map,
+              similar listings, share) + wishlist (migration 004)   ← next
+Sprint 7D/8A  Reviews + host profile + admin audit log
+              (migration 005, 14d double-blind, /hosts/[userId])
+Sprint 8B     KYC (Stripe Identity) + report/block + disputes
+              + computed host badges  (deferred per founder)
+Sprint 9      Messaging + notifications  (Q3 2026)
+Sprint 10     Host earnings + dynamic pricing + iCal sync  (Q3 2026)
+Sprint 11     Insurance + condition reports  (Q4 2026)
+Sprint 12     Admin moderation + analytics + audit log  (Q4 2026)
 ```
+
+Note: S7 was extended mid-sprint into phases A/B/C/D to absorb the discovery + reviews scope that the competitor UI audit (2026-05-21) surfaced as higher priority than the original S8 trust-and-safety scope. Reactive S8 items (KYC, reports, disputes, badges) explicitly deferred — they're highest-leverage after first incident, not before.
 
 Quarter labels are guesses, not commitments. The point is the dependencies: payments need a working booking flow; reviews need completed bookings; dynamic pricing needs payment data; analytics need everything.
 

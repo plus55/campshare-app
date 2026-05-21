@@ -4,7 +4,6 @@ export default function ApplySubmittedPage() {
   return (
     <main className="cs-page">
       <div className="cs-narrow">
-        <span className="cs-brand">CampShare</span>
         <div className="cs-card">
           <h1>Thanks — we&apos;ve got it.</h1>
           <p>

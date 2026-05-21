@@ -24,9 +24,7 @@ export default async function EditListingPage({
   return (
     <main className="cs-page">
       <div className="cs-narrow">
-        <Link href="/dashboard" className="cs-small">← Dashboard</Link>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <h1 style={{ margin: 0 }}>{listing.name}</h1>
           <span className={`cs-pill cs-pill-${listing.status === "pending_review" ? "pending" : listing.status}`}>
             {listing.status === "pending_review" ? "in review" : listing.status}

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
@@ -17,8 +16,7 @@ export default async function NewListingPage() {
   return (
     <main className="cs-page">
       <div className="cs-narrow">
-        <Link href="/dashboard" className="cs-small">← Dashboard</Link>
-        <h1 style={{ marginTop: 12 }}>New listing</h1>
+        <h1>New listing</h1>
         <p className="cs-muted">Tell travellers about your van.</p>
         <div style={{ marginTop: 24 }}>
           <ListingForm listing={null} />

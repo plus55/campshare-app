@@ -42,7 +42,6 @@ export default async function AdminPage() {
   return (
     <main className="cs-page">
       <div className="cs-container">
-        <span className="cs-brand">CampShare · Admin</span>
         <h1>Admin</h1>
 
         <h2 style={{ marginTop: 24 }}>Listings awaiting review</h2>

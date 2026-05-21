@@ -105,8 +105,33 @@ export interface Booking {
   completedAt: number | null;
   cancelledAt: number | null;
   expiresAt: number;
+  reviewPromptSentAt: number | null;
   createdAt: number;
   updatedAt: number;
+}
+
+export type ReviewRole = "guest" | "host";
+
+export interface Review {
+  id: string;
+  bookingId: string;
+  authorUserId: string;
+  subjectUserId: string;
+  vanListingId: string;
+  role: ReviewRole;
+  rating: number;
+  text: string;
+  createdAt: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorUserId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  metadata: string;
+  createdAt: number;
 }
 
 export interface BookingMessage {

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import { NZ_REGIONS } from "@/lib/constants";
 import { slugToRegion, regionToSlug } from "@/lib/regionSlug";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
@@ -34,22 +35,42 @@ export default async function HirePage({
   const region = slugToRegion(slug);
   if (!region) notFound();
 
-  const { results: listings } = await db()
-    .prepare(
-      `SELECT
-        vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
-        vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
-        vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
-        (SELECT r2Key FROM van_photo
-         WHERE vanListingId = vl.id
-         ORDER BY position ASC, createdAt ASC LIMIT 1) AS coverPhotoKey
-       FROM van_listing vl
-       WHERE vl.status = 'published' AND vl.region = ?
-       ORDER BY vl.publishedAt DESC
-       LIMIT 60`
-    )
-    .bind(region)
-    .all<SearchResult>();
+  const [session, rawResult] = await Promise.all([
+    getSession(),
+    db()
+      .prepare(
+        `SELECT
+          vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
+          vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
+          vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
+          hp.firstName AS hostFirstName,
+          u.image      AS hostImage,
+          NULL         AS avgRating,
+          0            AS reviewCount,
+          0            AS isWishlisted,
+          (SELECT r2Key FROM van_photo
+           WHERE vanListingId = vl.id
+           ORDER BY position ASC, createdAt ASC LIMIT 1) AS coverPhotoKey
+         FROM van_listing vl
+         LEFT JOIN host_profile hp ON hp.userId = vl.hostUserId
+         LEFT JOIN user u          ON u.id      = vl.hostUserId
+         WHERE vl.status = 'published' AND vl.region = ?
+         ORDER BY vl.publishedAt DESC
+         LIMIT 60`
+      )
+      .bind(region)
+      .all<SearchResult>(),
+  ]);
+
+  let savedIds = new Set<string>();
+  if (session) {
+    const { results: saved } = await db()
+      .prepare("SELECT vanListingId FROM wishlist WHERE userId = ?")
+      .bind(session.user.id)
+      .all<{ vanListingId: string }>();
+    savedIds = new Set(saved.map((r) => r.vanListingId));
+  }
+  const listings = rawResult.results.map((l) => ({ ...l, isWishlisted: savedIds.has(l.id) ? 1 : 0 }));
 
   const island = listings[0]?.island ?? null;
 
@@ -73,9 +94,6 @@ export default async function HirePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div className="cs-container">
-        <a href="/vans" className="cs-muted cs-small" style={{ display: "inline-block", marginBottom: 12 }}>
-          ← All campervans
-        </a>
         <h1 style={{ marginBottom: 4 }}>Campervan Hire in {region}</h1>
         {island && (
           <p className="cs-muted" style={{ marginBottom: 24 }}>
