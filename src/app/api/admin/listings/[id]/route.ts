@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { sendBrandedEmail } from "@/lib/email";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   decision: z.enum(["approve", "reject"]),
@@ -62,6 +63,14 @@ export async function PATCH(
       .bind(now, noteVal, now, id)
       .run();
 
+    await logAudit({
+      actorUserId: session.user.id,
+      action: "listing.approve",
+      targetType: "van_listing",
+      targetId: id,
+      metadata: { name: row.name, note: noteVal },
+    });
+
     try {
       await sendBrandedEmail({
         to: row.email,
@@ -81,6 +90,14 @@ export async function PATCH(
       )
       .bind(noteVal, now, id)
       .run();
+
+    await logAudit({
+      actorUserId: session.user.id,
+      action: "listing.reject",
+      targetType: "van_listing",
+      targetId: id,
+      metadata: { name: row.name, note: noteVal },
+    });
 
     try {
       await sendBrandedEmail({

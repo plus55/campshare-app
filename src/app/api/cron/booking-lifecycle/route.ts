@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
-import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail } from "@/lib/email";
+import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail } from "@/lib/email";
 import type { Booking } from "@/lib/types";
 
 type CfEnv = { CRON_SECRET?: string };
@@ -196,8 +196,37 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
     }).catch((e) => console.error("Failed to send deposit released email", e));
   }
 
+  // Review prompts: fire once per booking, both parties simultaneously.
+  if (!booking.reviewPromptSentAt) {
+    const host = await db()
+      .prepare("SELECT email, name FROM user WHERE id = ?")
+      .bind(booking.hostUserId)
+      .first<{ email: string; name: string }>();
+
+    if (guest) {
+      await sendReviewPromptEmail({
+        to: guest.email,
+        recipientName: guest.name,
+        role: "guest",
+        bookingId: booking.id,
+        vanName: listing?.name ?? "",
+      }).catch((e) => console.error("Failed to send guest review prompt", e));
+    }
+    if (host) {
+      await sendReviewPromptEmail({
+        to: host.email,
+        recipientName: host.name,
+        role: "host",
+        bookingId: booking.id,
+        vanName: listing?.name ?? "",
+      }).catch((e) => console.error("Failed to send host review prompt", e));
+    }
+  }
+
   await db()
-    .prepare("UPDATE booking SET status = 'completed', completedAt = ?, updatedAt = ? WHERE id = ?")
-    .bind(nowSec, nowSec, booking.id)
+    .prepare(
+      "UPDATE booking SET status = 'completed', completedAt = ?, reviewPromptSentAt = COALESCE(reviewPromptSentAt, ?), updatedAt = ? WHERE id = ?"
+    )
+    .bind(nowSec, nowSec, nowSec, booking.id)
     .run();
 }

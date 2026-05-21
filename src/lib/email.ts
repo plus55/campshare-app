@@ -291,6 +291,31 @@ export async function sendPayoutSentEmail(opts: {
   });
 }
 
+export async function sendReviewPromptEmail(opts: {
+  to: string;
+  recipientName: string;
+  role: "guest" | "host";
+  bookingId: string;
+  vanName: string;
+}): Promise<void> {
+  const heading = opts.role === "guest" ? "How was your trip?" : "How was your guest?";
+  const subject = opts.role === "guest"
+    ? `How was your trip in ${opts.vanName}?`
+    : `How was your guest in ${opts.vanName}?`;
+  const intro = opts.role === "guest"
+    ? `Kia ora ${escapeHtml(opts.recipientName)}, share how your trip in ${escapeHtml(opts.vanName)} went. Your review helps future travellers find great hosts.`
+    : `Kia ora ${escapeHtml(opts.recipientName)}, leave a review for your recent guest in ${escapeHtml(opts.vanName)}. Reviews stay hidden until both sides submit, so feedback is honest.`;
+
+  await sendBrandedEmail({
+    to: opts.to,
+    subject,
+    heading,
+    intro,
+    cta: { label: "Leave a review", href: `${appUrl()}/trips/${opts.bookingId}/review` },
+    body: `<p style="color:#6b5d4f;font-size:13px;">Reviews are double-blind: yours and theirs go public together once both are submitted, or after 14 days — whichever comes first.</p>`,
+  });
+}
+
 export async function sendBookingMessageEmail(opts: {
   recipientEmail: string;
   recipientName: string;
