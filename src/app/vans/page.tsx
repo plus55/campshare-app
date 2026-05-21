@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import ListingCard, { type SearchResult } from "./ListingCard";
 import SearchFilters, { type FilterValues } from "./SearchFilters";
 import MapViewClient from "./MapViewClient";
@@ -25,7 +26,7 @@ export default async function VansPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const sp = await searchParams;
+  const [sp, session] = await Promise.all([searchParams, getSession()]);
 
   const region = sp.region || "";
   const vanType = sp.vanType || "";
@@ -59,19 +60,48 @@ export default async function VansPage({
       vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
       vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
       vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
+      hp.firstName AS hostFirstName,
+      u.image      AS hostImage,
+      COALESCE(rv.avgRating, NULL) AS avgRating,
+      COALESCE(rv.reviewCount, 0) AS reviewCount,
       (SELECT r2Key FROM van_photo
        WHERE vanListingId = vl.id
        ORDER BY position ASC, createdAt ASC LIMIT 1) AS coverPhotoKey
     FROM van_listing vl
+    LEFT JOIN host_profile hp ON hp.userId = vl.hostUserId
+    LEFT JOIN user u          ON u.id      = vl.hostUserId
+    LEFT JOIN (
+      SELECT b.vanListingId,
+             AVG(r.rating) AS avgRating,
+             COUNT(*)      AS reviewCount
+      FROM review r
+      JOIN booking b ON b.id = r.bookingId
+      WHERE r.role = 'guest'
+        AND (
+          EXISTS (SELECT 1 FROM review r2 WHERE r2.bookingId = r.bookingId AND r2.role = 'host')
+          OR (b.endDate / 1000 + 1296000) <= unixepoch()
+        )
+      GROUP BY b.vanListingId
+    ) rv ON rv.vanListingId = vl.id
     WHERE ${whereClauses.join(" AND ")}
     ORDER BY vl.publishedAt DESC
     LIMIT 60
   `;
 
-  const { results: listings } = await db()
+  const { results: rawListings } = await db()
     .prepare(sql)
     .bind(...binds)
     .all<SearchResult>();
+
+  let savedIds = new Set<string>();
+  if (session) {
+    const { results: saved } = await db()
+      .prepare("SELECT vanListingId FROM wishlist WHERE userId = ?")
+      .bind(session.user.id)
+      .all<{ vanListingId: string }>();
+    savedIds = new Set(saved.map((r) => r.vanListingId));
+  }
+  const listings = rawListings.map((l) => ({ ...l, isWishlisted: savedIds.has(l.id) ? 1 : 0 }));
 
   const initialFilters: FilterValues = {
     region, vanType,
@@ -85,15 +115,7 @@ export default async function VansPage({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
-      {/* Header */}
-      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--sand-200)", display: "flex", alignItems: "center", gap: 12 }}>
-        <a href="/" style={{ textDecoration: "none" }}>
-          <span className="cs-brand" style={{ fontSize: 18 }}>CampShare</span>
-        </a>
-        <span className="cs-muted cs-small">New Zealand campervans</span>
-      </div>
-
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - var(--header-h))", overflow: "hidden" }}>
       {/* Filters */}
       <SearchFilters initial={initialFilters} />
 

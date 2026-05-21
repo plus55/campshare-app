@@ -4,19 +4,30 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { photoUrl } from "@/lib/photos";
 import type { AvailabilityBlock, VanListing, VanPhoto } from "@/lib/types";
+import Link from "next/link";
 import { BookingRequestForm } from "./BookingRequestForm";
+import PhotoGalleryLightbox from "./PhotoGalleryLightbox";
+import ListingReviews from "./ListingReviews";
+import PickupMapClient from "./PickupMapClient";
+import SimilarListings from "./SimilarListings";
+import StickyBookCta from "./StickyBookCta";
+import ShareButton from "./ShareButton";
+import WishlistHeart from "@/components/WishlistHeart";
+import { getReviewsForListing } from "@/lib/reviews";
 
 interface ListingWithHost extends VanListing {
   hostFirstName: string;
   hostBio: string | null;
+  hostImage: string | null;
 }
 
 async function getListing(slug: string): Promise<ListingWithHost | null> {
   return db()
     .prepare(
-      `SELECT vl.*, hp.firstName AS hostFirstName, hp.bio AS hostBio
+      `SELECT vl.*, hp.firstName AS hostFirstName, hp.bio AS hostBio, u.image AS hostImage
        FROM van_listing vl
        JOIN host_profile hp ON hp.userId = vl.hostUserId
+       LEFT JOIN user u ON u.id = vl.hostUserId
        WHERE vl.slug = ? AND vl.status = 'published'`
     )
     .bind(slug)
@@ -55,48 +66,54 @@ export default async function VanPage({
   const isOwner = session?.user.id === listing.hostUserId;
   const isLoggedIn = !!session;
 
-  const photos = await db()
-    .prepare("SELECT * FROM van_photo WHERE vanListingId = ? ORDER BY position ASC, createdAt ASC")
-    .bind(listing.id)
-    .all<VanPhoto>();
+  const [photosResult, blocksResult, wishlistRow] = await Promise.all([
+    db()
+      .prepare("SELECT * FROM van_photo WHERE vanListingId = ? ORDER BY position ASC, createdAt ASC")
+      .bind(listing.id)
+      .all<VanPhoto>(),
+    db()
+      .prepare("SELECT * FROM availability_block WHERE vanListingId = ? ORDER BY startDate ASC")
+      .bind(listing.id)
+      .all<AvailabilityBlock>(),
+    session && !isOwner
+      ? db()
+          .prepare("SELECT 1 FROM wishlist WHERE userId = ? AND vanListingId = ?")
+          .bind(session.user.id, listing.id)
+          .first()
+      : Promise.resolve(null),
+  ]);
 
-  const blocks = await db()
-    .prepare("SELECT * FROM availability_block WHERE vanListingId = ? ORDER BY startDate ASC")
-    .bind(listing.id)
-    .all<AvailabilityBlock>();
+  const userWishlisted = !!wishlistRow;
 
   let features: string[] = [];
   try { features = JSON.parse(listing.features) as string[]; } catch { features = []; }
 
-  const coverPhoto = photos.results[0];
   const nightlyDollars = Math.round(listing.nightlyRate / 100);
 
+  const galleryPhotos = photosResult.results
+    .map((p) => {
+      const url = photoUrl(p.r2Key);
+      return url ? { url, alt: p.caption ?? listing.name } : null;
+    })
+    .filter((p): p is { url: string; alt: string } => p !== null);
+
   return (
-    <main className="cs-page">
+    <main className="cs-page" style={{ paddingBottom: 80 }}>
       <div className="cs-container">
-        <span className="cs-brand">CampShare</span>
 
-        {/* Hero photo */}
-        {coverPhoto && photoUrl(coverPhoto.r2Key) && (
-          <div style={{ margin: "16px 0", borderRadius: 12, overflow: "hidden", aspectRatio: "16/9", maxHeight: 480 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photoUrl(coverPhoto.r2Key)}
-              alt={listing.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "flex-start", marginTop: 16 }}>
+        {/* Title + actions */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, margin: "20px 0 10px" }}>
           <h1 style={{ margin: 0 }}>{listing.name}</h1>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>${nightlyDollars}<span className="cs-muted" style={{ fontWeight: 400, fontSize: 14 }}>/night</span></p>
-            <p className="cs-muted cs-small" style={{ margin: 0 }}>min {listing.minimumNights} night{listing.minimumNights !== 1 ? "s" : ""}</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+            <ShareButton title={listing.name} />
+            {!isOwner && (
+              <WishlistHeart vanListingId={listing.id} initialSaved={userWishlisted} />
+            )}
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
+        {/* Info pills */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
           <span className="cs-pill">{listing.vanType}</span>
           <span className="cs-pill">{listing.region} · {listing.island} Island</span>
           <span className="cs-pill">Sleeps {listing.sleeps}</span>
@@ -104,78 +121,126 @@ export default async function VanPage({
           {listing.instantBook ? <span className="cs-pill">Instant book</span> : null}
         </div>
 
-        {/* Photo gallery */}
-        {photos.results.length > 1 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8, marginTop: 16 }}>
-            {photos.results.slice(1).map((p) => {
-              const url = photoUrl(p.r2Key);
-              return url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={p.id} src={url} alt={p.caption ?? ""} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: 8 }} />
-              ) : null;
-            })}
-          </div>
-        )}
+        {/* Photo gallery / lightbox */}
+        <PhotoGalleryLightbox photos={galleryPhotos} />
 
-        <div className="cs-card" style={{ marginTop: 24 }}>
-          <h2>About this van</h2>
-          <p style={{ whiteSpace: "pre-wrap" }}>{listing.description}</p>
-        </div>
+        {/* Two-column content */}
+        <div className="pdp-grid" style={{ marginTop: 32 }}>
 
-        {features.length > 0 && (
-          <div className="cs-card" style={{ marginTop: 16 }}>
-            <h2>Features</h2>
-            <div className="cs-tags">
-              {features.map((f) => <span key={f} className="cs-tag is-active">{f}</span>)}
+          {/* LEFT — scrollable content */}
+          <div>
+            <div className="cs-card">
+              <h2>About this van</h2>
+              <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{listing.description}</p>
+            </div>
+
+            {features.length > 0 && (
+              <div className="cs-card" style={{ marginTop: 16 }}>
+                <h2>Features</h2>
+                <div className="cs-tags">
+                  {features.map((f) => <span key={f} className="cs-tag is-active">{f}</span>)}
+                </div>
+              </div>
+            )}
+
+            {listing.houseRules && (
+              <div className="cs-card" style={{ marginTop: 16 }}>
+                <h2>House rules</h2>
+                <p className="cs-muted" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{listing.houseRules}</p>
+              </div>
+            )}
+
+            {blocksResult.results.length > 0 && (
+              <div className="cs-card" style={{ marginTop: 16 }}>
+                <h2>Availability</h2>
+                <ReadOnlyCalendar blocks={blocksResult.results} />
+              </div>
+            )}
+
+            {listing.pickupLat && listing.pickupLng && (
+              <div className="cs-card" style={{ marginTop: 16 }}>
+                <h2>Pickup area</h2>
+                <p className="cs-muted cs-small" style={{ marginBottom: 12 }}>
+                  Exact pickup location shared after booking is confirmed.
+                </p>
+                <PickupMapClient lat={listing.pickupLat} lng={listing.pickupLng} />
+              </div>
+            )}
+
+            <ListingReviews listingId={listing.id} />
+
+            <SimilarListings region={listing.region} excludeId={listing.id} />
+
+            <div className="cs-card" style={{ marginTop: 16 }}>
+              <h2>About the host</h2>
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: listing.hostBio ? 12 : 0 }}>
+                {listing.hostImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={listing.hostImage}
+                    alt={listing.hostFirstName}
+                    style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+                  />
+                ) : (
+                  <span style={{
+                    width: 48, height: 48, borderRadius: "50%",
+                    background: "var(--forest)", color: "var(--cream)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, flexShrink: 0,
+                  }}>
+                    {listing.hostFirstName[0].toUpperCase()}
+                  </span>
+                )}
+                <div>
+                  <span style={{ fontWeight: 600, fontSize: 17, display: "block" }}>{listing.hostFirstName}</span>
+                  <Link href={`/hosts/${listing.hostUserId}`} className="cs-muted cs-small" style={{ textDecoration: "underline" }}>
+                    View host profile
+                  </Link>
+                </div>
+              </div>
+              {listing.hostBio && <p className="cs-muted" style={{ margin: 0 }}>{listing.hostBio}</p>}
             </div>
           </div>
-        )}
 
-        {listing.houseRules && (
-          <div className="cs-card" style={{ marginTop: 16 }}>
-            <h2>House rules</h2>
-            <p className="cs-muted" style={{ whiteSpace: "pre-wrap" }}>{listing.houseRules}</p>
-          </div>
-        )}
+          {/* RIGHT — sticky booking widget */}
+          <div className="pdp-right">
+            <div className="cs-card" id="book-form">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 22 }}>
+                  ${nightlyDollars}
+                  <span className="cs-muted" style={{ fontWeight: 400, fontSize: 14 }}>/night</span>
+                </p>
+                <p className="cs-muted cs-small" style={{ margin: 0 }}>
+                  min {listing.minimumNights} night{listing.minimumNights !== 1 ? "s" : ""}
+                </p>
+              </div>
 
-        {blocks.results.length > 0 && (
-          <div className="cs-card" style={{ marginTop: 16 }}>
-            <h2>Availability</h2>
-            <ReadOnlyCalendar blocks={blocks.results} />
-          </div>
-        )}
-
-        <div className="cs-card" style={{ marginTop: 16 }}>
-          <h2>About the host</h2>
-          <p style={{ fontWeight: 500 }}>{listing.hostFirstName}</p>
-          {listing.hostBio && <p className="cs-muted">{listing.hostBio}</p>}
-        </div>
-
-        <div className="cs-card" style={{ marginTop: 16 }}>
-          <h2 style={{ marginBottom: 16 }}>Book this van</h2>
-          {isOwner ? (
-            <p className="cs-muted">This is your listing.</p>
-          ) : isLoggedIn ? (
-            <BookingRequestForm
-              listingId={listing.id}
-              nightlyRateCents={listing.nightlyRate}
-              minimumNights={listing.minimumNights}
-            />
-          ) : (
-            <div style={{ textAlign: "center" }}>
-              <p className="cs-muted" style={{ marginBottom: 16 }}>Sign in to request a booking.</p>
-              <a href="/login" className="cs-btn cs-btn-primary">Sign in to book</a>
+              {isOwner ? (
+                <p className="cs-muted">This is your listing.</p>
+              ) : isLoggedIn ? (
+                <BookingRequestForm
+                  listingId={listing.id}
+                  nightlyRateCents={listing.nightlyRate}
+                  minimumNights={listing.minimumNights}
+                />
+              ) : (
+                <div style={{ textAlign: "center" }}>
+                  <p className="cs-muted" style={{ marginBottom: 16 }}>Sign in to request a booking.</p>
+                  <a href="/login" className="cs-btn cs-btn-primary">Sign in to book</a>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-
-        <p className="cs-muted cs-small" style={{ marginTop: 24, textAlign: "center" }}>
-          <a href="https://www.campshare.co.nz">campshare.co.nz</a>
-        </p>
       </div>
+
+      {/* Mobile sticky CTA — hidden on desktop via .pdp-sticky-cta CSS */}
+      {!isOwner && <StickyBookCta nightlyRateCents={listing.nightlyRate} />}
     </main>
   );
 }
+
+// ── Read-only availability calendar ─────────────────────────────────────────
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];

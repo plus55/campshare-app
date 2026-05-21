@@ -40,7 +40,6 @@ export default async function DashboardPage() {
   return (
     <main className="cs-page">
       <div className="cs-container">
-        <span className="cs-brand">CampShare</span>
         <h1>Kia ora, {firstName}.</h1>
         <p className="cs-muted">Welcome to your CampShare dashboard.</p>
 
