@@ -133,6 +133,27 @@ export async function sendBookingRequestedEmail(opts: {
   });
 }
 
+export async function sendInstantBookedHostEmail(opts: {
+  hostEmail: string;
+  hostFirstName: string;
+  guestName: string;
+  vanName: string;
+  bookingId: string;
+  startDate: number;
+  endDate: number;
+  nights: number;
+  totalCents: number;
+}): Promise<void> {
+  await sendBrandedEmail({
+    to: opts.hostEmail,
+    subject: `${opts.vanName} was instantly booked`,
+    heading: "Your van was instantly booked!",
+    intro: `Kia ora ${escapeHtml(opts.hostFirstName)}, great news — ${escapeHtml(opts.guestName)} has instantly booked ${escapeHtml(opts.vanName)}. Payment has been captured and the dates are blocked.`,
+    cta: { label: "View booking", href: `${appUrl()}/dashboard/bookings/${opts.bookingId}` },
+    body: `<p>${fmtDate(opts.startDate)} → ${fmtDate(opts.endDate)} · ${opts.nights} night${opts.nights !== 1 ? "s" : ""} · ${fmtDollars(opts.totalCents)} total</p><p style="color:#6b5d4f;font-size:13px;">No action needed — your calendar has been updated automatically.</p>`,
+  });
+}
+
 export async function sendBookingAcceptedEmail(opts: {
   guestEmail: string;
   guestName: string;
@@ -335,5 +356,39 @@ export async function sendBookingMessageEmail(opts: {
     intro: `Kia ora ${escapeHtml(opts.recipientName)}, ${escapeHtml(opts.senderName)} sent you a message about the booking for ${escapeHtml(opts.vanName)}.`,
     cta: { label: "View message", href },
     body: `<p style="background:#f5ede0;border-radius:8px;padding:12px 16px;font-style:italic;">"${escapeHtml(opts.messagePreview.slice(0, 200))}${opts.messagePreview.length > 200 ? "…" : ""}"</p>`,
+  });
+}
+
+export async function sendSavedSearchAlertEmail(opts: {
+  to: string;
+  recipientName: string;
+  searchDescription: string;
+  matches: { name: string; slug: string; region: string; nightlyRate: number }[];
+  searchUrl: string;
+}): Promise<void> {
+  const count = opts.matches.length;
+  const subject = count === 1
+    ? `New van matches your search: ${opts.matches[0].name}`
+    : `${count} new vans match your saved search`;
+
+  const items = opts.matches.slice(0, 5).map((m) => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #e8dfd3;">
+        <a href="${appUrl()}/vans/${escapeHtml(m.slug)}" style="color:#1a4332;text-decoration:none;font-weight:600;">${escapeHtml(m.name)}</a>
+        <div style="color:#6b5d4f;font-size:13px;margin-top:2px;">${escapeHtml(m.region)} · $${Math.round(m.nightlyRate / 100)}/night</div>
+      </td>
+    </tr>`).join("");
+
+  const more = count > 5
+    ? `<p style="color:#6b5d4f;font-size:13px;margin-top:12px;">…and ${count - 5} more.</p>`
+    : "";
+
+  await sendBrandedEmail({
+    to: opts.to,
+    subject,
+    heading: count === 1 ? "A new van matches your search" : `${count} new vans match your search`,
+    intro: `Kia ora ${escapeHtml(opts.recipientName)}, ${count === 1 ? "a new campervan" : `${count} new campervans`} matching <em>${escapeHtml(opts.searchDescription)}</em> just hit CampShare.`,
+    cta: { label: "View all matches", href: opts.searchUrl },
+    body: `<table role="presentation" style="width:100%;border-collapse:collapse;margin-top:8px;">${items}</table>${more}<p style="color:#6b5d4f;font-size:12px;margin-top:24px;">Manage your saved searches in <a href="${appUrl()}/dashboard/saved?tab=searches" style="color:#b8624a;">your dashboard</a>.</p>`,
   });
 }

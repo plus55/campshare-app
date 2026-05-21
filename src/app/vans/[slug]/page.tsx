@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { photoUrl } from "@/lib/photos";
 import type { AvailabilityBlock, VanListing, VanPhoto } from "@/lib/types";
 import Link from "next/link";
-import { BookingRequestForm } from "./BookingRequestForm";
+import { BookingRequestForm, type ListingAddon } from "./BookingRequestForm";
 import PhotoGalleryLightbox from "./PhotoGalleryLightbox";
 import ListingReviews from "./ListingReviews";
 import PickupMapClient from "./PickupMapClient";
@@ -66,7 +66,7 @@ export default async function VanPage({
   const isOwner = session?.user.id === listing.hostUserId;
   const isLoggedIn = !!session;
 
-  const [photosResult, blocksResult, wishlistRow] = await Promise.all([
+  const [photosResult, blocksResult, wishlistRow, addonsResult] = await Promise.all([
     db()
       .prepare("SELECT * FROM van_photo WHERE vanListingId = ? ORDER BY position ASC, createdAt ASC")
       .bind(listing.id)
@@ -81,6 +81,16 @@ export default async function VanPage({
           .bind(session.user.id, listing.id)
           .first()
       : Promise.resolve(null),
+    db()
+      .prepare(
+        `SELECT la.addonId, a.name, a.description, la.priceNZDCents, a.priceType
+         FROM listing_addon la
+         JOIN addon a ON a.id = la.addonId
+         WHERE la.vanListingId = ? AND a.active = 1
+         ORDER BY a.sortOrder`
+      )
+      .bind(listing.id)
+      .all<ListingAddon>(),
   ]);
 
   const userWishlisted = !!wishlistRow;
@@ -222,6 +232,8 @@ export default async function VanPage({
                   listingId={listing.id}
                   nightlyRateCents={listing.nightlyRate}
                   minimumNights={listing.minimumNights}
+                  instantBook={!!listing.instantBook}
+                  listingAddons={addonsResult.results}
                 />
               ) : (
                 <div style={{ textAlign: "center" }}>

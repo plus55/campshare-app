@@ -12,12 +12,17 @@ export interface BookingTotals {
   depositCents: number;
 }
 
-export function calcBookingTotals(nightlyRateCents: number, nights: number): BookingTotals {
+// Add-ons are fee-free: hosts keep 100% of add-on revenue, no platform commission.
+export function calcBookingTotals(
+  nightlyRateCents: number,
+  nights: number,
+  addonTotalCents = 0,
+): BookingTotals {
   const subtotalCents = nightlyRateCents * nights;
   const serviceFeeCents = Math.round(subtotalCents * COMMISSION_GUEST_PCT / 100);
   const gstOnFeeCents = Math.round(serviceFeeCents * GST_PCT / 100);
-  const totalCents = subtotalCents + serviceFeeCents + gstOnFeeCents;
-  const hostPayoutCents = Math.round(subtotalCents * (1 - COMMISSION_HOST_PCT / 100));
+  const totalCents = subtotalCents + serviceFeeCents + gstOnFeeCents + addonTotalCents;
+  const hostPayoutCents = Math.round(subtotalCents * (1 - COMMISSION_HOST_PCT / 100)) + addonTotalCents;
   return {
     subtotalCents,
     serviceFeeCents,

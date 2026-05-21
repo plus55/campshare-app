@@ -4,7 +4,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { calcBookingTotals } from "@/lib/money";
-import { sendBookingRequestedEmail } from "@/lib/email";
+import { sendBookingRequestedEmail, sendPaymentCapturedEmail, sendInstantBookedHostEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import type { Booking, VanListing } from "@/lib/types";
 
@@ -15,6 +15,7 @@ const schema = z.object({
   guestCount: z.number().int().min(1).max(20),
   message: z.string().max(2000).optional().nullable(),
   paymentIntentId: z.string().min(1),
+  selectedAddonIds: z.array(z.string()).optional().default([]),
 });
 
 function bad(message: string, status = 400) {
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error.issues[0]?.message ?? "Invalid payload");
 
-  const { listingId, startDate, endDate, guestCount, message, paymentIntentId } = parsed.data;
+  const { listingId, startDate, endDate, guestCount, message, paymentIntentId, selectedAddonIds } = parsed.data;
 
   const startMs = parseDateToMs(startDate);
   const endMs   = parseDateToMs(endDate);
@@ -73,16 +74,53 @@ export async function POST(req: Request) {
   const paymentMethod = pi.payment_method as string | null;
   const customerStripeId = pi.customer as string | null;
 
-  const totals = calcBookingTotals(listing.nightlyRate, nights);
+  // Resolve selected add-ons to verify they're valid for this listing
+  let addonTotalCents = 0;
+  let resolvedAddons: Array<{ addonId: string; name: string; priceNZDCents: number }> = [];
+  if (selectedAddonIds.length > 0) {
+    const rows = await db()
+      .prepare(
+        `SELECT la.addonId, a.name, la.priceNZDCents
+         FROM listing_addon la
+         JOIN addon a ON a.id = la.addonId
+         WHERE la.vanListingId = ?`
+      )
+      .bind(listingId)
+      .all<{ addonId: string; name: string; priceNZDCents: number }>();
+    const available = new Map(rows.results.map((r) => [r.addonId, r]));
+    resolvedAddons = selectedAddonIds
+      .map((aid) => available.get(aid))
+      .filter((r): r is { addonId: string; name: string; priceNZDCents: number } => !!r);
+    addonTotalCents = resolvedAddons.reduce((sum, r) => sum + r.priceNZDCents, 0);
+  }
 
-  // Sanity-check PI amount matches expected total
+  const totals = calcBookingTotals(listing.nightlyRate, nights, addonTotalCents);
+
+  // Sanity-check PI amount matches expected total (including add-ons)
   if (pi.amount !== totals.totalCents) {
     return bad("Payment amount mismatch. Please start the booking again.");
   }
 
+  const isInstantBook = !!listing.instantBook;
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + 48 * 60 * 60;
   const bookingId = crypto.randomUUID();
+
+  // For instant-book: capture payment before creating the booking record
+  if (isInstantBook) {
+    let captureResult;
+    try {
+      captureResult = await s.paymentIntents.capture(paymentIntentId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Payment capture failed";
+      return NextResponse.json({ error: `Could not process payment: ${msg}` }, { status: 402 });
+    }
+    if (captureResult.status !== "succeeded") {
+      return NextResponse.json({ error: "Payment could not be processed — please try again" }, { status: 402 });
+    }
+  }
+
+  const bookingStatus = isInstantBook ? "accepted" : "requested";
 
   await db()
     .prepare(
@@ -91,10 +129,10 @@ export async function POST(req: Request) {
           startDate, endDate, nights, guestCount,
           nightlyRateCents, subtotalCents, serviceFeeCents, gstOnFeeCents,
           hostPayoutCents, totalCents, depositCents, cancellationPolicy,
-          guestMessage, status,
+          guestMessage, status, addonTotalCents,
           paymentIntentId, depositPaymentMethodId, customerStripeId,
           requestedAt, expiresAt, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       bookingId, listingId, session.user.id, listing.hostUserId,
@@ -103,10 +141,37 @@ export async function POST(req: Request) {
       totals.subtotalCents, totals.serviceFeeCents, totals.gstOnFeeCents,
       totals.hostPayoutCents, totals.totalCents, totals.depositCents, "standard_v1",
       message ?? null,
+      bookingStatus, addonTotalCents,
       paymentIntentId, paymentMethod ?? null, customerStripeId ?? null,
       now, expiresAt, now, now
     )
     .run();
+
+  // Store add-on selections as a snapshot
+  for (const addon of resolvedAddons) {
+    await db()
+      .prepare(
+        "INSERT INTO booking_addon (id, bookingId, addonId, name, priceNZDCents) VALUES (?, ?, ?, ?, ?)"
+      )
+      .bind(crypto.randomUUID(), bookingId, addon.addonId, addon.name, addon.priceNZDCents)
+      .run();
+  }
+
+  if (isInstantBook) {
+    // Mark payment as received and create the availability block immediately
+    await db()
+      .prepare("UPDATE booking SET respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?")
+      .bind(now, now, now, bookingId)
+      .run();
+
+    await db()
+      .prepare(
+        `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
+         VALUES (?, ?, ?, ?, 'booking', ?, ?)`
+      )
+      .bind(crypto.randomUUID(), listingId, startMs, endMs, bookingId, now)
+      .run();
+  }
 
   const hostRow = await db()
     .prepare("SELECT email, name FROM user WHERE id = ?")
@@ -118,29 +183,83 @@ export async function POST(req: Request) {
     .bind(listing.hostUserId)
     .first<{ firstName: string }>();
 
-  if (hostRow) {
+  if (isInstantBook) {
+    // Guest: payment captured confirmation; Host: instant booking notification
+    const hostFirstName = hp?.firstName ?? hostRow?.name?.split(" ")[0] ?? "Host";
+
     try {
-      await sendBookingRequestedEmail({
-        hostEmail: hostRow.email,
-        hostFirstName: hp?.firstName ?? hostRow.name.split(" ")[0],
+      await sendPaymentCapturedEmail({
+        guestEmail: session.user.email,
         guestName: session.user.name ?? session.user.email,
+        hostFirstName,
         vanName: listing.name,
         bookingId,
         startDate: startMs,
         endDate: endMs,
         nights,
+        subtotalCents: totals.subtotalCents,
+        serviceFeeCents: totals.serviceFeeCents,
+        gstOnFeeCents: totals.gstOnFeeCents,
         totalCents: totals.totalCents,
+        depositCents: totals.depositCents,
       });
     } catch (e) {
-      console.error("Failed to send booking request email", e);
+      console.error("Failed to send instant-book guest email", e);
     }
-  }
 
-  await createNotification({
-    userId: listing.hostUserId,
-    type: "booking_requested",
-    payload: { bookingId, vanName: listing.name },
-  });
+    if (hostRow) {
+      try {
+        await sendInstantBookedHostEmail({
+          hostEmail: hostRow.email,
+          hostFirstName,
+          guestName: session.user.name ?? session.user.email,
+          vanName: listing.name,
+          bookingId,
+          startDate: startMs,
+          endDate: endMs,
+          nights,
+          totalCents: totals.totalCents,
+        });
+      } catch (e) {
+        console.error("Failed to send instant-book host email", e);
+      }
+    }
+
+    await createNotification({
+      userId: session.user.id,
+      type: "booking_accepted",
+      payload: { bookingId, vanName: listing.name },
+    });
+    await createNotification({
+      userId: listing.hostUserId,
+      type: "booking_requested",
+      payload: { bookingId, vanName: listing.name, instant: true },
+    });
+  } else {
+    if (hostRow) {
+      try {
+        await sendBookingRequestedEmail({
+          hostEmail: hostRow.email,
+          hostFirstName: hp?.firstName ?? hostRow.name.split(" ")[0],
+          guestName: session.user.name ?? session.user.email,
+          vanName: listing.name,
+          bookingId,
+          startDate: startMs,
+          endDate: endMs,
+          nights,
+          totalCents: totals.totalCents,
+        });
+      } catch (e) {
+        console.error("Failed to send booking request email", e);
+      }
+    }
+
+    await createNotification({
+      userId: listing.hostUserId,
+      type: "booking_requested",
+      payload: { bookingId, vanName: listing.name },
+    });
+  }
 
   return NextResponse.json({ id: bookingId }, { status: 201 });
 }

@@ -5,16 +5,27 @@ import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
+export interface ListingAddon {
+  addonId: string;
+  name: string;
+  description: string | null;
+  priceNZDCents: number;
+  priceType: "flat" | "per_night";
+}
+
 interface Props {
   listingId: string;
   nightlyRateCents: number;
   minimumNights: number;
+  instantBook: boolean;
+  listingAddons: ListingAddon[];
 }
 
 interface Totals {
   subtotalCents: number;
   serviceFeeCents: number;
   gstOnFeeCents: number;
+  addonTotalCents: number;
   totalCents: number;
   depositCents: number;
 }
@@ -46,12 +57,16 @@ interface PaymentStepProps {
   nights: number;
   totals: Totals;
   paymentIntentId: string;
+  instantBook: boolean;
+  selectedAddonIds: string[];
+  selectedAddons: ListingAddon[];
   onBack: () => void;
 }
 
 function PaymentStep({
   listingId, startDate, endDate, guestCount, message,
-  nights, totals, paymentIntentId, onBack,
+  nights, totals, paymentIntentId, instantBook,
+  selectedAddonIds, selectedAddons, onBack,
 }: PaymentStepProps) {
   const router = useRouter();
   const stripeHook = useStripe();
@@ -64,13 +79,10 @@ function PaymentStep({
     setLoading(true);
     setError(null);
 
-    // Confirm the PaymentIntent via Stripe Elements
     const { error: confirmError, paymentIntent } = await stripeHook.confirmPayment({
       elements,
       redirect: "if_required",
-      confirmParams: {
-        return_url: window.location.href,
-      },
+      confirmParams: { return_url: window.location.href },
     });
 
     if (confirmError) {
@@ -85,7 +97,6 @@ function PaymentStep({
       return;
     }
 
-    // Create the booking now that PI is authorized
     try {
       const res = await fetch("/api/bookings", {
         method: "POST",
@@ -94,6 +105,7 @@ function PaymentStep({
           listingId, startDate, endDate, guestCount,
           message: message || null,
           paymentIntentId,
+          selectedAddonIds,
         }),
       });
       const data = await res.json() as { id?: string; error?: string };
@@ -112,15 +124,18 @@ function PaymentStep({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Booking summary */}
-      <div style={{
-        background: "#f5ede0", borderRadius: 10, padding: "14px 16px",
-        fontSize: 14, color: "var(--ink-700)",
-      }}>
+      <div style={{ background: "#f5ede0", borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "var(--ink-700)" }}>
         <p style={{ margin: "0 0 8px", fontWeight: 600 }}>Booking summary</p>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Van hire ({nights} night{nights !== 1 ? "s" : ""})</span>
           <span>{fmtNzd(totals.subtotalCents)}</span>
         </div>
+        {selectedAddons.map((a) => (
+          <div key={a.addonId} style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+            <span>{a.name}</span>
+            <span>{fmtNzd(a.priceNZDCents)}</span>
+          </div>
+        ))}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
           <span>Service fee (12%)</span>
           <span>{fmtNzd(totals.serviceFeeCents)}</span>
@@ -141,7 +156,6 @@ function PaymentStep({
         </p>
       </div>
 
-      {/* Stripe PaymentElement */}
       <PaymentElement />
 
       {error && <p className="cs-error" style={{ margin: 0 }}>{error}</p>}
@@ -151,7 +165,7 @@ function PaymentStep({
         disabled={loading || !stripeHook || !elements}
         onClick={submit}
       >
-        {loading ? "Processing…" : `Confirm and pay ${fmtNzd(totals.totalCents)}`}
+        {loading ? "Processing…" : instantBook ? `Confirm and pay ${fmtNzd(totals.totalCents)}` : `Authorise ${fmtNzd(totals.totalCents)}`}
       </button>
 
       <button
@@ -164,19 +178,22 @@ function PaymentStep({
       </button>
 
       <p style={{ margin: 0, fontSize: 12, color: "var(--ink-300)", textAlign: "center" }}>
-        Card is authorised now — charged only when the host accepts.
+        {instantBook
+          ? "Payment charged immediately — booking confirmed instantly, no host approval needed."
+          : "Card authorised now — charged only when the host accepts."}
       </p>
     </div>
   );
 }
 
 // ── Main form component ───────────────────────────────────────────────────
-export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights }: Props) {
+export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights, instantBook, listingAddons }: Props) {
   const [step, setStep] = useState<"details" | "payment">("details");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate]     = useState("");
   const [guestCount, setGuestCount] = useState(1);
   const [message, setMessage]     = useState("");
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -186,6 +203,14 @@ export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights 
   const nights = startDate && endDate
     ? Math.max(0, Math.round((parseDateMs(endDate) - parseDateMs(startDate)) / 86400000))
     : 0;
+
+  const selectedAddons = listingAddons.filter((a) => selectedAddonIds.includes(a.addonId));
+
+  function toggleAddon(addonId: string) {
+    setSelectedAddonIds((prev) =>
+      prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
+    );
+  }
 
   const handleBack = useCallback(() => {
     setStep("details");
@@ -204,7 +229,7 @@ export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights 
       const res = await fetch("/api/bookings/payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId, startDate, endDate, guestCount }),
+        body: JSON.stringify({ listingId, startDate, endDate, guestCount, selectedAddonIds }),
       });
       const data = await res.json() as {
         clientSecret?: string;
@@ -233,10 +258,7 @@ export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights 
         stripe={stripePromise}
         options={{
           clientSecret,
-          appearance: {
-            theme: "stripe",
-            variables: { colorPrimary: "#b8624a", borderRadius: "8px" },
-          },
+          appearance: { theme: "stripe", variables: { colorPrimary: "#b8624a", borderRadius: "8px" } },
         }}
       >
         <PaymentStep
@@ -248,6 +270,9 @@ export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights 
           nights={nights}
           totals={totals}
           paymentIntentId={paymentIntentId}
+          instantBook={instantBook}
+          selectedAddonIds={selectedAddonIds}
+          selectedAddons={selectedAddons}
           onBack={handleBack}
         />
       </Elements>
@@ -293,6 +318,40 @@ export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights 
         />
       </label>
 
+      {listingAddons.length > 0 && (
+        <div>
+          <p className="cs-label" style={{ margin: "0 0 8px" }}>Add-ons (optional)</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {listingAddons.map((addon) => (
+              <label
+                key={addon.addonId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: `1px solid ${selectedAddonIds.includes(addon.addonId) ? "var(--clay)" : "var(--line)"}`,
+                  background: selectedAddonIds.includes(addon.addonId) ? "#fdf0eb" : "transparent",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedAddonIds.includes(addon.addonId)}
+                  onChange={() => toggleAddon(addon.addonId)}
+                  style={{ flexShrink: 0 }}
+                />
+                <span style={{ flex: 1, fontSize: 14 }}>{addon.name}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--clay)", flexShrink: 0 }}>
+                  +{fmtNzd(addon.priceNZDCents)}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       <label className="cs-field" style={{ margin: 0 }}>
         <span className="cs-label">Message to host (optional)</span>
         <textarea
@@ -317,10 +376,12 @@ export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights 
         disabled={loading}
         onClick={continueToPayment}
       >
-        {loading ? "Checking…" : "Continue to payment"}
+        {loading ? "Checking…" : instantBook ? "Continue to instant payment" : "Continue to payment"}
       </button>
       <p style={{ margin: 0, fontSize: 12, color: "var(--ink-300)", textAlign: "center" }}>
-        Card authorised now — charged only when the host accepts.
+        {instantBook
+          ? "Payment charged immediately — booking confirmed with no waiting."
+          : "Card authorised now — charged only when the host accepts."}
       </p>
     </div>
   );

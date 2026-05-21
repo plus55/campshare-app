@@ -7,6 +7,12 @@ import { BookingActions } from "@/components/BookingActions";
 import { MessageSendForm } from "@/components/MessageSendForm";
 import type { Booking, BookingMessage } from "@/lib/types";
 
+interface BookingAddon {
+  id: string;
+  name: string;
+  priceNZDCents: number;
+}
+
 interface BookingDetail extends Booking {
   vanName: string;
   vanSlug: string;
@@ -52,16 +58,24 @@ export default async function DashboardBookingDetailPage({
     }
   }
 
-  const msgs = await db()
-    .prepare(
-      `SELECT bm.*, u.name AS senderName
-       FROM booking_message bm
-       JOIN user u ON u.id = bm.senderUserId
-       WHERE bm.bookingId = ?
-       ORDER BY bm.createdAt ASC`
-    )
-    .bind(id)
-    .all<BookingMessage & { senderName: string }>();
+  const [msgsResult, addonsResult] = await Promise.all([
+    db()
+      .prepare(
+        `SELECT bm.*, u.name AS senderName
+         FROM booking_message bm
+         JOIN user u ON u.id = bm.senderUserId
+         WHERE bm.bookingId = ?
+         ORDER BY bm.createdAt ASC`
+      )
+      .bind(id)
+      .all<BookingMessage & { senderName: string }>(),
+    db()
+      .prepare("SELECT id, name, priceNZDCents FROM booking_addon WHERE bookingId = ?")
+      .bind(id)
+      .all<BookingAddon>(),
+  ]);
+  const msgs = msgsResult;
+  const bookingAddons = addonsResult.results;
 
   const isActive = ["requested", "accepted", "in_progress"].includes(booking.status);
 
@@ -95,6 +109,11 @@ export default async function DashboardBookingDetailPage({
                   Your payout: ${(booking.hostPayoutCents / 100).toFixed(0)} NZD
                 </p>
               )}
+              {bookingAddons.map((a) => (
+                <p key={a.id} className="cs-muted cs-small" style={{ margin: 0 }}>
+                  + {a.name} (${(a.priceNZDCents / 100).toFixed(0)})
+                </p>
+              ))}
             </div>
             <div>
               <p className="cs-label" style={{ margin: 0 }}>Guest</p>

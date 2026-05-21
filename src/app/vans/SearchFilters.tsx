@@ -16,9 +16,11 @@ export interface FilterValues {
   endDate: string;
 }
 
-export default function SearchFilters({ initial }: { initial: FilterValues }) {
+export default function SearchFilters({ initial, isLoggedIn = false }: { initial: FilterValues; isLoggedIn?: boolean }) {
   const router = useRouter();
   const [f, setF] = useState<FilterValues>(initial);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   function update<K extends keyof FilterValues>(key: K, value: FilterValues[K]) {
     setF((prev) => ({ ...prev, [key]: value }));
@@ -55,6 +57,33 @@ export default function SearchFilters({ initial }: { initial: FilterValues }) {
 
   const hasFilters = f.region || f.vanType || f.sleeps || f.minRate || f.maxRate ||
     f.petFriendly || f.instantBook || f.startDate || f.endDate;
+
+  async function saveSearch() {
+    setSaving(true);
+    try {
+      const filters: Record<string, string> = {};
+      if (f.region) filters.region = f.region;
+      if (f.vanType) filters.vanType = f.vanType;
+      if (f.sleeps) filters.sleeps = f.sleeps;
+      if (f.minRate) filters.minRate = f.minRate;
+      if (f.maxRate) filters.maxRate = f.maxRate;
+      if (f.petFriendly) filters.petFriendly = "1";
+      if (f.instantBook) filters.instantBook = "1";
+      if (f.startDate) filters.startDate = f.startDate;
+      if (f.endDate) filters.endDate = f.endDate;
+      const res = await fetch("/api/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2400);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div style={{
@@ -130,6 +159,20 @@ export default function SearchFilters({ initial }: { initial: FilterValues }) {
       {hasFilters && (
         <button type="button" className="cs-btn cs-btn-ghost" style={{ fontSize: 13, padding: "6px 14px" }} onClick={clear}>
           Clear
+        </button>
+      )}
+
+      {hasFilters && isLoggedIn && (
+        <button
+          type="button"
+          className="cs-btn cs-btn-ghost"
+          style={{ fontSize: 13, padding: "6px 14px" }}
+          onClick={saveSearch}
+          disabled={saving || saved}
+          aria-label="Save this search"
+          title="Get email alerts when matching vans are listed"
+        >
+          {saved ? "Saved ✓" : saving ? "Saving…" : "Save search"}
         </button>
       )}
     </div>

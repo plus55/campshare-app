@@ -92,6 +92,7 @@ export interface Booking {
   depositCents: number;
   cancellationPolicy: string;
   guestMessage: string | null;
+  addonTotalCents: number;
   status: BookingStatus;
   statusReason: string | null;
   paymentIntentId: string | null;

@@ -117,7 +117,7 @@ export default async function VansPage({
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - var(--header-h))", overflow: "hidden" }}>
       {/* Filters */}
-      <SearchFilters initial={initialFilters} />
+      <SearchFilters initial={initialFilters} isLoggedIn={!!session} />
 
       {/* Body: list + map */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>

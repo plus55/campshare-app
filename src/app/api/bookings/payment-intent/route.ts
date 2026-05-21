@@ -11,6 +11,7 @@ const schema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   guestCount: z.number().int().min(1).max(20),
+  selectedAddonIds: z.array(z.string()).optional().default([]),
 });
 
 function bad(message: string, status = 400) {
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error.issues[0]?.message ?? "Invalid payload");
 
-  const { listingId, startDate, endDate, guestCount } = parsed.data;
+  const { listingId, startDate, endDate, guestCount, selectedAddonIds } = parsed.data;
   const startMs = parseDateToMs(startDate);
   const endMs   = parseDateToMs(endDate);
   if (endMs <= startMs) return bad("End date must be after start date");
@@ -54,7 +55,27 @@ export async function POST(req: Request) {
     return bad("This host has not yet set up their payment account. Please contact the host or try another listing.");
   }
 
-  const totals = calcBookingTotals(listing.nightlyRate, nights);
+  // Resolve selected add-ons and compute their total
+  let addonTotalCents = 0;
+  let resolvedAddons: Array<{ addonId: string; name: string; priceNZDCents: number }> = [];
+  if (selectedAddonIds.length > 0) {
+    const rows = await db()
+      .prepare(
+        `SELECT la.addonId, a.name, la.priceNZDCents
+         FROM listing_addon la
+         JOIN addon a ON a.id = la.addonId
+         WHERE la.vanListingId = ?`
+      )
+      .bind(listingId)
+      .all<{ addonId: string; name: string; priceNZDCents: number }>();
+    const available = new Map(rows.results.map((r) => [r.addonId, r]));
+    resolvedAddons = selectedAddonIds
+      .map((aid) => available.get(aid))
+      .filter((r): r is { addonId: string; name: string; priceNZDCents: number } => !!r);
+    addonTotalCents = resolvedAddons.reduce((sum, r) => sum + r.priceNZDCents, 0);
+  }
+
+  const totals = calcBookingTotals(listing.nightlyRate, nights, addonTotalCents);
 
   // Get or create Stripe Customer for this guest
   let stripeCustomerId: string;
@@ -104,8 +125,10 @@ export async function POST(req: Request) {
       subtotalCents: totals.subtotalCents,
       serviceFeeCents: totals.serviceFeeCents,
       gstOnFeeCents: totals.gstOnFeeCents,
+      addonTotalCents,
       totalCents: totals.totalCents,
       depositCents: totals.depositCents,
     },
+    resolvedAddons,
   });
 }

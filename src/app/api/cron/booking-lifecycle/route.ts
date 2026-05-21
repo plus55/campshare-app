@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
-import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail } from "@/lib/email";
+import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail, sendSavedSearchAlertEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import type { Booking } from "@/lib/types";
 
@@ -49,10 +49,118 @@ export async function GET(req: Request) {
     await completeTrip(booking, nowSec);
   }
 
+  // Pass 3: saved search alerts — check each saved_search against listings published since lastAlertedAt
+  const alertsSent = await runSavedSearchAlerts(nowSec);
+
   return NextResponse.json({
     started: toStart.results.length,
     completed: toComplete.results.length,
+    alertsSent,
   });
+}
+
+interface SavedSearchRow {
+  id: string;
+  userId: string;
+  filters: string;
+  lastAlertedAt: number | null;
+  createdAt: number;
+  email: string;
+  name: string;
+}
+
+interface MatchingListing {
+  id: string;
+  slug: string;
+  name: string;
+  region: string;
+  nightlyRate: number;
+}
+
+async function runSavedSearchAlerts(nowSec: number): Promise<number> {
+  const { results: searches } = await db()
+    .prepare(
+      `SELECT ss.id, ss.userId, ss.filters, ss.lastAlertedAt, ss.createdAt,
+              u.email, u.name
+       FROM saved_search ss
+       JOIN user u ON u.id = ss.userId`
+    )
+    .all<SavedSearchRow>();
+
+  let sent = 0;
+  const appBase = process.env.BETTER_AUTH_URL ?? "https://app.campshare.co.nz";
+
+  for (const s of searches) {
+    let filters: Record<string, string>;
+    try {
+      filters = JSON.parse(s.filters);
+    } catch {
+      continue;
+    }
+
+    const since = s.lastAlertedAt ?? s.createdAt;
+    const where: string[] = ["vl.status = 'published'", "vl.publishedAt IS NOT NULL", "vl.publishedAt > ?"];
+    const binds: unknown[] = [since];
+
+    if (filters.region) { where.push("vl.region = ?"); binds.push(filters.region); }
+    if (filters.vanType) { where.push("vl.vanType = ?"); binds.push(filters.vanType); }
+    if (filters.sleeps) { where.push("vl.sleeps >= ?"); binds.push(parseInt(filters.sleeps, 10)); }
+    if (filters.minRate) { where.push("vl.nightlyRate >= ?"); binds.push(Math.round(parseFloat(filters.minRate) * 100)); }
+    if (filters.maxRate) { where.push("vl.nightlyRate <= ?"); binds.push(Math.round(parseFloat(filters.maxRate) * 100)); }
+    if (filters.petFriendly === "1") { where.push("vl.petFriendly = 1"); }
+    if (filters.instantBook === "1") { where.push("vl.instantBook = 1"); }
+
+    const { results: matches } = await db()
+      .prepare(
+        `SELECT vl.id, vl.slug, vl.name, vl.region, vl.nightlyRate
+         FROM van_listing vl
+         WHERE ${where.join(" AND ")}
+         ORDER BY vl.publishedAt DESC
+         LIMIT 20`
+      )
+      .bind(...binds)
+      .all<MatchingListing>();
+
+    if (matches.length === 0) {
+      await db()
+        .prepare("UPDATE saved_search SET lastAlertedAt = ? WHERE id = ?")
+        .bind(nowSec, s.id)
+        .run();
+      continue;
+    }
+
+    const searchQuery = new URLSearchParams(filters).toString();
+    const description = describeFiltersForEmail(filters);
+    try {
+      await sendSavedSearchAlertEmail({
+        to: s.email,
+        recipientName: s.name,
+        searchDescription: description,
+        matches,
+        searchUrl: `${appBase}/vans?${searchQuery}`,
+      });
+      sent++;
+    } catch (e) {
+      console.error(`Failed to send saved-search alert for ${s.id}`, e);
+    }
+
+    await db()
+      .prepare("UPDATE saved_search SET lastAlertedAt = ? WHERE id = ?")
+      .bind(nowSec, s.id)
+      .run();
+  }
+
+  return sent;
+}
+
+function describeFiltersForEmail(f: Record<string, string>): string {
+  const parts: string[] = [];
+  if (f.region) parts.push(f.region);
+  if (f.vanType) parts.push(f.vanType);
+  if (f.sleeps) parts.push(`sleeps ${f.sleeps}+`);
+  if (f.petFriendly === "1") parts.push("pet-friendly");
+  if (f.instantBook === "1") parts.push("instant book");
+  return parts.length === 0 ? "your saved search" : parts.join(", ");
 }
 
 async function startTrip(booking: Booking, nowSec: number, nowMs: number): Promise<void> {

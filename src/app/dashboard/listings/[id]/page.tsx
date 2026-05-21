@@ -38,6 +38,9 @@ export default async function EditListingPage({
           <Link href={`/dashboard/listings/${id}/calendar`} className="cs-btn cs-btn-ghost">
             Calendar
           </Link>
+          <Link href={`/dashboard/listings/${id}/addons`} className="cs-btn cs-btn-ghost">
+            Add-ons
+          </Link>
           {listing.status === "published" && (
             <Link href={`/vans/${listing.slug}`} className="cs-btn cs-btn-ghost" target="_blank">
               View public page ↗
