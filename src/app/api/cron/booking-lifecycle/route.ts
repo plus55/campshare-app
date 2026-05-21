@@ -3,6 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import type { Booking } from "@/lib/types";
 
 type CfEnv = { CRON_SECRET?: string };
@@ -166,6 +167,11 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
             bookingId: booking.id,
             amountCents: payoutAmount,
           }).catch((e) => console.error("Failed to send payout email", e));
+          await createNotification({
+            userId: booking.hostUserId,
+            type: "payout_sent",
+            payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
+          });
         }
       } catch (e) {
         console.error(`Failed to create Stripe transfer for booking ${booking.id}`, e);
@@ -194,6 +200,11 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
       vanName: listing?.name ?? "",
       bookingId: booking.id,
     }).catch((e) => console.error("Failed to send deposit released email", e));
+    await createNotification({
+      userId: booking.guestUserId,
+      type: "deposit_released",
+      payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
+    });
   }
 
   // Review prompts: fire once per booking, both parties simultaneously.
@@ -211,6 +222,11 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
         bookingId: booking.id,
         vanName: listing?.name ?? "",
       }).catch((e) => console.error("Failed to send guest review prompt", e));
+      await createNotification({
+        userId: booking.guestUserId,
+        type: "review_prompt",
+        payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
+      });
     }
     if (host) {
       await sendReviewPromptEmail({
@@ -220,6 +236,11 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
         bookingId: booking.id,
         vanName: listing?.name ?? "",
       }).catch((e) => console.error("Failed to send host review prompt", e));
+      await createNotification({
+        userId: booking.hostUserId,
+        type: "review_prompt",
+        payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
+      });
     }
   }
 

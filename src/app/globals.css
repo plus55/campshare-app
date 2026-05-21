@@ -535,6 +535,76 @@ p  { margin: 0 0 12px; color: var(--ink-700); }
   margin: 4px 0;
 }
 
+/* ---- Notification bell ---- */
+.notif-bell { position: relative; }
+.notif-bell-btn {
+  background: transparent;
+  border: 0;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--forest-deep);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  position: relative;
+  transition: background 0.15s;
+}
+.notif-bell-btn:hover { background: var(--sand); }
+.notif-bell-btn:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+.notif-badge {
+  position: absolute;
+  top: 2px; right: 2px;
+  min-width: 16px; height: 16px;
+  background: var(--clay);
+  color: var(--cream);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  pointer-events: none;
+}
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -8px;
+  width: 300px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 50px -12px rgba(31,42,32,0.18);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.notif-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.notif-panel-header strong { font-family: var(--display); font-size: 0.9rem; color: var(--forest-deep); }
+.notif-item {
+  display: block;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--charcoal-soft);
+  transition: background 0.12s;
+}
+.notif-item:last-child { border-bottom: 0; }
+.notif-item:hover { background: var(--sand); }
+.notif-item--unread { background: rgba(194,97,58,0.06); }
+.notif-item-text { display: block; font-size: 0.85rem; line-height: 1.4; }
+.notif-item-time { display: block; font-size: 0.75rem; color: var(--stone); margin-top: 2px; }
+.notif-empty { padding: 20px 14px; font-size: 0.85rem; color: var(--stone); text-align: center; }
+@media (max-width: 400px) { .notif-panel { width: calc(100vw - 24px); right: 0; } }
+
 /* ---- Footer ---- */
 .site-footer {
   background: var(--forest-deep);

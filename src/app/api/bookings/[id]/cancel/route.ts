@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { computeRefundCents } from "@/lib/cancellation";
 import { sendBookingCancelledEmail, sendRefundProcessedEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import type { Booking } from "@/lib/types";
 
 function bad(message: string, status = 400) {
@@ -134,6 +135,14 @@ export async function POST(
       console.error("Failed to send refund email", e);
     }
   }
+
+  // Notify the OTHER party
+  const notifyUserId = isGuest ? booking.hostUserId : booking.guestUserId;
+  await createNotification({
+    userId: notifyUserId,
+    type: "booking_cancelled",
+    payload: { bookingId: id, vanName: listing?.name ?? "" },
+  });
 
   return NextResponse.json({ ok: true });
 }

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { calcBookingTotals } from "@/lib/money";
 import { sendBookingRequestedEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import type { Booking, VanListing } from "@/lib/types";
 
 const schema = z.object({
@@ -134,6 +135,12 @@ export async function POST(req: Request) {
       console.error("Failed to send booking request email", e);
     }
   }
+
+  await createNotification({
+    userId: listing.hostUserId,
+    type: "booking_requested",
+    payload: { bookingId, vanName: listing.name },
+  });
 
   return NextResponse.json({ id: bookingId }, { status: 201 });
 }

@@ -11,6 +11,8 @@ export interface ReviewItem {
   text: string;
   authorName: string;
   createdAt: number;
+  hostResponse: string | null;
+  hostRespondedAt: number | null;
 }
 
 export interface ReviewSummary {
@@ -72,7 +74,7 @@ export async function getReviewsForListing(
   const ns = nowSec();
   const rows = await db()
     .prepare(
-      `SELECT r.id, r.rating, r.text, r.createdAt, u.name AS authorName
+      `SELECT r.id, r.rating, r.text, r.createdAt, r.hostResponse, r.hostRespondedAt, u.name AS authorName
        FROM review r
        JOIN booking b ON b.id = r.bookingId
        JOIN user u ON u.id = r.authorUserId
@@ -86,7 +88,7 @@ export async function getReviewsForListing(
        LIMIT ?`
     )
     .bind(vanListingId, HOLDBACK_SEC + BLIND_WINDOW_SEC, ns, limit)
-    .all<{ id: string; rating: number; text: string; createdAt: number; authorName: string }>();
+    .all<{ id: string; rating: number; text: string; createdAt: number; authorName: string; hostResponse: string | null; hostRespondedAt: number | null }>();
 
   const agg = await db()
     .prepare(
@@ -112,6 +114,8 @@ export async function getReviewsForListing(
       text: r.text,
       authorName: r.authorName,
       createdAt: r.createdAt,
+      hostResponse: r.hostResponse,
+      hostRespondedAt: r.hostRespondedAt,
     })),
   };
 }
@@ -127,7 +131,7 @@ export async function getReviewsForHost(
   const ns = nowSec();
   const rows = await db()
     .prepare(
-      `SELECT r.id, r.rating, r.text, r.createdAt, u.name AS authorName
+      `SELECT r.id, r.rating, r.text, r.createdAt, r.hostResponse, r.hostRespondedAt, u.name AS authorName
        FROM review r
        JOIN booking b ON b.id = r.bookingId
        JOIN user u ON u.id = r.authorUserId
@@ -141,7 +145,7 @@ export async function getReviewsForHost(
        LIMIT ?`
     )
     .bind(hostUserId, HOLDBACK_SEC + BLIND_WINDOW_SEC, ns, limit)
-    .all<{ id: string; rating: number; text: string; createdAt: number; authorName: string }>();
+    .all<{ id: string; rating: number; text: string; createdAt: number; authorName: string; hostResponse: string | null; hostRespondedAt: number | null }>();
 
   const agg = await db()
     .prepare(
@@ -167,6 +171,8 @@ export async function getReviewsForHost(
       text: r.text,
       authorName: r.authorName,
       createdAt: r.createdAt,
+      hostResponse: r.hostResponse,
+      hostRespondedAt: r.hostRespondedAt,
     })),
   };
 }

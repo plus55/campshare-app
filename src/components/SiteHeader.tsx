@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { getSession } from "@/lib/session";
+import { getUnreadCount } from "@/lib/notifications";
 import MobileMenuToggle from "./MobileMenuToggle";
 import NavActive from "./NavActive";
+import NotificationBell from "./NotificationBell";
 import UserMenu from "./UserMenu";
 
 export default async function SiteHeader() {
   const session = await getSession();
   const user = session?.user ?? null;
+  const unreadCount = user ? await getUnreadCount(user.id) : 0;
 
   return (
     <header className="site-header">
@@ -34,10 +37,13 @@ export default async function SiteHeader() {
 
         <div className="nav-cta">
           {user ? (
-            <UserMenu
-              name={user.name ?? user.email ?? "Account"}
-              email={user.email ?? ""}
-            />
+            <>
+              <NotificationBell initialUnread={unreadCount} />
+              <UserMenu
+                name={user.name ?? user.email ?? "Account"}
+                email={user.email ?? ""}
+              />
+            </>
           ) : (
             <>
               <Link href="/login" className="btn btn-ghost btn-sm">Log in</Link>

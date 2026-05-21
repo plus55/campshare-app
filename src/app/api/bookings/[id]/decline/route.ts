@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { sendBookingDeclinedEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import type { Booking } from "@/lib/types";
 
 const schema = z.object({
@@ -71,6 +72,12 @@ export async function POST(
       console.error("Failed to send booking declined email", e);
     }
   }
+
+  await createNotification({
+    userId: booking.guestUserId,
+    type: "booking_declined",
+    payload: { bookingId: id, vanName: listing?.name ?? "" },
+  });
 
   return NextResponse.json({ ok: true });
 }

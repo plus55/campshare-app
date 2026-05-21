@@ -60,6 +60,7 @@ export default function UserMenu({ name, email }: { name: string; email: string 
           <Link href="/trips" role="menuitem" onClick={close}>My trips</Link>
           <Link href="/dashboard/saved" role="menuitem" onClick={close}>Saved</Link>
           <Link href="/dashboard/reviews" role="menuitem" onClick={close}>Reviews</Link>
+          <Link href="/dashboard/notifications" role="menuitem" onClick={close}>Notifications</Link>
           <Link href="/dashboard/payouts" role="menuitem" onClick={close}>Payouts</Link>
           <Link href="/dashboard/profile" role="menuitem" onClick={close}>Profile</Link>
           <div className="user-menu-divider" />

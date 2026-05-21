@@ -202,6 +202,15 @@ export default async function HostProfilePage({
                     </div>
                   </div>
                   <p className="cs-muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.55 }}>{r.text}</p>
+                  {r.hostResponse && (
+                    <div style={{ marginTop: 10, padding: "10px 14px", background: "var(--sand)", borderRadius: 8, borderLeft: "3px solid var(--clay)" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--clay)", marginBottom: 4 }}>
+                        Host response
+                        {r.hostRespondedAt && <span style={{ fontWeight: 400, color: "var(--stone)", marginLeft: 6 }}>{relDate(r.hostRespondedAt)}</span>}
+                      </div>
+                      <p style={{ margin: 0, fontSize: 13, color: "var(--charcoal-soft)", lineHeight: 1.5 }}>{r.hostResponse}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

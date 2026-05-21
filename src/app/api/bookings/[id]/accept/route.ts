@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { sendPaymentCapturedEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import type { Booking, HostProfile } from "@/lib/types";
 
 function bad(message: string, status = 400) {
@@ -121,6 +122,12 @@ export async function POST(
       console.error("Failed to send payment captured email", e);
     }
   }
+
+  await createNotification({
+    userId: booking.guestUserId,
+    type: "booking_accepted",
+    payload: { bookingId: id, vanName: listing?.name ?? "" },
+  });
 
   return NextResponse.json({ ok: true });
 }

@@ -2,10 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { HOLDBACK_SEC, BLIND_WINDOW_SEC } from "@/lib/reviews";
+import ReceivedReviewsSection from "./ReceivedReviewsSection";
 
 export const metadata: Metadata = {
   title: "Reviews — CampShare",
 };
+
+interface ReceivedReview {
+  id: string;
+  rating: number;
+  text: string;
+  authorName: string;
+  createdAt: number;
+  vanName: string;
+  hostResponse: string | null;
+  hostRespondedAt: number | null;
+}
 
 interface PendingTrip {
   bookingId: string;
@@ -26,30 +39,59 @@ export default async function ReviewsDashboardPage() {
   const session = await requireSession();
   const uid = session.user.id;
 
-  const { results: pending } = await db()
-    .prepare(
-      `SELECT
-         b.id AS bookingId,
-         CASE WHEN b.guestUserId = ? THEN 'guest' ELSE 'host' END AS role,
-         vl.name AS vanName,
-         b.startDate,
-         b.endDate,
-         CASE WHEN b.guestUserId = ? THEN hp.firstName ELSE ug.name END AS counterpartName
-       FROM booking b
-       JOIN van_listing vl ON vl.id = b.vanListingId
-       JOIN host_profile hp ON hp.userId = b.hostUserId
-       JOIN user ug ON ug.id = b.guestUserId
-       WHERE b.status = 'completed'
-         AND (b.guestUserId = ? OR b.hostUserId = ?)
-         AND NOT EXISTS (
-           SELECT 1 FROM review r
-           WHERE r.bookingId = b.id AND r.authorUserId = ?
-         )
-         AND (b.endDate / 1000 + 1296000) >= unixepoch()
-       ORDER BY b.endDate DESC`
-    )
-    .bind(uid, uid, uid, uid, uid)
-    .all<PendingTrip>();
+  const ns = Math.floor(Date.now() / 1000);
+  const visibilityCutoff = HOLDBACK_SEC + BLIND_WINDOW_SEC;
+
+  const [pendingResult, receivedResult] = await Promise.all([
+    db()
+      .prepare(
+        `SELECT
+           b.id AS bookingId,
+           CASE WHEN b.guestUserId = ? THEN 'guest' ELSE 'host' END AS role,
+           vl.name AS vanName,
+           b.startDate,
+           b.endDate,
+           CASE WHEN b.guestUserId = ? THEN hp.firstName ELSE ug.name END AS counterpartName
+         FROM booking b
+         JOIN van_listing vl ON vl.id = b.vanListingId
+         JOIN host_profile hp ON hp.userId = b.hostUserId
+         JOIN user ug ON ug.id = b.guestUserId
+         WHERE b.status = 'completed'
+           AND (b.guestUserId = ? OR b.hostUserId = ?)
+           AND NOT EXISTS (
+             SELECT 1 FROM review r
+             WHERE r.bookingId = b.id AND r.authorUserId = ?
+           )
+           AND (b.endDate / 1000 + 1296000) >= unixepoch()
+         ORDER BY b.endDate DESC`
+      )
+      .bind(uid, uid, uid, uid, uid)
+      .all<PendingTrip>(),
+
+    // Reviews received by this user as a host (guest reviews of their listings)
+    db()
+      .prepare(
+        `SELECT r.id, r.rating, r.text, r.createdAt, r.hostResponse, r.hostRespondedAt,
+                u.name AS authorName, vl.name AS vanName
+         FROM review r
+         JOIN booking b ON b.id = r.bookingId
+         JOIN user u ON u.id = r.authorUserId
+         JOIN van_listing vl ON vl.id = b.vanListingId
+         WHERE r.role = 'guest'
+           AND r.subjectUserId = ?
+           AND (
+             EXISTS (SELECT 1 FROM review r2 WHERE r2.bookingId = r.bookingId AND r2.role = 'host')
+             OR (b.endDate / 1000 + ?) <= ?
+           )
+         ORDER BY r.createdAt DESC
+         LIMIT 30`
+      )
+      .bind(uid, visibilityCutoff, ns)
+      .all<ReceivedReview>(),
+  ]);
+
+  const pending = pendingResult.results ?? [];
+  const received = receivedResult.results ?? [];
 
   return (
     <main className="cs-page">
@@ -89,6 +131,8 @@ export default async function ReviewsDashboardPage() {
             ))}
           </div>
         )}
+
+        <ReceivedReviewsSection reviews={received} />
       </div>
     </main>
   );
