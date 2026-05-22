@@ -14,6 +14,7 @@ interface SearchParams {
   instantBook?: string;
   startDate?: string;
   endDate?: string;
+  sort?: string;
 }
 
 export const metadata = {
@@ -37,6 +38,7 @@ export default async function VansPage({
   const instantBook = sp.instantBook === "1";
   const startMs = sp.startDate ? new Date(sp.startDate).getTime() : null;
   const endMs = sp.endDate ? new Date(sp.endDate).getTime() : null;
+  const sort = sp.sort === "rating" ? "rating" : "newest";
 
   const whereClauses: string[] = ["vl.status = 'published'"];
   const binds: unknown[] = [];
@@ -84,7 +86,9 @@ export default async function VansPage({
       GROUP BY b.vanListingId
     ) rv ON rv.vanListingId = vl.id
     WHERE ${whereClauses.join(" AND ")}
-    ORDER BY vl.publishedAt DESC
+    ORDER BY ${sort === "rating"
+      ? "COALESCE(rv.avgRating, 0) DESC, COALESCE(rv.reviewCount, 0) DESC, vl.publishedAt DESC"
+      : "vl.publishedAt DESC"}
     LIMIT 60
   `;
 
@@ -112,6 +116,7 @@ export default async function VansPage({
     instantBook,
     startDate: sp.startDate || "",
     endDate: sp.endDate || "",
+    sort,
   };
 
   return (

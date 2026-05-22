@@ -14,6 +14,7 @@ export interface FilterValues {
   instantBook: boolean;
   startDate: string;
   endDate: string;
+  sort: string;
 }
 
 export default function SearchFilters({ initial, isLoggedIn = false }: { initial: FilterValues; isLoggedIn?: boolean }) {
@@ -37,6 +38,7 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
     if (next.instantBook) p.set("instantBook", "1");
     if (next.startDate) p.set("startDate", next.startDate);
     if (next.endDate) p.set("endDate", next.endDate);
+    if (next.sort && next.sort !== "newest") p.set("sort", next.sort);
     router.push(`/vans${p.size > 0 ? `?${p.toString()}` : ""}`);
   }
 
@@ -50,6 +52,7 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
     const empty: FilterValues = {
       region: "", vanType: "", sleeps: "", minRate: "", maxRate: "",
       petFriendly: false, instantBook: false, startDate: "", endDate: "",
+      sort: "newest",
     };
     setF(empty);
     router.push("/vans");
@@ -71,6 +74,7 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
       if (f.instantBook) filters.instantBook = "1";
       if (f.startDate) filters.startDate = f.startDate;
       if (f.endDate) filters.endDate = f.endDate;
+      if (f.sort && f.sort !== "newest") filters.sort = f.sort;
       const res = await fetch("/api/saved-searches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -137,6 +141,14 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
       <div className="cs-field" style={{ margin: 0, minWidth: 130 }}>
         <label className="cs-label" style={{ fontSize: 11, marginBottom: 4 }}>Check out</label>
         <input type="date" className="cs-input" style={{ fontSize: 13 }} value={f.endDate} onChange={(e) => update("endDate", e.target.value)} />
+      </div>
+
+      <div className="cs-field" style={{ margin: 0, minWidth: 130 }}>
+        <label className="cs-label" style={{ fontSize: 11, marginBottom: 4 }}>Sort by</label>
+        <select className="cs-select" style={{ fontSize: 13 }} value={f.sort} onChange={(e) => handleSelect("sort", e.target.value)}>
+          <option value="newest">Newest</option>
+          <option value="rating">Top rated</option>
+        </select>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
