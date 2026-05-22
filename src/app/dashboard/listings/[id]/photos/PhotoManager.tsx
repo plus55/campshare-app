@@ -9,6 +9,8 @@ interface Props {
   initialPhotos: VanPhoto[];
 }
 
+const LONG_PRESS_MS = 300;
+
 export default function PhotoManager({ listingId, initialPhotos }: Props) {
   const [photos, setPhotos] = useState<VanPhoto[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
@@ -90,27 +92,86 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
     setPhotos((prev) => prev.map((p) => p.id === photoId ? { ...p, caption } : p));
   }
 
-  // Drag-to-reorder
+  // Drag-to-reorder — desktop uses HTML5 DnD, touch uses pointer events with long-press
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [touchDragIdx, setTouchDragIdx] = useState<number | null>(null);
+  const [touchOverIdx, setTouchOverIdx] = useState<number | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const previousPhotosRef = useRef<VanPhoto[] | null>(null);
 
   async function movePhoto(fromIdx: number, toIdx: number) {
     if (fromIdx === toIdx) return;
+    previousPhotosRef.current = photos;
     const reordered = [...photos];
     const [moved] = reordered.splice(fromIdx, 1);
     reordered.splice(toIdx, 0, moved);
     const withPositions = reordered.map((p, i) => ({ ...p, position: i }));
     setPhotos(withPositions);
 
-    // Persist new positions
-    await Promise.all(
-      withPositions.map((p) =>
-        fetch(`/api/photos/${p.id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ position: p.position }),
-        })
-      )
-    );
+    try {
+      const res = await fetch("/api/photos/reorder", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          vanListingId: listingId,
+          orderedIds: withPositions.map((p) => p.id),
+        }),
+      });
+      if (!res.ok) throw new Error("Reorder failed");
+    } catch {
+      // Roll back optimistic update
+      if (previousPhotosRef.current) setPhotos(previousPhotosRef.current);
+      setError("Couldn't save new order.");
+    }
+  }
+
+  function cancelLongPress() {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>, idx: number) {
+    if (e.pointerType !== "touch") return;
+    const target = e.currentTarget;
+    const pointerId = e.pointerId;
+    cancelLongPress();
+    longPressTimerRef.current = window.setTimeout(() => {
+      target.setPointerCapture(pointerId);
+      setTouchDragIdx(idx);
+      setTouchOverIdx(idx);
+    }, LONG_PRESS_MS);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "touch") return;
+    if (touchDragIdx === null) {
+      cancelLongPress();
+      return;
+    }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const tile = el?.closest("[data-photo-idx]") as HTMLElement | null;
+    if (tile) {
+      const idx = Number(tile.dataset.photoIdx);
+      if (!Number.isNaN(idx)) setTouchOverIdx(idx);
+    }
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "touch") return;
+    cancelLongPress();
+    if (touchDragIdx !== null && touchOverIdx !== null) {
+      void movePhoto(touchDragIdx, touchOverIdx);
+    }
+    setTouchDragIdx(null);
+    setTouchOverIdx(null);
+  }
+
+  function onPointerCancel() {
+    cancelLongPress();
+    setTouchDragIdx(null);
+    setTouchOverIdx(null);
   }
 
   return (
@@ -127,9 +188,12 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
       >
         {photos.map((photo, idx) => {
           const url = photoUrl(photo.r2Key);
+          const isTouchDragging = touchDragIdx === idx;
+          const isTouchOver = touchDragIdx !== null && touchOverIdx === idx && touchDragIdx !== idx;
           return (
             <div
               key={photo.id}
+              data-photo-idx={idx}
               draggable
               onDragStart={() => setDragIdx(idx)}
               onDragOver={(e) => e.preventDefault()}
@@ -137,12 +201,19 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
                 if (dragIdx !== null) void movePhoto(dragIdx, idx);
                 setDragIdx(null);
               }}
+              onPointerDown={(e) => onPointerDown(e, idx)}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerCancel}
               style={{
-                border: "1px solid var(--sand-200)",
+                border: isTouchOver ? "2px solid var(--clay)" : "1px solid var(--sand-200)",
                 borderRadius: 8,
                 overflow: "hidden",
                 cursor: "grab",
-                opacity: dragIdx === idx ? 0.5 : 1,
+                opacity: dragIdx === idx || isTouchDragging ? 0.5 : 1,
+                transform: isTouchDragging ? "scale(1.03)" : "none",
+                transition: "transform 120ms ease, border-color 80ms ease",
+                touchAction: touchDragIdx !== null ? "none" : "auto",
               }}
             >
               {url && (
