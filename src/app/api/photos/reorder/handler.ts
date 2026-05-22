@@ -47,7 +47,11 @@ export async function reorderPhotosHandler({
     .first<{ id: string }>();
   if (!listing) return { status: 404, body: { error: "listing_not_found" } };
 
-  // Integrity: must equal the listing's full photo set
+  // Integrity: orderedIds must equal the listing's full photo set.
+  // Known TOCTOU window: a photo deleted between this SELECT and the UPDATE
+  // batch below will match zero rows, and the handler still returns 200. Per
+  // spec (multi-tab races are rare and handled client-side via auto-refresh),
+  // this is acceptable — the client will pick up the desync on next interaction.
   const existing = await db
     .prepare("SELECT id FROM van_photo WHERE vanListingId = ?")
     .bind(vanListingId)
