@@ -45,6 +45,25 @@ export async function POST(req: Request) {
   if (nights < listing.minimumNights)
     return bad(`Minimum stay is ${listing.minimumNights} night${listing.minimumNights !== 1 ? "s" : ""}`);
 
+  const block = await db()
+    .prepare(
+      `SELECT 1 FROM user_block
+       WHERE (blockerUserId = ? AND blockedUserId = ?)
+          OR (blockerUserId = ? AND blockedUserId = ?)`
+    )
+    .bind(session.user.id, listing.hostUserId, listing.hostUserId, session.user.id)
+    .first();
+  if (block) return bad("This booking is not available", 403);
+
+  const overlap = await db()
+    .prepare(
+      `SELECT COUNT(*) AS cnt FROM availability_block
+       WHERE vanListingId = ? AND startDate <= ? AND endDate >= ?`
+    )
+    .bind(listingId, endMs, startMs)
+    .first<{ cnt: number }>();
+  if ((overlap?.cnt ?? 0) > 0) return bad("Those dates are not available", 409);
+
   // KYC guard — all guests must be verified before booking
   const guestUser = await db()
     .prepare("SELECT kycStatus, dateOfBirth FROM user WHERE id = ?")
@@ -75,9 +94,14 @@ export async function POST(req: Request) {
   }
 
   // Resolve selected add-ons and compute their total
+  const uniqueAddonIds = Array.from(new Set(selectedAddonIds)).sort();
+  if (uniqueAddonIds.length !== selectedAddonIds.length) {
+    return bad("Invalid add-on selection");
+  }
+
   let addonTotalCents = 0;
   let resolvedAddons: Array<{ addonId: string; name: string; priceNZDCents: number }> = [];
-  if (selectedAddonIds.length > 0) {
+  if (uniqueAddonIds.length > 0) {
     const rows = await db()
       .prepare(
         `SELECT la.addonId, a.name, la.priceNZDCents
@@ -88,9 +112,12 @@ export async function POST(req: Request) {
       .bind(listingId)
       .all<{ addonId: string; name: string; priceNZDCents: number }>();
     const available = new Map(rows.results.map((r) => [r.addonId, r]));
-    resolvedAddons = selectedAddonIds
+    resolvedAddons = uniqueAddonIds
       .map((aid) => available.get(aid))
       .filter((r): r is { addonId: string; name: string; priceNZDCents: number } => !!r);
+    if (resolvedAddons.length !== uniqueAddonIds.length) {
+      return bad("Invalid add-on selection");
+    }
     addonTotalCents = resolvedAddons.reduce((sum, r) => sum + r.priceNZDCents, 0);
   }
 
@@ -134,6 +161,7 @@ export async function POST(req: Request) {
       guestCount: String(guestCount),
       userId: session.user.id,
       hostUserId: listing.hostUserId,
+      addonIds: uniqueAddonIds.join(","),
     },
   });
 
