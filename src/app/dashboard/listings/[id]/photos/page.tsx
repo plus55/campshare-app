@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import type { VanListing, VanPhoto } from "@/lib/types";
 import PhotoManager from "./PhotoManager";
 
@@ -12,32 +12,33 @@ export default async function ListingPhotosPage({
 }) {
   const session = await requireSession();
   const { id } = await params;
+  const database = await getDb();
 
-  const listing = await db()
+  const listing = await database
     .prepare("SELECT id, name, hostUserId FROM van_listing WHERE id = ? AND hostUserId = ?")
     .bind(id, session.user.id)
     .first<Pick<VanListing, "id" | "name" | "hostUserId">>();
 
   if (!listing) notFound();
 
-  const photos = await db()
+  const photos = await database
     .prepare("SELECT * FROM van_photo WHERE vanListingId = ? ORDER BY position ASC, createdAt ASC")
     .bind(id)
     .all<VanPhoto>();
 
   return (
-    <main className="cs-page">
-      <div className="cs-narrow">
-        <Link href={`/dashboard/listings/${id}`} className="cs-small">
-          ← {listing.name}
-        </Link>
-        <h1 style={{ marginTop: 12 }}>Photos</h1>
-        <p className="cs-muted">
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[720px]">
+        <p className="mb-2 text-sm">
+          <Link href={`/dashboard/listings/${id}`} className="text-stone hover:text-charcoal">
+            ← {listing.name}
+          </Link>
+        </p>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Photos</h1>
+        <p className="mb-6 text-stone">
           Up to 10 photos. Drag to reorder. First photo is used as the cover image.
         </p>
-        <div style={{ marginTop: 24 }}>
-          <PhotoManager listingId={id} initialPhotos={photos.results} />
-        </div>
+        <PhotoManager listingId={id} initialPhotos={photos.results} />
       </div>
     </main>
   );

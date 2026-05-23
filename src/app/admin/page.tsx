@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 
 interface ListingRow {
   id: string;
@@ -16,16 +16,15 @@ interface ListingRow {
 
 function formatDate(epochSeconds: number): string {
   return new Date(epochSeconds * 1000).toLocaleDateString("en-NZ", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+    day: "numeric", month: "short", year: "numeric",
   });
 }
 
 export default async function AdminPage() {
   await requireAdmin();
+  const database = await getDb();
 
-  const pendingListings = await db()
+  const pendingListings = await database
     .prepare(
       `SELECT vl.id, vl.name, vl.vanType, vl.region, vl.island,
               vl.nightlyRate, vl.createdAt,
@@ -40,47 +39,43 @@ export default async function AdminPage() {
     .all<ListingRow>();
 
   return (
-    <main className="cs-page">
-      <div className="cs-container">
-        <h1>Admin</h1>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[1080px]">
+        <h1 className="mb-4 font-serif text-3xl text-forest-deep">Admin</h1>
 
-        <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-          <Link href="/admin/reports" className="cs-btn cs-btn-ghost cs-small">Reports queue</Link>
-          <Link href="/admin/disputes" className="cs-btn cs-btn-ghost cs-small">Disputes queue</Link>
+        <div className="mb-6 flex flex-wrap gap-2">
+          <Link href="/admin/reports" className="rounded-lg border border-line px-3 py-1.5 text-sm text-charcoal-soft hover:bg-sand transition-colors">Reports queue</Link>
+          <Link href="/admin/disputes" className="rounded-lg border border-line px-3 py-1.5 text-sm text-charcoal-soft hover:bg-sand transition-colors">Disputes queue</Link>
         </div>
 
-        <h2 style={{ marginTop: 24 }}>Listings awaiting review</h2>
-        <p className="cs-muted">
+        <h2 className="mb-1 font-serif text-xl text-forest-deep">Listings awaiting review</h2>
+        <p className="mb-4 text-sm text-stone">
           {pendingListings.results.length} listing{pendingListings.results.length === 1 ? "" : "s"} pending
         </p>
 
-        <div className="cs-card" style={{ marginTop: 16, padding: 16 }}>
-          <table className="cs-table">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-cream">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr>
-                <th>Van</th>
-                <th>Type</th>
-                <th>Host</th>
-                <th>Location</th>
-                <th>Rate</th>
-                <th>Submitted</th>
-                <th></th>
+                {["Van", "Type", "Host", "Location", "Rate", "Submitted", ""].map((h) => (
+                  <th key={h} className="border-b border-line px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wide text-stone">{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {pendingListings.results.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.name}</td>
-                  <td className="cs-small">{r.vanType}</td>
-                  <td>
-                    <div>{r.hostFirstName}</div>
-                    <div className="cs-muted cs-small">{r.hostEmail}</div>
+                <tr key={r.id} className="hover:bg-sand">
+                  <td className="px-4 py-2.5 font-medium text-charcoal">{r.name}</td>
+                  <td className="px-4 py-2.5 text-xs text-charcoal-soft">{r.vanType}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="text-charcoal">{r.hostFirstName}</div>
+                    <div className="text-xs text-stone">{r.hostEmail}</div>
                   </td>
-                  <td className="cs-small">{r.region} · {r.island}</td>
-                  <td>${Math.round(r.nightlyRate / 100)}/night</td>
-                  <td className="cs-muted cs-small">{formatDate(r.createdAt)}</td>
-                  <td>
-                    <Link href={`/admin/listings/${r.id}`} className="cs-small">
+                  <td className="px-4 py-2.5 text-xs text-charcoal-soft">{r.region} · {r.island}</td>
+                  <td className="px-4 py-2.5 text-charcoal-soft">${Math.round(r.nightlyRate / 100)}/night</td>
+                  <td className="px-4 py-2.5 text-xs text-stone">{formatDate(r.createdAt)}</td>
+                  <td className="px-4 py-2.5">
+                    <Link href={`/admin/listings/${r.id}`} className="text-clay hover:text-clay-deep text-sm">
                       Review →
                     </Link>
                   </td>
@@ -88,7 +83,7 @@ export default async function AdminPage() {
               ))}
               {pendingListings.results.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="cs-muted" style={{ padding: 24 }}>
+                  <td colSpan={7} className="px-4 py-8 text-center text-stone">
                     No listings awaiting review.
                   </td>
                 </tr>

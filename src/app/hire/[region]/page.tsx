@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getInstantBookEligibleHosts } from "@/lib/badges";
 import { NZ_REGIONS } from "@/lib/constants";
@@ -36,9 +36,11 @@ export default async function HirePage({
   const region = slugToRegion(slug);
   if (!region) notFound();
 
+  const database = await getDb();
+
   const [session, rawResult] = await Promise.all([
     getSession(),
-    db()
+    database
       .prepare(
         `SELECT
           vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
@@ -65,7 +67,7 @@ export default async function HirePage({
 
   let savedIds = new Set<string>();
   if (session) {
-    const { results: saved } = await db()
+    const { results: saved } = await database
       .prepare("SELECT vanListingId FROM wishlist WHERE userId = ?")
       .bind(session.user.id)
       .all<{ vanListingId: string }>();
@@ -95,32 +97,31 @@ export default async function HirePage({
   };
 
   return (
-    <main className="cs-page">
+    <main className="min-h-screen px-4 py-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="cs-container">
-        <h1 style={{ marginBottom: 4 }}>Campervan Hire in {region}</h1>
+      <div className="mx-auto max-w-[1080px]">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Campervan Hire in {region}</h1>
         {island && (
-          <p className="cs-muted" style={{ marginBottom: 24 }}>
-            {island} Island, New Zealand
-          </p>
+          <p className="mb-6 text-stone">{island} Island, New Zealand</p>
         )}
 
         {listings.length === 0 ? (
-          <div className="cs-card" style={{ textAlign: "center", padding: 48 }}>
-            <p style={{ fontWeight: 600, marginBottom: 8 }}>No vans listed yet in {region}</p>
-            <p className="cs-muted cs-small">We&apos;re growing! Check back soon or{" "}
-              <a href="/vans">browse all regions</a>.
+          <div className="rounded-2xl border border-line bg-cream p-12 text-center">
+            <p className="mb-2 font-semibold text-charcoal">No vans listed yet in {region}</p>
+            <p className="text-sm text-stone">
+              We&apos;re growing! Check back soon or{" "}
+              <a href="/vans" className="text-forest-deep underline">browse all regions</a>.
             </p>
           </div>
         ) : (
           <>
-            <p className="cs-muted cs-small" style={{ marginBottom: 16 }}>
+            <p className="mb-4 text-sm text-stone">
               {listings.length} van{listings.length === 1 ? "" : "s"} available
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
               {listings.map((l) => (
                 <ListingCard key={l.id} listing={l} />
               ))}
@@ -128,11 +129,15 @@ export default async function HirePage({
           </>
         )}
 
-        <div style={{ marginTop: 40, borderTop: "1px solid var(--sand-200)", paddingTop: 24 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Browse other regions</h2>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div className="mt-10 border-t border-line pt-6">
+          <h2 className="mb-3 text-base font-semibold text-charcoal">Browse other regions</h2>
+          <div className="flex flex-wrap gap-2">
             {NZ_REGIONS.filter((r) => r !== region).map((r) => (
-              <a key={r} href={`/hire/${regionToSlug(r)}`} className="cs-pill" style={{ textDecoration: "none" }}>
+              <a
+                key={r}
+                href={`/hire/${regionToSlug(r)}`}
+                className="rounded-full border border-line bg-cream px-3 py-1 text-sm text-charcoal-soft hover:border-forest hover:text-forest transition-colors no-underline"
+              >
                 {r}
               </a>
             ))}

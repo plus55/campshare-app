@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import type { AvailabilityBlock, VanListing } from "@/lib/types";
 import AvailabilityCalendar from "./AvailabilityCalendar";
 
@@ -12,8 +12,9 @@ export default async function CalendarPage({
 }) {
   const session = await requireSession();
   const { id } = await params;
+  const database = await getDb();
 
-  const listing = await db()
+  const listing = await database
     .prepare(
       "SELECT id, name, hostUserId, icalFeedUrl FROM van_listing WHERE id = ? AND hostUserId = ?"
     )
@@ -22,7 +23,7 @@ export default async function CalendarPage({
 
   if (!listing) notFound();
 
-  const blocks = await db()
+  const blocks = await database
     .prepare(
       "SELECT * FROM availability_block WHERE vanListingId = ? ORDER BY startDate ASC"
     )
@@ -34,24 +35,23 @@ export default async function CalendarPage({
   const exportUrl = `${appBase}/api/listings/${id}/ical`;
 
   return (
-    <main className="cs-page">
-      <div className="cs-narrow">
-        <Link href={`/dashboard/listings/${id}`} className="cs-small">
-          ← {listing.name}
-        </Link>
-        <h1 style={{ marginTop: 12 }}>Availability</h1>
-        <p className="cs-muted">
-          Click to block / unblock dates. Blocked dates are greyed on your
-          public page.
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[720px]">
+        <p className="mb-2 text-sm">
+          <Link href={`/dashboard/listings/${id}`} className="text-stone hover:text-charcoal">
+            ← {listing.name}
+          </Link>
         </p>
-        <div style={{ marginTop: 24 }}>
-          <AvailabilityCalendar
-            listingId={id}
-            initialBlocks={blocks.results}
-            icalFeedUrl={listing.icalFeedUrl}
-            exportUrl={exportUrl}
-          />
-        </div>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Availability</h1>
+        <p className="mb-6 text-stone">
+          Click to block / unblock dates. Blocked dates are greyed on your public page.
+        </p>
+        <AvailabilityCalendar
+          listingId={id}
+          initialBlocks={blocks.results}
+          icalFeedUrl={listing.icalFeedUrl}
+          exportUrl={exportUrl}
+        />
       </div>
     </main>
   );

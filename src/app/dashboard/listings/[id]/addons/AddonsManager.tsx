@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 interface Addon {
   id: string;
@@ -78,45 +79,36 @@ export default function AddonsManager({ listingId, catalogue, enabledMap }: Prop
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex flex-col gap-3">
       {catalogue.map((addon) => (
         <div
           key={addon.id}
-          className="cs-card"
-          style={{
-            display: "flex",
-            gap: 16,
-            alignItems: "flex-start",
-            opacity: enabled[addon.id] ? 1 : 0.6,
-          }}
+          className={`flex items-start gap-4 rounded-2xl border border-line bg-cream p-4 transition-opacity ${enabled[addon.id] ? "opacity-100" : "opacity-60"}`}
         >
           <input
             type="checkbox"
             id={`addon-${addon.id}`}
             checked={!!enabled[addon.id]}
             onChange={() => toggle(addon.id)}
-            style={{ marginTop: 4, flexShrink: 0, cursor: "pointer" }}
+            className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-forest-deep"
           />
-          <div style={{ flex: 1 }}>
-            <label htmlFor={`addon-${addon.id}`} style={{ fontWeight: 600, cursor: "pointer", display: "block" }}>
+          <div className="flex-1">
+            <label htmlFor={`addon-${addon.id}`} className="cursor-pointer text-sm font-semibold text-charcoal">
               {addon.name}
             </label>
             {addon.description && (
-              <p className="cs-muted cs-small" style={{ margin: "2px 0 0" }}>{addon.description}</p>
+              <p className="mt-0.5 text-xs text-stone">{addon.description}</p>
             )}
           </div>
           {enabled[addon.id] && (
-            <label className="cs-field" style={{ margin: 0, minWidth: 120 }}>
-              <span className="cs-label">Price (NZD)</span>
-              <div style={{ position: "relative" }}>
-                <span style={{
-                  position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-                  color: "var(--stone)", fontSize: 14,
-                }}>$</span>
+            <div className="flex min-w-[120px] flex-col gap-1">
+              <label htmlFor={`price-${addon.id}`} className="text-xs font-medium text-charcoal">Price (NZD)</label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-stone">$</span>
                 <input
+                  id={`price-${addon.id}`}
                   type="number"
-                  className="cs-input"
-                  style={{ paddingLeft: 22 }}
+                  className="w-full rounded-lg border border-line bg-white py-1.5 pl-6 pr-3 text-sm text-charcoal placeholder:text-stone focus:border-forest-deep focus:outline-none"
                   min="0"
                   step="1"
                   placeholder="0"
@@ -124,23 +116,21 @@ export default function AddonsManager({ listingId, catalogue, enabledMap }: Prop
                   onChange={(e) => setPrice(addon.id, e.target.value)}
                 />
               </div>
-              <span className="cs-muted cs-small">{addon.priceType === "per_night" ? "per night" : "per booking"}</span>
-            </label>
+              <span className="text-xs text-stone">{addon.priceType === "per_night" ? "per night" : "per booking"}</span>
+            </div>
           )}
         </div>
       ))}
 
-      {error && <p className="cs-error">{error}</p>}
+      {error && (
+        <p className="rounded-lg bg-rust-light px-3 py-2 text-sm text-rust">{error}</p>
+      )}
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <button
-          className="cs-btn cs-btn-primary"
-          onClick={save}
-          disabled={saving}
-        >
+      <div className="flex items-center gap-3 pt-2">
+        <Button onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save add-ons"}
-        </button>
-        {saved && <span className="cs-muted cs-small">Saved</span>}
+        </Button>
+        {saved && <span className="text-sm text-stone">Saved</span>}
       </div>
     </div>
   );

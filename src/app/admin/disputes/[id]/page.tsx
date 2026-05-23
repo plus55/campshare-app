@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import DisputeActions from "./DisputeActions";
 
 interface DisputeDetail {
@@ -51,6 +51,8 @@ function fmtDateMs(ms: number) {
   return new Date(ms).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
+const dl = "text-[11px] font-medium uppercase tracking-wide text-stone";
+
 export default async function AdminDisputeDetailPage({
   params,
 }: {
@@ -58,8 +60,9 @@ export default async function AdminDisputeDetailPage({
 }) {
   await requireAdmin();
   const { id } = await params;
+  const database = await getDb();
 
-  const d = await db()
+  const d = await database
     .prepare(
       `SELECT d.*,
               u.name AS initiatorName, u.email AS initiatorEmail,
@@ -92,60 +95,55 @@ export default async function AdminDisputeDetailPage({
   const isOpen = d.status === "open" || d.status === "under_review";
 
   return (
-    <main className="cs-page">
-      <div className="cs-container" style={{ maxWidth: 760 }}>
-        <p style={{ marginTop: 0 }}><Link href="/admin/disputes" className="cs-small">← Disputes</Link></p>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[760px]">
+        <p className="mb-2 text-sm"><Link href="/admin/disputes" className="text-stone hover:text-charcoal">← Disputes</Link></p>
 
-        <h1 style={{ margin: "0 0 8px" }}>{REASON_LABEL[d.reason] ?? d.reason}</h1>
-        <p className="cs-muted">Status: <strong>{d.status}</strong> · raised {fmt(d.createdAt)}{d.resolvedAt ? ` · resolved ${fmt(d.resolvedAt)}` : ""}</p>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">{REASON_LABEL[d.reason] ?? d.reason}</h1>
+        <p className="mb-4 text-sm text-stone">
+          Status: <strong className="text-charcoal">{d.status}</strong> · raised {fmt(d.createdAt)}
+          {d.resolvedAt ? ` · resolved ${fmt(d.resolvedAt)}` : ""}
+        </p>
 
-        <div className="cs-card" style={{ marginTop: 16 }}>
-          <h2>Booking</h2>
-          <p style={{ margin: 0 }}><Link href={`/vans/${d.vanSlug}`}>{d.vanName}</Link></p>
-          <p className="cs-muted cs-small" style={{ margin: "4px 0 12px" }}>
-            {fmtDateMs(d.startDate)} → {fmtDateMs(d.endDate)}
+        <div className="rounded-2xl border border-line bg-cream p-5">
+          <h2 className="mb-3 font-serif text-base text-forest-deep">Booking</h2>
+          <p className="mb-1 text-sm font-medium text-charcoal">
+            <Link href={`/vans/${d.vanSlug}`} className="text-clay hover:text-clay-deep">{d.vanName}</Link>
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div>
-              <p className="cs-label" style={{ margin: 0 }}>Guest</p>
-              <p style={{ margin: 0 }}>{d.guestName}</p>
-            </div>
-            <div>
-              <p className="cs-label" style={{ margin: 0 }}>Host</p>
-              <p style={{ margin: 0 }}>{d.hostName}</p>
-            </div>
-            <div>
-              <p className="cs-label" style={{ margin: 0 }}>Total paid</p>
-              <p style={{ margin: 0 }}>${(d.bookingTotalCents / 100).toFixed(0)}</p>
-            </div>
-            <div>
-              <p className="cs-label" style={{ margin: 0 }}>Deposit hold</p>
-              <p style={{ margin: 0 }}>${(d.bookingDepositCents / 100).toFixed(0)}</p>
-            </div>
-            <div>
-              <p className="cs-label" style={{ margin: 0 }}>Host payout</p>
-              <p style={{ margin: 0 }}>{d.bookingHostPayoutCents != null ? `$${(d.bookingHostPayoutCents / 100).toFixed(0)}` : "—"}</p>
-            </div>
+          <p className="mb-4 text-xs text-stone">{fmtDateMs(d.startDate)} → {fmtDateMs(d.endDate)}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Guest", value: d.guestName },
+              { label: "Host", value: d.hostName },
+              { label: "Total paid", value: `$${(d.bookingTotalCents / 100).toFixed(0)}` },
+              { label: "Deposit hold", value: `$${(d.bookingDepositCents / 100).toFixed(0)}` },
+              { label: "Host payout", value: d.bookingHostPayoutCents != null ? `$${(d.bookingHostPayoutCents / 100).toFixed(0)}` : "—" },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className={dl}>{label}</p>
+                <p className="mt-0.5 text-sm text-charcoal">{value}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="cs-card" style={{ marginTop: 16 }}>
-          <h2>Initiator</h2>
-          <p style={{ margin: 0 }}>
-            {d.initiatorName} <span className="cs-muted">({d.initiatorEmail})</span>{" "}
-            <span className="cs-muted cs-small">— {d.initiatorUserId === d.guestUserId ? "guest" : "host"}</span>
+        <div className="mt-4 rounded-2xl border border-line bg-cream p-5">
+          <h2 className="mb-2 font-serif text-base text-forest-deep">Initiator</h2>
+          <p className="text-sm text-charcoal">
+            {d.initiatorName} <span className="text-stone">({d.initiatorEmail})</span>{" "}
+            <span className="text-xs text-stone">— {d.initiatorUserId === d.guestUserId ? "guest" : "host"}</span>
           </p>
         </div>
 
-        <div className="cs-card" style={{ marginTop: 16 }}>
-          <h2>Details</h2>
-          <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{d.details}</p>
+        <div className="mt-4 rounded-2xl border border-line bg-cream p-5">
+          <h2 className="mb-2 font-serif text-base text-forest-deep">Details</h2>
+          <p className="whitespace-pre-wrap text-sm text-charcoal">{d.details}</p>
           {evidence.length > 0 && (
             <>
-              <h3 style={{ marginTop: 16 }}>Evidence</h3>
-              <ul>
+              <h3 className="mb-1 mt-4 font-serif text-sm text-forest-deep">Evidence</h3>
+              <ul className="space-y-1">
                 {evidence.map((u, i) => (
-                  <li key={i}><a href={u} target="_blank" rel="noopener noreferrer">{u}</a></li>
+                  <li key={i}><a href={u} target="_blank" rel="noopener noreferrer" className="text-sm text-clay hover:text-clay-deep">{u}</a></li>
                 ))}
               </ul>
             </>
@@ -153,12 +151,12 @@ export default async function AdminDisputeDetailPage({
         </div>
 
         {d.adminNote && (
-          <div className="cs-card" style={{ marginTop: 16 }}>
-            <h2>Admin note</h2>
-            <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{d.adminNote}</p>
+          <div className="mt-4 rounded-2xl border border-line bg-cream p-5">
+            <h2 className="mb-2 font-serif text-base text-forest-deep">Admin note</h2>
+            <p className="whitespace-pre-wrap text-sm text-charcoal">{d.adminNote}</p>
             {d.depositAction && (
-              <p className="cs-muted cs-small" style={{ marginTop: 8 }}>
-                Deposit action: <strong>{d.depositAction}</strong>
+              <p className="mt-2 text-xs text-stone">
+                Deposit action: <strong className="text-charcoal">{d.depositAction}</strong>
                 {d.depositAction === "split" && d.depositSplitToHostCents != null
                   ? ` — $${(d.depositSplitToHostCents / 100).toFixed(0)} to host, rest to guest`
                   : ""}
@@ -168,8 +166,8 @@ export default async function AdminDisputeDetailPage({
         )}
 
         {isOpen && (
-          <div className="cs-card" style={{ marginTop: 16 }}>
-            <h2>Resolve</h2>
+          <div className="mt-4 rounded-2xl border border-line bg-cream p-5">
+            <h2 className="mb-3 font-serif text-base text-forest-deep">Resolve</h2>
             <DisputeActions disputeId={id} depositCents={d.bookingDepositCents} />
           </div>
         )}

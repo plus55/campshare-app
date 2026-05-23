@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import type { VanListing } from "@/lib/types";
 import AddonsManager from "./AddonsManager";
 
@@ -23,8 +24,9 @@ export default async function AddonsPage({
 }) {
   const session = await requireSession();
   const { id } = await params;
+  const database = await getDb();
 
-  const listing = await db()
+  const listing = await database
     .prepare("SELECT id, name FROM van_listing WHERE id = ? AND hostUserId = ?")
     .bind(id, session.user.id)
     .first<Pick<VanListing, "id" | "name">>();
@@ -32,10 +34,10 @@ export default async function AddonsPage({
   if (!listing) notFound();
 
   const [catalogue, enabled] = await Promise.all([
-    db()
+    database
       .prepare("SELECT id, name, description, priceType, sortOrder FROM addon WHERE active = 1 ORDER BY sortOrder")
       .all<AddonRow>(),
-    db()
+    database
       .prepare(
         `SELECT a.id, a.name, a.description, a.priceType, a.sortOrder, la.priceNZDCents
          FROM listing_addon la
@@ -49,10 +51,15 @@ export default async function AddonsPage({
   const enabledMap = new Map(enabled.results.map((e) => [e.id, e.priceNZDCents]));
 
   return (
-    <main className="cs-page">
-      <div className="cs-narrow">
-        <h1>{listing.name} — Add-ons</h1>
-        <p className="cs-muted" style={{ marginTop: 0, marginBottom: 24 }}>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[720px]">
+        <p className="mb-2 text-sm">
+          <Link href={`/dashboard/listings/${id}`} className="text-stone hover:text-charcoal">
+            ← {listing.name}
+          </Link>
+        </p>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Add-ons</h1>
+        <p className="mb-6 text-stone">
           Choose which add-ons guests can request with this van. You set the price — we pass it through to you in full.
         </p>
         <AddonsManager

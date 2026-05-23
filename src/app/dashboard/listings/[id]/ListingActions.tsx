@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { VanListing } from "@/lib/types";
 
 export default function ListingActions({ listing }: { listing: VanListing }) {
@@ -45,48 +46,46 @@ export default function ListingActions({ listing }: { listing: VanListing }) {
   const { status } = listing;
 
   return (
-    <div className="cs-card">
-      <h3>Listing actions</h3>
-      {error && <div className="cs-error">{error}</div>}
+    <div className="rounded-2xl border border-line bg-cream p-6">
+      <h3 className="mb-3 font-serif text-base text-charcoal">Listing actions</h3>
 
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+      {error && (
+        <p className="mb-3 rounded-lg bg-rust-light px-3 py-2 text-sm text-rust">{error}</p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
         {(status === "draft" || status === "paused") && (
-          <button
-            type="button"
-            className="cs-btn cs-btn-primary"
+          <Button
             disabled={busy !== null}
             onClick={() => act("submit", submit)}
           >
             {busy === "submit" ? "Submitting…" : "Submit for review"}
-          </button>
+          </Button>
         )}
 
         {status === "published" && (
-          <button
-            type="button"
-            className="cs-btn cs-btn-ghost"
+          <Button
+            variant="outline"
             disabled={busy !== null}
             onClick={() => act("pause", () => patch({ status: "paused" }))}
           >
             {busy === "pause" ? "Pausing…" : "Pause listing"}
-          </button>
+          </Button>
         )}
 
         {status === "paused" && (
-          <button
-            type="button"
-            className="cs-btn cs-btn-ghost"
+          <Button
+            variant="outline"
             disabled={busy !== null}
             onClick={() => act("submit", submit)}
           >
             {busy === "submit" ? "Submitting…" : "Re-submit for review"}
-          </button>
+          </Button>
         )}
 
         {status !== "archived" && (
-          <button
-            type="button"
-            className="cs-btn cs-btn-danger"
+          <Button
+            variant="destructive"
             disabled={busy !== null}
             onClick={() => {
               if (!confirm("Archive this listing? It will be hidden from travellers.")) return;
@@ -94,12 +93,12 @@ export default function ListingActions({ listing }: { listing: VanListing }) {
             }}
           >
             {busy === "archive" ? "Archiving…" : "Archive"}
-          </button>
+          </Button>
         )}
       </div>
 
       {status === "pending_review" && (
-        <p className="cs-muted cs-small" style={{ marginTop: 12 }}>
+        <p className="mt-3 text-sm text-stone">
           Your listing is being reviewed. You&apos;ll receive an email once a decision is made.
         </p>
       )}

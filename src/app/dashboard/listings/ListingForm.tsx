@@ -11,6 +11,8 @@ import {
 } from "@/lib/constants";
 import type { VanListing } from "@/lib/types";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Step = 1 | 2 | 3;
 
@@ -61,6 +63,11 @@ function fromListing(l: VanListing | null): FormState {
     pickupLng: l.pickupLng ?? null,
   };
 }
+
+const inputCls = "w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-charcoal placeholder:text-stone focus:border-forest-deep focus:outline-none";
+const labelCls = "text-sm font-medium text-charcoal";
+const fieldCls = "flex flex-col gap-1";
+const hintCls = "text-xs text-stone";
 
 export default function ListingForm({ listing }: { listing: VanListing | null }) {
   const router = useRouter();
@@ -192,55 +199,55 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
 
   return (
     <>
-      <div className="cs-steps" style={{ marginBottom: 16 }}>
+      {/* Step progress dots */}
+      <div className="mb-5 flex gap-2">
         {([1, 2, 3] as Step[]).map((n) => (
           <div
             key={n}
-            className={`cs-step ${n < step ? "is-done" : ""} ${n === step ? "is-active" : ""}`}
+            className={cn(
+              "h-1.5 flex-1 rounded-full transition-colors",
+              n < step ? "bg-forest-deep" : n === step ? "bg-forest" : "bg-line",
+            )}
           />
         ))}
       </div>
 
-      <div className="cs-card">
-        {error && <div className="cs-error">{error}</div>}
+      <div className="rounded-2xl border border-line bg-cream p-6">
+        {error && (
+          <div className="mb-4 rounded-lg bg-rust-light px-3 py-2 text-sm text-rust">{error}</div>
+        )}
 
         {step === 1 && <StepVan form={form} update={update} island={island} onPickupBlur={geocodePickup} geocoding={geocoding} geocodedLabel={geocodedLabel} />}
         {step === 2 && <StepPricing form={form} update={update} />}
         {step === 3 && <StepFeatures form={form} update={update} toggleFeature={toggleFeature} island={island} />}
 
         {isNew && isLastStep && (
-          <div style={{ marginTop: 16 }}>
+          <div className="mt-4">
             <TurnstileWidget onToken={setTurnstileToken} />
           </div>
         )}
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 24 }}>
-          <button
+        <div className="mt-6 flex justify-between gap-3">
+          <Button
             type="button"
-            className="cs-btn cs-btn-ghost"
+            variant="outline"
             onClick={() => setStep((s) => (s > 1 ? (s - 1) as Step : s))}
             disabled={step === 1}
           >
             Back
-          </button>
+          </Button>
           {!isLastStep ? (
-            <button
+            <Button
               type="button"
-              className="cs-btn cs-btn-primary"
               onClick={() => setStep((s) => (s + 1) as Step)}
               disabled={!canAdvance()}
             >
               Continue
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              className="cs-btn cs-btn-primary"
-              onClick={save}
-              disabled={saving}
-            >
+            <Button type="button" onClick={save} disabled={saving}>
               {saving ? "Saving…" : isNew ? "Create listing (draft)" : "Save changes"}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -261,64 +268,60 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
 }) {
   return (
     <>
-      <h2>Your van</h2>
-      <div className="cs-field">
-        <label className="cs-label">Van name</label>
-        <input className="cs-input" placeholder="e.g. Pip the Toyota Hiace" value={form.name} onChange={(e) => update("name", e.target.value)} />
+      <h2 className="mb-4 font-serif text-xl text-forest-deep">Your van</h2>
+      <div className={fieldCls}>
+        <label className={labelCls}>Van name</label>
+        <input className={inputCls} placeholder="e.g. Pip the Toyota Hiace" value={form.name} onChange={(e) => update("name", e.target.value)} />
       </div>
-      <div className="cs-field">
-        <label className="cs-label">Type</label>
-        <select className="cs-select" value={form.vanType} onChange={(e) => update("vanType", e.target.value)}>
+      <div className={cn(fieldCls, "mt-3")}>
+        <label className={labelCls}>Type</label>
+        <select className={inputCls} value={form.vanType} onChange={(e) => update("vanType", e.target.value)}>
           <option value="">Select a type…</option>
           {VAN_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-        <div className="cs-field">
-          <label className="cs-label">Year</label>
-          <input type="number" className="cs-input" value={form.year} onChange={(e) => update("year", e.target.value)} />
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className={fieldCls}>
+          <label className={labelCls}>Year</label>
+          <input type="number" className={inputCls} value={form.year} onChange={(e) => update("year", e.target.value)} />
         </div>
-        <div className="cs-field">
-          <label className="cs-label">Sleeps</label>
-          <input type="number" min={1} className="cs-input" value={form.sleeps} onChange={(e) => update("sleeps", e.target.value)} />
+        <div className={fieldCls}>
+          <label className={labelCls}>Sleeps</label>
+          <input type="number" min={1} className={inputCls} value={form.sleeps} onChange={(e) => update("sleeps", e.target.value)} />
         </div>
-        <div className="cs-field">
-          <label className="cs-label">Seats</label>
-          <input type="number" min={1} className="cs-input" value={form.seats} onChange={(e) => update("seats", e.target.value)} />
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div className="cs-field">
-          <label className="cs-checkbox">
-            <input type="checkbox" checked={form.fixedToilet} onChange={(e) => update("fixedToilet", e.target.checked)} />
-            Has a fixed toilet
-          </label>
-        </div>
-        <div className="cs-field">
-          <label className="cs-checkbox">
-            <input type="checkbox" checked={form.petFriendly} onChange={(e) => update("petFriendly", e.target.checked)} />
-            Pets welcome
-          </label>
+        <div className={fieldCls}>
+          <label className={labelCls}>Seats</label>
+          <input type="number" min={1} className={inputCls} value={form.seats} onChange={(e) => update("seats", e.target.value)} />
         </div>
       </div>
-      <div className="cs-field">
-        <label className="cs-label">Region</label>
-        <select className="cs-select" value={form.region} onChange={(e) => update("region", e.target.value)}>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal">
+          <input type="checkbox" className="h-4 w-4 accent-forest-deep" checked={form.fixedToilet} onChange={(e) => update("fixedToilet", e.target.checked)} />
+          Has a fixed toilet
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal">
+          <input type="checkbox" className="h-4 w-4 accent-forest-deep" checked={form.petFriendly} onChange={(e) => update("petFriendly", e.target.checked)} />
+          Pets welcome
+        </label>
+      </div>
+      <div className={cn(fieldCls, "mt-3")}>
+        <label className={labelCls}>Region</label>
+        <select className={inputCls} value={form.region} onChange={(e) => update("region", e.target.value)}>
           <option value="">Select a region…</option>
           {NZ_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        {form.region && <p className="cs-muted cs-small" style={{ marginTop: 6 }}>{island} Island</p>}
+        {form.region && <p className={hintCls}>{island} Island</p>}
       </div>
-      <div className="cs-field">
-        <label className="cs-label">Pickup location <span className="cs-muted">(optional)</span></label>
+      <div className={cn(fieldCls, "mt-3")}>
+        <label className={labelCls}>Pickup location <span className="font-normal text-stone">(optional)</span></label>
         <input
-          className="cs-input"
+          className={inputCls}
           placeholder="e.g. Christchurch Airport, Rolleston"
           value={form.pickupLocationText}
           onChange={(e) => update("pickupLocationText", e.target.value)}
           onBlur={(e) => onPickupBlur(e.target.value)}
         />
-        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>
+        <p className={hintCls}>
           {geocoding
             ? "Locating…"
             : geocodedLabel
@@ -326,9 +329,9 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
             : "Where guests collect the van. Shown as an approximate area on your listing."}
         </p>
       </div>
-      <div className="cs-field">
-        <label className="cs-label">Description</label>
-        <textarea className="cs-textarea" placeholder="What makes your van a great trip?" value={form.description} onChange={(e) => update("description", e.target.value)} />
+      <div className={cn(fieldCls, "mt-3")}>
+        <label className={labelCls}>Description</label>
+        <textarea className={cn(inputCls, "min-h-[120px] resize-y")} placeholder="What makes your van a great trip?" value={form.description} onChange={(e) => update("description", e.target.value)} />
       </div>
     </>
   );
@@ -337,38 +340,35 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
 function StepPricing({ form, update }: StepProps) {
   return (
     <>
-      <h2>Pricing</h2>
-      <div className="cs-field">
-        <label className="cs-label">Nightly rate (NZD)</label>
-        <input type="number" min={1} className="cs-input" value={form.nightlyRate} onChange={(e) => update("nightlyRate", e.target.value)} />
-        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>Enter dollars, e.g. 150 for $150/night.</p>
+      <h2 className="mb-4 font-serif text-xl text-forest-deep">Pricing</h2>
+      <div className={fieldCls}>
+        <label className={labelCls}>Nightly rate (NZD)</label>
+        <input type="number" min={1} className={inputCls} value={form.nightlyRate} onChange={(e) => update("nightlyRate", e.target.value)} />
+        <p className={hintCls}>Enter dollars, e.g. 150 for $150/night.</p>
       </div>
-      <div className="cs-field">
-        <label className="cs-label">Minimum nights</label>
-        <select className="cs-select" value={form.minimumNights} onChange={(e) => update("minimumNights", e.target.value)}>
+      <div className={cn(fieldCls, "mt-3")}>
+        <label className={labelCls}>Minimum nights</label>
+        <select className={inputCls} value={form.minimumNights} onChange={(e) => update("minimumNights", e.target.value)}>
           {MINIMUM_NIGHTS.map((n) => <option key={n} value={n}>{n} {n === 1 ? "night" : "nights"}</option>)}
         </select>
       </div>
-      <div className="cs-field">
-        <label className="cs-checkbox">
-          <input type="checkbox" checked={form.instantBook} onChange={(e) => update("instantBook", e.target.checked)} />
-          Allow instant book (no manual approval per booking)
+      <div className={cn(fieldCls, "mt-3")}>
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-charcoal">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-forest-deep" checked={form.instantBook} onChange={(e) => update("instantBook", e.target.checked)} />
+          <span>Allow instant book <span className="text-stone">(no manual approval per booking)</span></span>
         </label>
-        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>
-          Instant book is offered to guests once you&apos;ve completed 3 trips with an average rating of 4.5⋆ or better
-          and your identity is verified. Until then, bookings still come to you as requests.
+        <p className={cn(hintCls, "mt-1")}>
+          Instant book is offered to guests once you&apos;ve completed 3 trips with an average rating of 4.5★ or better and your identity is verified. Until then, bookings still come to you as requests.
         </p>
       </div>
-      <div className="cs-field">
-        <label className="cs-label">Minimum driver age</label>
-        <select className="cs-select" value={form.minDriverAge} onChange={(e) => update("minDriverAge", e.target.value)}>
+      <div className={cn(fieldCls, "mt-3")}>
+        <label className={labelCls}>Minimum driver age</label>
+        <select className={inputCls} value={form.minDriverAge} onChange={(e) => update("minDriverAge", e.target.value)}>
           <option value="18">18+ (no extra restriction)</option>
           <option value="21">21+</option>
           <option value="25">25+</option>
         </select>
-        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>
-          Enforced against the guest&apos;s verified date of birth.
-        </p>
+        <p className={hintCls}>Enforced against the guest&apos;s verified date of birth.</p>
       </div>
     </>
   );
@@ -377,27 +377,32 @@ function StepPricing({ form, update }: StepProps) {
 function StepFeatures({ form, update, toggleFeature, island }: StepProps & { toggleFeature: (name: string) => void; island: "North" | "South" }) {
   return (
     <>
-      <h2>Features &amp; house rules</h2>
-      <p className="cs-label">Features</p>
-      <div className="cs-tags" style={{ marginBottom: 16 }}>
+      <h2 className="mb-4 font-serif text-xl text-forest-deep">Features &amp; house rules</h2>
+      <p className={cn(labelCls, "mb-2")}>Features</p>
+      <div className="mb-4 flex flex-wrap gap-2">
         {VAN_FEATURES.map((f) => (
           <button
             type="button"
             key={f}
             onClick={() => toggleFeature(f)}
-            className={`cs-tag ${form.features.includes(f) ? "is-active" : ""}`}
+            className={cn(
+              "rounded-full border px-3 py-1 text-sm transition-colors",
+              form.features.includes(f)
+                ? "border-forest-deep bg-forest-deep text-cream"
+                : "border-line bg-white text-charcoal-soft hover:border-forest",
+            )}
           >
             {f}
           </button>
         ))}
       </div>
-      <div className="cs-field">
-        <label className="cs-label">House rules</label>
-        <textarea className="cs-textarea" placeholder="e.g. No smoking. Please return with the same level of fuel." value={form.houseRules} onChange={(e) => update("houseRules", e.target.value)} />
+      <div className={fieldCls}>
+        <label className={labelCls}>House rules</label>
+        <textarea className={cn(inputCls, "min-h-[100px] resize-y")} placeholder="e.g. No smoking. Please return with the same level of fuel." value={form.houseRules} onChange={(e) => update("houseRules", e.target.value)} />
       </div>
-      <hr style={{ border: "none", borderTop: "1px solid var(--sand-200)", margin: "20px 0" }} />
-      <h3>Review</h3>
-      <ul className="cs-small cs-muted" style={{ paddingLeft: 18 }}>
+      <hr className="my-5 border-line" />
+      <h3 className="mb-2 font-serif text-base text-charcoal">Review</h3>
+      <ul className="space-y-1 text-sm text-stone">
         <li>{form.name} · {form.vanType} · {form.year} · sleeps {form.sleeps}</li>
         <li>{form.region} ({island})</li>
         <li>${form.nightlyRate}/night · min {form.minimumNights} nights{form.instantBook ? " · instant book" : ""}</li>

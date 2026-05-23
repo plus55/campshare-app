@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import ReportActions from "./ReportActions";
 
 interface ReportRow {
@@ -36,8 +36,9 @@ function fmtDate(epochSeconds: number): string {
 
 export default async function AdminReportsPage() {
   await requireAdmin();
+  const database = await getDb();
 
-  const rows = await db()
+  const rows = await database
     .prepare(
       `SELECT r.*,
               ur.name AS reporterName, ur.email AS reporterEmail,
@@ -55,23 +56,24 @@ export default async function AdminReportsPage() {
   const closed = rows.results.filter((r) => r.status !== "open");
 
   return (
-    <main className="cs-page">
-      <div className="cs-container">
-        <h1>Reports</h1>
-        <p className="cs-muted">{open.length} open · {closed.length} closed</p>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[1080px]">
+        <p className="mb-2 text-sm"><Link href="/admin" className="text-stone hover:text-charcoal">← Admin</Link></p>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Reports</h1>
+        <p className="mb-6 text-stone">{open.length} open · {closed.length} closed</p>
 
-        <h2 style={{ marginTop: 24 }}>Open</h2>
+        <h2 className="mb-3 font-serif text-xl text-forest-deep">Open</h2>
         {open.length === 0 ? (
-          <div className="cs-card"><p className="cs-muted" style={{ margin: 0 }}>No open reports.</p></div>
+          <div className="rounded-2xl border border-line bg-cream p-6 text-sm text-stone">No open reports.</div>
         ) : (
-          open.map((r) => <ReportRowCard key={r.id} r={r} />)
+          <div className="flex flex-col gap-3">{open.map((r) => <ReportRowCard key={r.id} r={r} />)}</div>
         )}
 
-        <h2 style={{ marginTop: 24 }}>Closed</h2>
+        <h2 className="mb-3 mt-8 font-serif text-xl text-forest-deep">Closed</h2>
         {closed.length === 0 ? (
-          <div className="cs-card"><p className="cs-muted" style={{ margin: 0 }}>No closed reports yet.</p></div>
+          <div className="rounded-2xl border border-line bg-cream p-6 text-sm text-stone">No closed reports yet.</div>
         ) : (
-          closed.map((r) => <ReportRowCard key={r.id} r={r} />)
+          <div className="flex flex-col gap-3">{closed.map((r) => <ReportRowCard key={r.id} r={r} />)}</div>
         )}
       </div>
     </main>
@@ -80,36 +82,37 @@ export default async function AdminReportsPage() {
 
 function ReportRowCard({ r }: { r: ReportRow }) {
   return (
-    <div className="cs-card" style={{ marginBottom: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <strong>{REASON_LABEL[r.reason] ?? r.reason}</strong>
-            <span className="cs-pill" style={{ fontSize: 11, padding: "2px 8px" }}>{r.status}</span>
-            <span className="cs-muted cs-small">{fmtDate(r.createdAt)}</span>
+    <div className="rounded-2xl border border-line bg-cream p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <strong className="text-charcoal">{REASON_LABEL[r.reason] ?? r.reason}</strong>
+            <span className="rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium text-stone">{r.status}</span>
+            <span className="text-xs text-stone">{fmtDate(r.createdAt)}</span>
           </div>
-          <p className="cs-small" style={{ margin: "0 0 4px" }}>
-            <strong>{r.reportedName}</strong> <span className="cs-muted">({r.reportedEmail})</span>
-            <span className="cs-muted"> reported by </span>
-            <strong>{r.reporterName}</strong> <span className="cs-muted">({r.reporterEmail})</span>
+          <p className="mb-1 text-sm">
+            <strong className="text-charcoal">{r.reportedName}</strong>
+            <span className="text-stone"> ({r.reportedEmail}) reported by </span>
+            <strong className="text-charcoal">{r.reporterName}</strong>
+            <span className="text-stone"> ({r.reporterEmail})</span>
           </p>
           {r.bookingId && (
-            <p className="cs-small" style={{ margin: "0 0 4px" }}>
-              Booking: <Link href={`/admin/bookings/${r.bookingId}`}>{r.bookingId.slice(0, 8)}…</Link>
+            <p className="mb-1 text-sm text-stone">
+              Booking: <Link href={`/admin/bookings/${r.bookingId}`} className="text-clay hover:text-clay-deep">{r.bookingId.slice(0, 8)}…</Link>
             </p>
           )}
           {r.details && (
-            <p className="cs-muted" style={{ margin: "8px 0 0", whiteSpace: "pre-wrap", fontSize: 13 }}>{r.details}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-stone">{r.details}</p>
           )}
           {r.adminNote && (
-            <p className="cs-small" style={{ margin: "8px 0 0", padding: "8px 12px", background: "var(--sand-100)", borderRadius: 6 }}>
-              <strong>Admin note:</strong> {r.adminNote}
+            <p className="mt-2 rounded-lg bg-sand px-3 py-2 text-sm text-charcoal-soft">
+              <strong className="text-charcoal">Admin note:</strong> {r.adminNote}
             </p>
           )}
         </div>
       </div>
       {r.status === "open" && (
-        <div style={{ marginTop: 12 }}>
+        <div className="mt-3">
           <ReportActions reportId={r.id} />
         </div>
       )}

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import ModerationButtons from "@/components/ModerationButtons";
-import type { VanListing, HostProfile } from "@/lib/types";
+import type { VanListing } from "@/lib/types";
 
 interface Row extends VanListing {
   hostFirstName: string;
@@ -14,25 +14,29 @@ interface Row extends VanListing {
 
 function formatDate(epochSeconds: number): string {
   return new Date(epochSeconds * 1000).toLocaleDateString("en-NZ", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+    day: "numeric", month: "short", year: "numeric",
   });
 }
 
+const statusBadge: Record<string, string> = {
+  pending_review: "rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium text-charcoal-soft",
+  published:      "rounded-full bg-moss-light px-2.5 py-0.5 text-[11px] font-medium text-moss",
+  rejected:       "rounded-full bg-rust-light px-2.5 py-0.5 text-[11px] font-medium text-rust",
+};
+
 function Field({ label, value, multiline }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <p className="cs-label" style={{ marginBottom: 2 }}>{label}</p>
-      <p style={{ margin: 0, whiteSpace: multiline ? "pre-wrap" : "normal" }}>{value}</p>
+    <div className="mb-3">
+      <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-stone">{label}</p>
+      <p className={`text-sm text-charcoal ${multiline ? "whitespace-pre-wrap" : ""}`}>{value}</p>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="cs-card" style={{ marginTop: 16 }}>
-      <h3>{title}</h3>
+    <div className="mt-4 rounded-2xl border border-line bg-cream p-5">
+      <h3 className="mb-3 font-serif text-base text-forest-deep">{title}</h3>
       {children}
     </div>
   );
@@ -45,8 +49,9 @@ export default async function AdminListingDetailPage({
 }) {
   await requireAdmin();
   const { id } = await params;
+  const database = await getDb();
 
-  const row = await db()
+  const row = await database
     .prepare(
       `SELECT vl.*,
               hp.firstName AS hostFirstName, hp.lastName AS hostLastName, hp.phone AS hostPhone,
@@ -65,17 +70,19 @@ export default async function AdminListingDetailPage({
   try { features = JSON.parse(row.features) as string[]; } catch { features = []; }
 
   return (
-    <main className="cs-page">
-      <div className="cs-narrow">
-        <Link href="/admin" className="cs-small">← Admin</Link>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[720px]">
+        <p className="mb-2 text-sm">
+          <Link href="/admin" className="text-stone hover:text-charcoal">← Admin</Link>
+        </p>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
-          <h1 style={{ margin: 0 }}>{row.name}</h1>
-          <span className={`cs-pill cs-pill-${row.status === "pending_review" ? "pending" : row.status}`}>
+        <div className="mb-1 flex items-center gap-3">
+          <h1 className="m-0 font-serif text-3xl text-forest-deep">{row.name}</h1>
+          <span className={statusBadge[row.status] ?? statusBadge.pending_review}>
             {row.status === "pending_review" ? "in review" : row.status}
           </span>
         </div>
-        <p className="cs-muted cs-small">Submitted {formatDate(row.createdAt)}</p>
+        <p className="mb-4 text-sm text-stone">Submitted {formatDate(row.createdAt)}</p>
 
         <Section title="Host">
           <Field label="Name" value={`${row.hostFirstName} ${row.hostLastName}`} />
@@ -106,13 +113,13 @@ export default async function AdminListingDetailPage({
 
         {row.adminNote && (
           <Section title="Previous admin note">
-            <p className="cs-muted cs-small">{row.adminNote}</p>
+            <p className="text-sm text-stone">{row.adminNote}</p>
           </Section>
         )}
 
         {row.status === "pending_review" && (
-          <div className="cs-card" style={{ marginTop: 16 }}>
-            <h3>Decision</h3>
+          <div className="mt-4 rounded-2xl border border-line bg-cream p-5">
+            <h3 className="mb-3 font-serif text-base text-forest-deep">Decision</h3>
             <ModerationButtons id={id} apiEndpoint={`/api/admin/listings/${id}`} />
           </div>
         )}

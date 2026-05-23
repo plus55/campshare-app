@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="cs-page">
-      <div className="cs-container cs-narrow" style={{ maxWidth: 720 }}>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[720px]">
 
         {/* Draft notice */}
         <div className="bg-ochre/15 border border-ochre/40 rounded-[var(--radius)] px-4 py-3 mb-8 text-[13px] text-charcoal-soft">

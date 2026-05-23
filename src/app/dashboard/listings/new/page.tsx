@@ -1,12 +1,14 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import ListingForm from "../ListingForm";
 
 export default async function NewListingPage() {
   const session = await requireSession();
+  const database = await getDb();
 
-  const profile = await db()
+  const profile = await database
     .prepare("SELECT userId FROM host_profile WHERE userId = ?")
     .bind(session.user.id)
     .first<{ userId: string }>();
@@ -14,13 +16,14 @@ export default async function NewListingPage() {
   if (!profile) redirect("/dashboard/profile");
 
   return (
-    <main className="cs-page">
-      <div className="cs-narrow">
-        <h1>New listing</h1>
-        <p className="cs-muted">Tell travellers about your van.</p>
-        <div style={{ marginTop: 24 }}>
-          <ListingForm listing={null} />
-        </div>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[720px]">
+        <p className="mb-2 text-sm">
+          <Link href="/dashboard" className="text-stone hover:text-charcoal">← Dashboard</Link>
+        </p>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">New listing</h1>
+        <p className="mb-6 text-stone">Tell travellers about your van.</p>
+        <ListingForm listing={null} />
       </div>
     </main>
   );

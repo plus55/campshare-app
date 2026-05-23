@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { db } from "@/lib/db";
-import { photoUrl } from "@/lib/photos";
+import { getDb } from "@/lib/db";
 import { getReviewsForHost } from "@/lib/reviews";
 import { getSession } from "@/lib/session";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
@@ -9,12 +8,6 @@ import type { HostProfile } from "@/lib/types";
 import ReportButton from "@/components/ReportButton";
 import HostBadges from "@/components/HostBadges";
 import { getBadgesForHost, isInstantBookEligible } from "@/lib/badges";
-
-interface HostUser {
-  id: string;
-  name: string;
-  image: string | null;
-}
 
 interface HostWithProfile extends HostProfile {
   userName: string;
@@ -25,7 +18,7 @@ function StarRating({ rating }: { rating: number }) {
   return (
     <span aria-label={`${rating} out of 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} style={{ color: n <= Math.round(rating) ? "var(--ochre)" : "var(--line)" }}>★</span>
+        <span key={n} className={n <= Math.round(rating) ? "text-ochre" : "text-line"}>★</span>
       ))}
     </span>
   );
@@ -46,10 +39,9 @@ export async function generateMetadata({
   params: Promise<{ userId: string }>;
 }): Promise<Metadata> {
   const { userId } = await params;
-  const host = await db()
-    .prepare(
-      `SELECT hp.firstName, hp.lastName FROM host_profile hp WHERE hp.userId = ?`
-    )
+  const database = await getDb();
+  const host = await database
+    .prepare(`SELECT hp.firstName, hp.lastName FROM host_profile hp WHERE hp.userId = ?`)
     .bind(userId)
     .first<{ firstName: string; lastName: string }>();
   if (!host) return { title: "Host not found — CampShare" };
@@ -62,8 +54,9 @@ export default async function HostProfilePage({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
+  const database = await getDb();
 
-  const host = await db()
+  const host = await database
     .prepare(
       `SELECT hp.*, u.name AS userName, u.image AS userImage
        FROM host_profile hp
@@ -80,7 +73,7 @@ export default async function HostProfilePage({
 
   const [reviewSummary, listingsResult, badges, hostIbEligible] = await Promise.all([
     getReviewsForHost(userId),
-    db()
+    database
       .prepare(
         `SELECT
            vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
@@ -131,51 +124,46 @@ export default async function HostProfilePage({
   });
 
   return (
-    <main className="cs-page">
-      <div className="cs-container" style={{ maxWidth: 860 }}>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[860px]">
 
         {/* Host identity card */}
-        <div className="cs-card" style={{ display: "flex", gap: 20, alignItems: "flex-start", marginBottom: 24 }}>
+        <div className="mb-6 flex items-start gap-5 rounded-2xl border border-line bg-cream p-6">
           {host.userImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={host.userImage}
               alt={host.firstName}
-              style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+              className="h-20 w-20 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span style={{
-              width: 80, height: 80, borderRadius: "50%",
-              background: "var(--forest)", color: "var(--cream)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-serif)", fontSize: 32, fontWeight: 500, flexShrink: 0,
-            }}>
+            <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-forest font-serif text-[2rem] font-medium text-cream">
               {initial}
             </span>
           )}
 
-          <div style={{ minWidth: 0 }}>
-            <h1 style={{ margin: "0 0 4px" }}>{host.firstName} {host.lastName}</h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div className="min-w-0">
+            <h1 className="mb-1 font-serif text-3xl text-forest-deep">{host.firstName} {host.lastName}</h1>
+            <div className="flex flex-wrap items-center gap-3">
               {reviewCount > 0 && avgRating !== null && (
-                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 14 }}>
+                <span className="flex items-center gap-1.5 text-sm">
                   <StarRating rating={avgRating} />
-                  <strong style={{ marginLeft: 2 }}>{avgRating.toFixed(1)}</strong>
-                  <span className="cs-muted">({reviewCount} review{reviewCount !== 1 ? "s" : ""})</span>
+                  <strong className="ml-0.5">{avgRating.toFixed(1)}</strong>
+                  <span className="text-stone">({reviewCount} review{reviewCount !== 1 ? "s" : ""})</span>
                 </span>
               )}
-              <span className="cs-muted cs-small">Member since {memberSince}</span>
+              <span className="text-sm text-stone">Member since {memberSince}</span>
             </div>
             {badges.length > 0 && (
-              <div style={{ marginTop: 8 }}>
+              <div className="mt-2">
                 <HostBadges badges={badges} />
               </div>
             )}
             {host.bio && (
-              <p className="cs-muted" style={{ marginTop: 12, marginBottom: 0 }}>{host.bio}</p>
+              <p className="mt-3 text-sm text-stone">{host.bio}</p>
             )}
             {canReport && (
-              <div style={{ marginTop: 12 }}>
+              <div className="mt-3">
                 <ReportButton reportedUserId={userId} reportedName={host.firstName} />
               </div>
             )}
@@ -184,11 +172,9 @@ export default async function HostProfilePage({
 
         {/* Listings */}
         {listings.length > 0 && (
-          <div style={{ marginBottom: 32 }}>
-            <h2 style={{ marginBottom: 16 }}>
-              {host.firstName}&apos;s vans
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+          <div className="mb-8">
+            <h2 className="mb-4 font-serif text-xl text-forest-deep">{host.firstName}&apos;s vans</h2>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
               {listings.map((l) => <ListingCard key={l.id} listing={l} />)}
             </div>
           </div>
@@ -196,38 +182,30 @@ export default async function HostProfilePage({
 
         {/* Reviews */}
         <div>
-          <h2 style={{ marginBottom: 16 }}>
-            Reviews ({reviewCount})
-          </h2>
+          <h2 className="mb-4 font-serif text-xl text-forest-deep">Reviews ({reviewCount})</h2>
           {reviews.length === 0 ? (
-            <div className="cs-card" style={{ padding: 24, textAlign: "center" }}>
-              <p className="cs-muted" style={{ margin: 0 }}>No reviews yet.</p>
+            <div className="rounded-2xl border border-line bg-cream p-8 text-center">
+              <p className="text-stone">No reviews yet.</p>
             </div>
           ) : (
-            <div className="cs-card" style={{ padding: 0 }}>
-              {reviews.map((r, i) => (
-                <div
-                  key={r.id}
-                  style={{
-                    padding: 20,
-                    borderTop: i > 0 ? "1px solid var(--line)" : "none",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{r.authorName}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="divide-y divide-line rounded-2xl border border-line bg-cream">
+              {reviews.map((r) => (
+                <div key={r.id} className="p-5">
+                  <div className="mb-2 flex justify-between">
+                    <span className="text-sm font-semibold text-charcoal">{r.authorName}</span>
+                    <div className="flex items-center gap-2">
                       <StarRating rating={r.rating} />
-                      <span className="cs-muted cs-small">{relDate(r.createdAt)}</span>
+                      <span className="text-xs text-stone">{relDate(r.createdAt)}</span>
                     </div>
                   </div>
-                  <p className="cs-muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.55 }}>{r.text}</p>
+                  <p className="text-sm leading-relaxed text-stone">{r.text}</p>
                   {r.hostResponse && (
-                    <div style={{ marginTop: 10, padding: "10px 14px", background: "var(--sand)", borderRadius: 8, borderLeft: "3px solid var(--clay)" }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--clay)", marginBottom: 4 }}>
+                    <div className="mt-3 rounded-lg border-l-2 border-clay bg-sand px-4 py-2.5">
+                      <div className="mb-1 text-xs font-semibold text-clay">
                         Host response
-                        {r.hostRespondedAt && <span style={{ fontWeight: 400, color: "var(--stone)", marginLeft: 6 }}>{relDate(r.hostRespondedAt)}</span>}
+                        {r.hostRespondedAt && <span className="ml-1.5 font-normal text-stone">{relDate(r.hostRespondedAt)}</span>}
                       </div>
-                      <p style={{ margin: 0, fontSize: 13, color: "var(--charcoal-soft)", lineHeight: 1.5 }}>{r.hostResponse}</p>
+                      <p className="text-sm leading-snug text-charcoal-soft">{r.hostResponse}</p>
                     </div>
                   )}
                 </div>

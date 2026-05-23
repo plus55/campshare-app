@@ -127,7 +127,7 @@ export default async function VanPage({
 
   return (
     <main className="min-h-screen pb-20 pt-6">
-      <div className="cs-container">
+      <div className="mx-auto max-w-[1080px] px-4">
 
         {/* Title + actions */}
         <div className="mb-2.5 mt-5 flex items-start justify-between gap-3">
