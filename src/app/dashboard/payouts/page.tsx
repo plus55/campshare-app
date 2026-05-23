@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { StripeDashboardButton } from "@/components/StripeDashboardButton";
 import { PayoutRow, type PayoutRowData } from "./PayoutRow";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Period = "month" | "3m" | "12m" | "all";
 
@@ -18,7 +20,6 @@ function periodLabel(p: Period) {
          "All time";
 }
 
-// Returns unix seconds cutoff for the period start. 0 = all time.
 function periodCutoffSec(p: Period): number {
   if (p === "all") return 0;
   const now = new Date();
@@ -46,7 +47,9 @@ export default async function PayoutsPage({
     rawPeriod === "all" ? "all" :
     "month";
 
-  let hp = await db()
+  const database = await getDb();
+
+  let hp = await database
     .prepare("SELECT stripeAccountId, stripeOnboardingCompleted FROM host_profile WHERE userId = ?")
     .bind(session.user.id)
     .first<{ stripeAccountId: string | null; stripeOnboardingCompleted: number }>();
@@ -57,7 +60,7 @@ export default async function PayoutsPage({
       const account = await s.accounts.retrieve(hp.stripeAccountId);
       if (account.charges_enabled) {
         const nowSec = Math.floor(Date.now() / 1000);
-        await db()
+        await database
           .prepare("UPDATE host_profile SET stripeOnboardingCompleted = 1, updatedAt = ? WHERE userId = ?")
           .bind(nowSec, session.user.id)
           .run();
@@ -68,7 +71,7 @@ export default async function PayoutsPage({
 
   const cutoff = periodCutoffSec(period);
 
-  const result = await db()
+  const result = await database
     .prepare(
       `SELECT p.id, p.amountCents, p.status, p.createdAt, p.bookingId,
               vl.name AS vanName,
@@ -95,25 +98,25 @@ export default async function PayoutsPage({
   const periods: Period[] = ["month", "3m", "12m", "all"];
 
   return (
-    <main className="cs-page">
-      <div className="cs-container">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <h1 style={{ margin: 0 }}>Payouts</h1>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[1080px]">
+        <div className="mb-6 flex items-start justify-between">
+          <h1 className="m-0 font-serif text-3xl text-forest-deep">Payouts</h1>
           {hp?.stripeAccountId && hp.stripeOnboardingCompleted ? (
             <StripeDashboardButton />
           ) : (
-            <Link href="/dashboard/payouts/onboard" className="cs-btn cs-btn-primary">
+            <Link href="/dashboard/payouts/onboard" className={cn(buttonVariants())}>
               Set up payouts
             </Link>
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+        <div className="mb-6 flex flex-wrap gap-2">
           {periods.map((p) => (
             <Link
               key={p}
               href={`/dashboard/payouts?period=${p}`}
-              className={`cs-btn cs-small ${period === p ? "cs-btn-primary" : "cs-btn-ghost"}`}
+              className={cn(buttonVariants({ variant: period === p ? "default" : "outline", size: "sm" }))}
             >
               {periodLabel(p)}
             </Link>
@@ -121,31 +124,27 @@ export default async function PayoutsPage({
         </div>
 
         {paidPayouts.length > 0 && (
-          <div className="cs-card" style={{ marginBottom: 24 }}>
-            <p style={{ margin: "0 0 16px", fontWeight: 600, fontSize: 18 }}>
-              Earnings — {periodLabel(period)}
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16 }}>
+          <div className="cs-card mb-6">
+            <p className="mb-4 text-lg font-semibold text-charcoal">Earnings — {periodLabel(period)}</p>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
               <div>
-                <p className="cs-label cs-small" style={{ margin: 0 }}>Nightly hire</p>
-                <p style={{ margin: "2px 0 0", fontWeight: 600, fontSize: 20 }}>{fmtNzd(totalNightlyCents)}</p>
+                <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Nightly hire</p>
+                <p className="mt-0.5 text-xl font-semibold text-charcoal">{fmtNzd(totalNightlyCents)}</p>
               </div>
               {totalAddonCents > 0 && (
                 <div>
-                  <p className="cs-label cs-small" style={{ margin: 0 }}>Add-ons</p>
-                  <p style={{ margin: "2px 0 0", fontWeight: 600, fontSize: 20 }}>{fmtNzd(totalAddonCents)}</p>
+                  <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Add-ons</p>
+                  <p className="mt-0.5 text-xl font-semibold text-charcoal">{fmtNzd(totalAddonCents)}</p>
                 </div>
               )}
               <div>
-                <p className="cs-label cs-small" style={{ margin: 0 }}>Platform fees (guest)</p>
-                <p style={{ margin: "2px 0 0", fontWeight: 600, fontSize: 20, color: "var(--stone)" }}>
-                  −{fmtNzd(totalPlatformFeeCents)}
-                </p>
-                <p className="cs-muted cs-small" style={{ margin: 0 }}>incl. GST</p>
+                <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Platform fees (guest)</p>
+                <p className="mt-0.5 text-xl font-semibold text-stone">−{fmtNzd(totalPlatformFeeCents)}</p>
+                <p className="m-0 text-xs text-stone">incl. GST</p>
               </div>
-              <div style={{ borderLeft: "2px solid var(--line)", paddingLeft: 16 }}>
-                <p className="cs-label cs-small" style={{ margin: 0 }}>Your total payout</p>
-                <p style={{ margin: "2px 0 0", fontWeight: 700, fontSize: 24 }}>{fmtNzd(totalPaidCents)}</p>
+              <div className="border-l-2 border-line pl-4">
+                <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Your total payout</p>
+                <p className="mt-0.5 text-2xl font-bold text-charcoal">{fmtNzd(totalPaidCents)}</p>
               </div>
             </div>
           </div>
@@ -153,31 +152,27 @@ export default async function PayoutsPage({
 
         {payouts.length === 0 ? (
           <div className="cs-card">
-            <p className="cs-muted">No payouts in this period. Payouts are issued 24 hours after each trip ends.</p>
+            <p className="text-stone">No payouts in this period. Payouts are issued 24 hours after each trip ends.</p>
           </div>
         ) : (
           <div className="cs-card">
-            <p className="cs-muted cs-small" style={{ margin: "0 0 12px" }}>
-              Click a row to see the per-booking breakdown.
-            </p>
-            <table className="cs-table">
-              <thead>
-                <tr>
-                  <th>Van</th>
-                  <th>Nightly hire</th>
-                  <th>Add-ons</th>
-                  <th>Platform fee</th>
-                  <th>Your payout</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payouts.map((p) => (
-                  <PayoutRow key={p.id} payout={p} />
-                ))}
-              </tbody>
-            </table>
+            <p className="mb-3 text-xs text-stone">Click a row to see the per-booking breakdown.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    {["Van", "Nightly hire", "Add-ons", "Platform fee", "Your payout", "Status", "Date"].map((h) => (
+                      <th key={h} className="border-b border-line pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-stone">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {payouts.map((p) => (
+                    <PayoutRow key={p.id} payout={p} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

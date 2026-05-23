@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
@@ -9,9 +9,9 @@ interface Props {
 }
 
 export default async function SimilarListings({ region, excludeId }: Props) {
-  const session = await getSession();
+  const [session, database] = await Promise.all([getSession(), getDb()]);
 
-  const { results: listings } = await db()
+  const { results: listings } = await database
     .prepare(
       `SELECT
         vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
@@ -50,10 +50,9 @@ export default async function SimilarListings({ region, excludeId }: Props) {
 
   if (listings.length === 0) return null;
 
-  // Mark wishlisted items for logged-in users
   let savedIds = new Set<string>();
   if (session) {
-    const { results: saved } = await db()
+    const { results: saved } = await database
       .prepare("SELECT vanListingId FROM wishlist WHERE userId = ?")
       .bind(session.user.id)
       .all<{ vanListingId: string }>();
@@ -69,13 +68,9 @@ export default async function SimilarListings({ region, excludeId }: Props) {
   }));
 
   return (
-    <div className="cs-card" style={{ marginTop: 16 }}>
-      <h2 style={{ marginBottom: 16 }}>More vans in {region}</h2>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-        gap: "1rem",
-      }}>
+    <div className="cs-card mt-4">
+      <h2 className="mb-4 font-serif text-xl text-forest-deep">More vans in {region}</h2>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
         {enriched.map((l) => <ListingCard key={l.id} listing={l} />)}
       </div>
     </div>

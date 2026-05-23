@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SavedSearches } from "./SavedSearches";
 
 export const metadata: Metadata = {
@@ -28,9 +30,10 @@ export default async function SavedPage({
   const session = await requireSession();
   const { tab: rawTab } = await searchParams;
   const tab: Tab = rawTab === "searches" ? "searches" : "vans";
+  const database = await getDb();
 
   const [vansResult, searchesResult] = await Promise.all([
-    db()
+    database
       .prepare(
         `SELECT
           vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
@@ -66,7 +69,7 @@ export default async function SavedPage({
       )
       .bind(session.user.id)
       .all<SearchResult>(),
-    db()
+    database
       .prepare("SELECT id, label, filters, lastAlertedAt, createdAt FROM saved_search WHERE userId = ? ORDER BY createdAt DESC")
       .bind(session.user.id)
       .all<SavedSearchRow>(),
@@ -84,38 +87,37 @@ export default async function SavedPage({
   }));
 
   return (
-    <main className="cs-page">
-      <div className="cs-container">
-        <h1 style={{ marginBottom: 16 }}>Saved</h1>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[1080px]">
+        <h1 className="mb-4 font-serif text-3xl text-forest-deep">Saved</h1>
 
-        <div style={{ display: "flex", gap: 16, borderBottom: "1px solid var(--line)", marginBottom: 24 }}>
-          <Link
-            href="/dashboard/saved?tab=vans"
-            className={tab === "vans" ? "cs-tab cs-tab-active" : "cs-tab"}
-            style={tabStyle(tab === "vans")}
-          >
-            Vans ({listings.length})
-          </Link>
-          <Link
-            href="/dashboard/saved?tab=searches"
-            className={tab === "searches" ? "cs-tab cs-tab-active" : "cs-tab"}
-            style={tabStyle(tab === "searches")}
-          >
-            Searches ({savedSearches.length})
-          </Link>
+        {/* Tab strip */}
+        <div className="mb-6 flex gap-4 border-b border-line">
+          {(["vans", "searches"] as Tab[]).map((t) => (
+            <Link
+              key={t}
+              href={`/dashboard/saved?tab=${t}`}
+              className={cn(
+                "-mb-px pb-2.5 pt-1 text-sm font-medium transition-colors",
+                tab === t
+                  ? "border-b-2 border-forest-deep text-forest-deep"
+                  : "border-b-2 border-transparent text-stone hover:text-charcoal",
+              )}
+            >
+              {t === "vans" ? `Vans (${listings.length})` : `Searches (${savedSearches.length})`}
+            </Link>
+          ))}
         </div>
 
         {tab === "vans" ? (
           listings.length === 0 ? (
-            <div className="cs-card" style={{ textAlign: "center", padding: 48 }}>
-              <p style={{ fontWeight: 600, marginBottom: 8 }}>No saved vans yet</p>
-              <p className="cs-muted cs-small" style={{ marginBottom: 20 }}>
-                Tap the heart on any listing to save it for later.
-              </p>
-              <Link href="/vans" className="cs-btn cs-btn-primary">Browse vans</Link>
+            <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
+              <p className="font-semibold text-charcoal">No saved vans yet</p>
+              <p className="max-w-[40ch] text-sm text-stone">Tap the heart on any listing to save it for later.</p>
+              <Link href="/vans" className={cn(buttonVariants())}>Browse vans</Link>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
               {listings.map((l) => (
                 <ListingCard key={l.id} listing={l} />
               ))}
@@ -127,15 +129,4 @@ export default async function SavedPage({
       </div>
     </main>
   );
-}
-
-function tabStyle(active: boolean): React.CSSProperties {
-  return {
-    padding: "10px 4px",
-    fontWeight: active ? 600 : 500,
-    color: active ? "var(--forest-deep, var(--ink-900))" : "var(--stone)",
-    borderBottom: active ? "2px solid var(--forest-deep, var(--ink-900))" : "2px solid transparent",
-    textDecoration: "none",
-    marginBottom: -1,
-  };
 }

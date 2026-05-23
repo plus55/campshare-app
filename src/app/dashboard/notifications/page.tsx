@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Notifications — CampShare",
@@ -66,8 +66,9 @@ function fmtDate(sec: number): string {
 export default async function NotificationsPage() {
   const session = await requireSession();
   const uid = session.user.id;
+  const database = await getDb();
 
-  const { results } = await db()
+  const { results } = await database
     .prepare(
       `SELECT id, type, payload, readAt, createdAt
        FROM notification
@@ -83,49 +84,41 @@ export default async function NotificationsPage() {
     parsedPayload: JSON.parse(r.payload) as Record<string, unknown>,
   }));
 
-  // Mark all as read (server-side — no JS required for the page itself)
   const nowSec = Math.floor(Date.now() / 1000);
-  await db()
+  await database
     .prepare("UPDATE notification SET readAt = ? WHERE userId = ? AND readAt IS NULL")
     .bind(nowSec, uid)
     .run();
 
   return (
-    <main className="cs-page">
-      <div className="cs-container">
-        <h1 style={{ marginBottom: 4 }}>Notifications</h1>
-        <p className="cs-muted" style={{ marginBottom: 24 }}>Your last 50 notifications.</p>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[1080px]">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Notifications</h1>
+        <p className="mb-6 text-stone">Your last 50 notifications.</p>
 
         {items.length === 0 ? (
-          <div className="cs-card" style={{ textAlign: "center", padding: 48 }}>
-            <p style={{ fontWeight: 600, marginBottom: 8 }}>Nothing here yet</p>
-            <p className="cs-muted cs-small" style={{ marginBottom: 20 }}>
+          <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
+            <p className="font-semibold text-charcoal">Nothing here yet</p>
+            <p className="max-w-[36ch] text-sm text-stone">
               Booking updates, review prompts, and messages will appear here.
             </p>
-            <Link href="/vans" className="cs-btn cs-btn-primary">Browse vans</Link>
+            <Link href="/vans" className="text-sm text-clay hover:text-clay-deep">Browse vans</Link>
           </div>
         ) : (
-          <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+          <div className="cs-card overflow-hidden p-0">
             {items.map((n, i) => (
               <Link
                 key={n.id}
                 href={href(n.type, n.parsedPayload)}
-                style={{
-                  display: "block",
-                  padding: "14px 20px",
-                  borderBottom: i < items.length - 1 ? "1px solid var(--line)" : "none",
-                  textDecoration: "none",
-                  background: n.readAt === null ? "rgba(194,97,58,0.05)" : "transparent",
-                  transition: "background 0.12s",
-                }}
+                className={`block border-b border-line px-5 py-3.5 no-underline transition-colors last:border-b-0 hover:bg-sand ${
+                  n.readAt === null ? "bg-clay/5" : ""
+                }`}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                  <span style={{ fontSize: 14, color: "var(--charcoal-soft)", fontWeight: n.readAt === null ? 600 : 400 }}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className={`text-sm ${n.readAt === null ? "font-semibold text-charcoal-soft" : "font-normal text-charcoal-soft"}`}>
                     {label(n.type, n.parsedPayload)}
                   </span>
-                  <span className="cs-muted" style={{ fontSize: 12, flexShrink: 0 }}>
-                    {fmtDate(n.createdAt)}
-                  </span>
+                  <span className="shrink-0 text-xs text-stone">{fmtDate(n.createdAt)}</span>
                 </div>
               </Link>
             ))}

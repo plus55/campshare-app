@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { HOLDBACK_SEC, BLIND_WINDOW_SEC } from "@/lib/reviews";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import ReceivedReviewsSection from "./ReceivedReviewsSection";
 
 export const metadata: Metadata = {
@@ -38,12 +40,13 @@ function fmtDate(ms: number) {
 export default async function ReviewsDashboardPage() {
   const session = await requireSession();
   const uid = session.user.id;
+  const database = await getDb();
 
   const ns = Math.floor(Date.now() / 1000);
   const visibilityCutoff = HOLDBACK_SEC + BLIND_WINDOW_SEC;
 
   const [pendingResult, receivedResult] = await Promise.all([
-    db()
+    database
       .prepare(
         `SELECT
            b.id AS bookingId,
@@ -68,8 +71,7 @@ export default async function ReviewsDashboardPage() {
       .bind(uid, uid, uid, uid, uid)
       .all<PendingTrip>(),
 
-    // Reviews received by this user as a host (guest reviews of their listings)
-    db()
+    database
       .prepare(
         `SELECT r.id, r.rating, r.text, r.createdAt, r.hostResponse, r.hostRespondedAt,
                 u.name AS authorName, vl.name AS vanName
@@ -94,36 +96,35 @@ export default async function ReviewsDashboardPage() {
   const received = receivedResult.results ?? [];
 
   return (
-    <main className="cs-page">
-      <div className="cs-container">
-        <h1 style={{ marginBottom: 4 }}>Reviews</h1>
-        <p className="cs-muted" style={{ marginBottom: 24 }}>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[1080px]">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Reviews</h1>
+        <p className="mb-6 text-stone">
           Trips you can still review. Reviews are double-blind — both sides write in private and both go live together (or after 14 days).
         </p>
 
         {pending.length === 0 ? (
-          <div className="cs-card" style={{ textAlign: "center", padding: 48 }}>
-            <p style={{ fontWeight: 600, marginBottom: 8 }}>No reviews waiting</p>
-            <p className="cs-muted cs-small" style={{ marginBottom: 20 }}>
+          <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
+            <p className="font-semibold text-charcoal">No reviews waiting</p>
+            <p className="max-w-[40ch] text-sm text-stone">
               We&apos;ll email you when a trip wraps up and is ready for review.
             </p>
-            <Link href="/vans" className="cs-btn cs-btn-primary">Browse vans</Link>
+            <Link href="/vans" className={cn(buttonVariants())}>Browse vans</Link>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             {pending.map((t) => (
-              <div key={t.bookingId} className="cs-card" style={{ padding: 16, display: "flex", alignItems: "center", gap: 16, justifyContent: "space-between" }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{t.vanName}</div>
-                  <div className="cs-muted cs-small" style={{ marginTop: 4 }}>
+              <div key={t.bookingId} className="cs-card flex items-center justify-between gap-4 p-4">
+                <div className="min-w-0">
+                  <div className="font-semibold text-charcoal">{t.vanName}</div>
+                  <div className="mt-1 text-xs text-stone">
                     {t.role === "guest" ? `Hosted by ${t.counterpartName}` : `Guest: ${t.counterpartName}`} ·{" "}
                     {fmtDate(t.startDate)} – {fmtDate(t.endDate)}
                   </div>
                 </div>
                 <Link
                   href={`/trips/${t.bookingId}/review`}
-                  className="cs-btn cs-btn-primary"
-                  style={{ flexShrink: 0 }}
+                  className={cn(buttonVariants({ size: "sm" }), "shrink-0")}
                 >
                   Leave a review
                 </Link>
