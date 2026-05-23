@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signIn, signUp } from "@/lib/auth-client";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -15,9 +16,29 @@ export default function SignupPage() {
   const [loading, setLoading] = useState<"email" | "google" | "magic" | null>(
     null
   );
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  async function verifyBot(): Promise<boolean> {
+    if (!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) return true;
+    if (!turnstileToken) {
+      setError("Please wait for the security check to complete.");
+      return false;
+    }
+    const res = await fetch("/api/verify-turnstile", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: turnstileToken }),
+    });
+    if (!res.ok) {
+      setError("Security check failed. Please refresh and try again.");
+      return false;
+    }
+    return true;
+  }
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
+    if (!(await verifyBot())) return;
     setLoading("email");
     setError(null);
     const res = await signUp.email({ name, email, password });
@@ -40,6 +61,7 @@ export default function SignupPage() {
       setError("Enter your email to receive a magic link.");
       return;
     }
+    if (!(await verifyBot())) return;
     setLoading("magic");
     setError(null);
     const res = await signIn.magicLink({ email, callbackURL: "/dashboard" });
@@ -123,6 +145,8 @@ export default function SignupPage() {
           {loading === "email" ? "Creating account…" : "Create account"}
         </button>
       </form>
+
+      <TurnstileWidget onToken={setTurnstileToken} />
 
       <button
         type="button"

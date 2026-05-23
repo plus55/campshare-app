@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "./ListingCard";
 import SearchFilters, { type FilterValues } from "./SearchFilters";
 import MapViewClient from "./MapViewClient";
@@ -60,7 +61,7 @@ export default async function VansPage({
   const sql = `
     SELECT
       vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
-      vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
+      vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
       vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
       hp.firstName AS hostFirstName,
       u.image      AS hostImage,
@@ -105,7 +106,18 @@ export default async function VansPage({
       .all<{ vanListingId: string }>();
     savedIds = new Set(saved.map((r) => r.vanListingId));
   }
-  const listings = rawListings.map((l) => ({ ...l, isWishlisted: savedIds.has(l.id) ? 1 : 0 }));
+
+  // Drop the IB flag for listings whose host doesn't meet eligibility — otherwise
+  // the pill would over-promise vs the PDP. If the user filtered by IB, also drop
+  // the listing entirely so the count and map match what's actually instant-bookable.
+  const ibHostIds = Array.from(new Set(rawListings.filter((l) => l.instantBook).map((l) => l.hostUserId)));
+  const eligibleHosts = await getInstantBookEligibleHosts(ibHostIds);
+  const gated = rawListings.map((l) => ({
+    ...l,
+    instantBook: l.instantBook && eligibleHosts.has(l.hostUserId) ? 1 : 0,
+  }));
+  const filtered = instantBook ? gated.filter((l) => l.instantBook === 1) : gated;
+  const listings = filtered.map((l) => ({ ...l, isWishlisted: savedIds.has(l.id) ? 1 : 0 }));
 
   const initialFilters: FilterValues = {
     region, vanType,

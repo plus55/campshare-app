@@ -1,6 +1,6 @@
 export type VanListingStatus = "draft" | "pending_review" | "published" | "paused" | "archived";
 export type Island = "North" | "South";
-export type AvailabilityBlockReason = "booking" | "host-blocked" | "maintenance";
+export type AvailabilityBlockReason = "booking" | "host-blocked" | "maintenance" | "ical";
 
 export interface HostProfile {
   userId: string;
@@ -41,6 +41,8 @@ export interface VanListing {
   features: string; // JSON array string
   houseRules: string;
   publishedAt: number | null;
+  minDriverAge: number;
+  icalFeedUrl: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -61,6 +63,7 @@ export interface AvailabilityBlock {
   endDate: number;
   reason: AvailabilityBlockReason;
   bookingId: string | null;
+  icalUid: string | null;
   createdAt: number;
 }
 

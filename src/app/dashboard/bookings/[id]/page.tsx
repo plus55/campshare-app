@@ -5,7 +5,11 @@ import { db } from "@/lib/db";
 import { BookingStatusBadge } from "@/components/BookingStatusBadge";
 import { BookingActions } from "@/components/BookingActions";
 import { MessageSendForm } from "@/components/MessageSendForm";
+import ReportButton from "@/components/ReportButton";
+import DisputeForm from "@/components/DisputeForm";
 import type { Booking, BookingMessage } from "@/lib/types";
+
+const DISPUTE_WINDOW_SEC = 7 * 24 * 3600;
 
 interface BookingAddon {
   id: string;
@@ -58,7 +62,7 @@ export default async function DashboardBookingDetailPage({
     }
   }
 
-  const [msgsResult, addonsResult] = await Promise.all([
+  const [msgsResult, addonsResult, openDispute] = await Promise.all([
     db()
       .prepare(
         `SELECT bm.*, u.name AS senderName
@@ -73,11 +77,23 @@ export default async function DashboardBookingDetailPage({
       .prepare("SELECT id, name, priceNZDCents FROM booking_addon WHERE bookingId = ?")
       .bind(id)
       .all<BookingAddon>(),
+    db()
+      .prepare(
+        `SELECT id, status, reason, createdAt FROM dispute
+         WHERE bookingId = ? AND initiatorUserId = ?
+         ORDER BY createdAt DESC LIMIT 1`
+      )
+      .bind(id, session.user.id)
+      .first<{ id: string; status: string; reason: string; createdAt: number }>(),
   ]);
   const msgs = msgsResult;
   const bookingAddons = addonsResult.results;
 
   const isActive = ["requested", "accepted", "in_progress"].includes(booking.status);
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const anchorSec = booking.completedAt ?? Math.floor(booking.endDate / 1000);
+  const canDispute = booking.status === "completed" && !openDispute && nowSec - anchorSec < DISPUTE_WINDOW_SEC;
 
   return (
     <main className="cs-page">
@@ -126,11 +142,21 @@ export default async function DashboardBookingDetailPage({
             </div>
           </div>
 
-          <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <Link href={`/vans/${booking.vanSlug}`} className="cs-btn cs-btn-ghost cs-small">
               View listing
             </Link>
+            {canDispute && <DisputeForm bookingId={id} />}
+            <span style={{ marginLeft: "auto" }}>
+              <ReportButton reportedUserId={booking.guestUserId} reportedName={booking.guestName} bookingId={booking.id} />
+            </span>
           </div>
+
+          {openDispute && (
+            <div style={{ marginTop: 12, padding: "10px 14px", background: "#fbe6e0", borderRadius: 8, fontSize: 13 }}>
+              <strong>Dispute open</strong> — status: {openDispute.status}. CampShare admin will follow up.
+            </div>
+          )}
         </div>
 
         {booking.status === "requested" && (

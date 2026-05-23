@@ -16,6 +16,7 @@ const schema = z.object({
   nightlyRate: z.number().int().positive().optional(),
   minimumNights: z.number().int().positive().optional(),
   instantBook: z.boolean().optional(),
+  minDriverAge: z.number().int().min(18).max(99).optional(),
   region: z.string().min(1).optional(),
   features: z.array(z.string()).optional(),
   houseRules: z.string().optional(),
@@ -68,6 +69,7 @@ export async function PATCH(
   if (d.nightlyRate !== undefined) { sets.push("nightlyRate = ?"); binds.push(d.nightlyRate); }
   if (d.minimumNights !== undefined) { sets.push("minimumNights = ?"); binds.push(d.minimumNights); }
   if (d.instantBook !== undefined) { sets.push("instantBook = ?"); binds.push(d.instantBook ? 1 : 0); }
+  if (d.minDriverAge !== undefined) { sets.push("minDriverAge = ?"); binds.push(d.minDriverAge); }
   if (d.region !== undefined) {
     sets.push("region = ?"); binds.push(d.region);
     sets.push("island = ?"); binds.push(NORTH_ISLAND_REGIONS.has(d.region) ? "North" : "South");

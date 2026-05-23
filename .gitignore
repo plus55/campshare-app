@@ -36,3 +36,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 cloudflare-env.d.ts
+
+# claude code workspace
+.claude/
+
+# test scratch output
+test-output.txt

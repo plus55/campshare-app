@@ -10,6 +10,7 @@ import {
   VAN_TYPES,
 } from "@/lib/constants";
 import type { VanListing } from "@/lib/types";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 type Step = 1 | 2 | 3;
 
@@ -25,6 +26,7 @@ interface FormState {
   nightlyRate: string;
   minimumNights: string;
   instantBook: boolean;
+  minDriverAge: string;
   region: string;
   features: string[];
   houseRules: string;
@@ -39,6 +41,7 @@ function fromListing(l: VanListing | null): FormState {
       name: "", vanType: "", year: "", sleeps: "", seats: "",
       fixedToilet: false, petFriendly: false, description: "",
       nightlyRate: "", minimumNights: "2", instantBook: false,
+      minDriverAge: "21",
       region: "", features: [], houseRules: "", pickupLocationText: "",
       pickupLat: null, pickupLng: null,
     };
@@ -51,6 +54,7 @@ function fromListing(l: VanListing | null): FormState {
     fixedToilet: !!l.fixedToilet, petFriendly: !!l.petFriendly,
     description: l.description, nightlyRate: String(Math.round(l.nightlyRate / 100)),
     minimumNights: String(l.minimumNights), instantBook: !!l.instantBook,
+    minDriverAge: String(l.minDriverAge ?? 18),
     region: l.region, features, houseRules: l.houseRules,
     pickupLocationText: l.pickupLocationText ?? "",
     pickupLat: l.pickupLat ?? null,
@@ -65,6 +69,7 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
   const [form, setForm] = useState<FormState>(() => fromListing(listing));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodedLabel, setGeocodedLabel] = useState<string | null>(
     listing?.pickupLat ? (listing.pickupLocationText ?? null) : null
@@ -120,6 +125,22 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
   }
 
   async function save() {
+    if (isNew && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+      if (!turnstileToken) {
+        setError("Please wait for the security check to complete.");
+        return;
+      }
+      const vRes = await fetch("/api/verify-turnstile", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: turnstileToken }),
+      });
+      if (!vRes.ok) {
+        setError("Security check failed. Please refresh and try again.");
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
     const payload = {
@@ -134,6 +155,7 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
       nightlyRate: Math.round(Number(form.nightlyRate) * 100),
       minimumNights: Number(form.minimumNights),
       instantBook: form.instantBook,
+      minDriverAge: Number(form.minDriverAge),
       region: form.region,
       features: form.features,
       houseRules: form.houseRules,
@@ -185,6 +207,12 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
         {step === 1 && <StepVan form={form} update={update} island={island} onPickupBlur={geocodePickup} geocoding={geocoding} geocodedLabel={geocodedLabel} />}
         {step === 2 && <StepPricing form={form} update={update} />}
         {step === 3 && <StepFeatures form={form} update={update} toggleFeature={toggleFeature} island={island} />}
+
+        {isNew && isLastStep && (
+          <div style={{ marginTop: 16 }}>
+            <TurnstileWidget onToken={setTurnstileToken} />
+          </div>
+        )}
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 24 }}>
           <button
@@ -326,6 +354,21 @@ function StepPricing({ form, update }: StepProps) {
           <input type="checkbox" checked={form.instantBook} onChange={(e) => update("instantBook", e.target.checked)} />
           Allow instant book (no manual approval per booking)
         </label>
+        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>
+          Instant book is offered to guests once you&apos;ve completed 3 trips with an average rating of 4.5⋆ or better
+          and your identity is verified. Until then, bookings still come to you as requests.
+        </p>
+      </div>
+      <div className="cs-field">
+        <label className="cs-label">Minimum driver age</label>
+        <select className="cs-select" value={form.minDriverAge} onChange={(e) => update("minDriverAge", e.target.value)}>
+          <option value="18">18+ (no extra restriction)</option>
+          <option value="21">21+</option>
+          <option value="25">25+</option>
+        </select>
+        <p className="cs-muted cs-small" style={{ marginTop: 4 }}>
+          Enforced against the guest&apos;s verified date of birth.
+        </p>
       </div>
     </>
   );

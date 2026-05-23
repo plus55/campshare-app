@@ -17,6 +17,7 @@ const schema = z.object({
   nightlyRate: z.number().int().positive(),
   minimumNights: z.number().int().positive(),
   instantBook: z.boolean().default(false),
+  minDriverAge: z.number().int().min(18).max(99).default(18),
   region: z.string().min(1),
   features: z.array(z.string()).default([]),
   houseRules: z.string().default(""),
@@ -62,14 +63,14 @@ export async function POST(req: Request) {
       `INSERT INTO van_listing
          (id, hostUserId, slug, name, vanType, year, sleeps, seats,
           fixedToilet, petFriendly, description, nightlyRate, minimumNights,
-          instantBook, status, region, island, features, houseRules,
+          instantBook, minDriverAge, status, region, island, features, houseRules,
           pickupLocationText, pickupLat, pickupLng, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id, session.user.id, slug, d.name, d.vanType, d.year, d.sleeps, d.seats,
       d.fixedToilet ? 1 : 0, d.petFriendly ? 1 : 0, d.description,
-      d.nightlyRate, d.minimumNights, d.instantBook ? 1 : 0,
+      d.nightlyRate, d.minimumNights, d.instantBook ? 1 : 0, d.minDriverAge,
       d.region, island, JSON.stringify(d.features), d.houseRules,
       d.pickupLocationText ?? null, d.pickupLat ?? null, d.pickupLng ?? null,
       now, now

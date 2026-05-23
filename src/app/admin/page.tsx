@@ -44,6 +44,11 @@ export default async function AdminPage() {
       <div className="cs-container">
         <h1>Admin</h1>
 
+        <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+          <Link href="/admin/reports" className="cs-btn cs-btn-ghost cs-small">Reports queue</Link>
+          <Link href="/admin/disputes" className="cs-btn cs-btn-ghost cs-small">Disputes queue</Link>
+        </div>
+
         <h2 style={{ marginTop: 24 }}>Listings awaiting review</h2>
         <p className="cs-muted">
           {pendingListings.results.length} listing{pendingListings.results.length === 1 ? "" : "s"} pending

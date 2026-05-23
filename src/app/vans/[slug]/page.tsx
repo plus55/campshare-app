@@ -14,6 +14,8 @@ import StickyBookCta from "./StickyBookCta";
 import ShareButton from "./ShareButton";
 import WishlistHeart from "@/components/WishlistHeart";
 import { getReviewsForListing } from "@/lib/reviews";
+import HostBadges from "@/components/HostBadges";
+import { getBadgesForHost, isInstantBookEligible } from "@/lib/badges";
 
 interface ListingWithHost extends VanListing {
   hostFirstName: string;
@@ -66,7 +68,15 @@ export default async function VanPage({
   const isOwner = session?.user.id === listing.hostUserId;
   const isLoggedIn = !!session;
 
-  const [photosResult, blocksResult, wishlistRow, addonsResult] = await Promise.all([
+  const kycRow = session
+    ? await db()
+        .prepare("SELECT kycStatus FROM user WHERE id = ?")
+        .bind(session.user.id)
+        .first<{ kycStatus: "unverified" | "pending" | "verified" | "failed" }>()
+    : null;
+  const kycStatus = kycRow?.kycStatus ?? "unverified";
+
+  const [photosResult, blocksResult, wishlistRow, addonsResult, hostBadges, hostIbEligible] = await Promise.all([
     db()
       .prepare("SELECT * FROM van_photo WHERE vanListingId = ? ORDER BY position ASC, createdAt ASC")
       .bind(listing.id)
@@ -91,9 +101,12 @@ export default async function VanPage({
       )
       .bind(listing.id)
       .all<ListingAddon>(),
+    getBadgesForHost(listing.hostUserId),
+    isInstantBookEligible(listing.hostUserId),
   ]);
 
   const userWishlisted = !!wishlistRow;
+  const effectiveInstantBook = !!listing.instantBook && hostIbEligible;
 
   let features: string[] = [];
   try { features = JSON.parse(listing.features) as string[]; } catch { features = []; }
@@ -128,7 +141,8 @@ export default async function VanPage({
           <span className="cs-pill">{listing.region} · {listing.island} Island</span>
           <span className="cs-pill">Sleeps {listing.sleeps}</span>
           {listing.petFriendly ? <span className="cs-pill">Pets welcome</span> : null}
-          {listing.instantBook ? <span className="cs-pill">Instant book</span> : null}
+          {effectiveInstantBook ? <span className="cs-pill">Instant book</span> : null}
+          {listing.minDriverAge > 18 ? <span className="cs-pill">Drivers {listing.minDriverAge}+</span> : null}
         </div>
 
         {/* Photo gallery / lightbox */}
@@ -208,6 +222,11 @@ export default async function VanPage({
                   </Link>
                 </div>
               </div>
+              {hostBadges.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <HostBadges badges={hostBadges} />
+                </div>
+              )}
               {listing.hostBio && <p className="cs-muted" style={{ margin: 0 }}>{listing.hostBio}</p>}
             </div>
           </div>
@@ -232,8 +251,10 @@ export default async function VanPage({
                   listingId={listing.id}
                   nightlyRateCents={listing.nightlyRate}
                   minimumNights={listing.minimumNights}
-                  instantBook={!!listing.instantBook}
+                  instantBook={effectiveInstantBook}
                   listingAddons={addonsResult.results}
+                  kycStatus={kycStatus}
+                  minDriverAge={listing.minDriverAge}
                 />
               ) : (
                 <div style={{ textAlign: "center" }}>

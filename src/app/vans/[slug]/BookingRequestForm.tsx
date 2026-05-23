@@ -19,6 +19,8 @@ interface Props {
   minimumNights: number;
   instantBook: boolean;
   listingAddons: ListingAddon[];
+  kycStatus: "unverified" | "pending" | "verified" | "failed";
+  minDriverAge: number;
 }
 
 interface Totals {
@@ -187,7 +189,27 @@ function PaymentStep({
 }
 
 // ── Main form component ───────────────────────────────────────────────────
-export function BookingRequestForm({ listingId, nightlyRateCents, minimumNights, instantBook, listingAddons }: Props) {
+export function BookingRequestForm(props: Props) {
+  if (props.kycStatus !== "verified") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ background: "#fff4dc", borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "var(--ink-700)" }}>
+          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Verify your identity to book</p>
+          <p className="cs-muted cs-small" style={{ margin: 0 }}>
+            CampShare requires all guests to verify their identity (driver&apos;s licence + selfie) before their first booking.
+            {props.minDriverAge > 18 ? ` This van requires drivers aged ${props.minDriverAge}+.` : ""}
+          </p>
+        </div>
+        <a href="/dashboard/profile" className="cs-btn cs-btn-primary cs-btn-block">
+          {props.kycStatus === "pending" ? "Continue verification" : props.kycStatus === "failed" ? "Retry verification" : "Verify my identity"}
+        </a>
+      </div>
+    );
+  }
+  return <BookingRequestFormInner {...props} />;
+}
+
+function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, instantBook, listingAddons }: Props) {
   const [step, setStep] = useState<"details" | "payment">("details");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate]     = useState("");

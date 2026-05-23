@@ -45,6 +45,25 @@ export async function POST(req: Request) {
   if (nights < listing.minimumNights)
     return bad(`Minimum stay is ${listing.minimumNights} night${listing.minimumNights !== 1 ? "s" : ""}`);
 
+  // KYC guard — all guests must be verified before booking
+  const guestUser = await db()
+    .prepare("SELECT kycStatus, dateOfBirth FROM user WHERE id = ?")
+    .bind(session.user.id)
+    .first<{ kycStatus: string; dateOfBirth: number | null }>();
+  if (!guestUser || guestUser.kycStatus !== "verified") {
+    return bad("Identity verification required before booking. Go to your profile to verify.", 403);
+  }
+  // Age guard
+  if (listing.minDriverAge > 18) {
+    if (!guestUser.dateOfBirth) {
+      return bad(`This van requires drivers aged ${listing.minDriverAge}+. Please re-verify your identity to confirm your age.`, 403);
+    }
+    const ageYears = (Date.now() / 1000 - guestUser.dateOfBirth) / (365.25 * 24 * 3600);
+    if (ageYears < listing.minDriverAge) {
+      return bad(`This van requires drivers aged ${listing.minDriverAge}+.`, 403);
+    }
+  }
+
   // Require host to have completed Stripe Connect onboarding
   const hp = await db()
     .prepare("SELECT stripeAccountId, stripeOnboardingCompleted FROM host_profile WHERE userId = ?")

@@ -13,6 +13,7 @@ export interface SearchResult {
   sleeps: number;
   petFriendly: number;
   instantBook: number;
+  hostUserId: string;
   minimumNights: number;
   pickupLat: number | null;
   pickupLng: number | null;

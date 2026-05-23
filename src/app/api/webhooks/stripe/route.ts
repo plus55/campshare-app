@@ -103,6 +103,57 @@ async function handleEvent(event: Stripe.Event, nowSec: number): Promise<void> {
       break;
     }
 
+    case "identity.verification_session.verified": {
+      const vs = event.data.object as Stripe.Identity.VerificationSession;
+      const userId = vs.metadata?.userId;
+      if (!userId) break;
+      // Re-fetch with expanded outputs to get DOB
+      let dobUnix: number | null = null;
+      try {
+        const s = await stripe();
+        const expanded = await s.identity.verificationSessions.retrieve(vs.id, {
+          expand: ["verified_outputs"],
+        });
+        const dob = expanded.verified_outputs?.dob;
+        if (dob?.year && dob.month && dob.day) {
+          dobUnix = Math.floor(Date.UTC(dob.year, dob.month - 1, dob.day) / 1000);
+        }
+      } catch (err) {
+        console.error("Failed to expand verified_outputs", err);
+      }
+      await db()
+        .prepare(
+          "UPDATE user SET kycStatus = 'verified', kycVerifiedAt = ?, dateOfBirth = COALESCE(?, dateOfBirth), updatedAt = ? WHERE id = ?"
+        )
+        .bind(nowSec, dobUnix, nowSec, userId)
+        .run();
+      break;
+    }
+
+    case "identity.verification_session.requires_input": {
+      const vs = event.data.object as Stripe.Identity.VerificationSession;
+      const userId = vs.metadata?.userId;
+      if (!userId) break;
+      await db()
+        .prepare("UPDATE user SET kycStatus = 'failed', updatedAt = ? WHERE id = ?")
+        .bind(nowSec, userId)
+        .run();
+      break;
+    }
+
+    case "identity.verification_session.canceled": {
+      const vs = event.data.object as Stripe.Identity.VerificationSession;
+      const userId = vs.metadata?.userId;
+      if (!userId) break;
+      await db()
+        .prepare(
+          "UPDATE user SET kycStatus = 'unverified', stripeIdentitySessionId = NULL, updatedAt = ? WHERE id = ?"
+        )
+        .bind(nowSec, userId)
+        .run();
+      break;
+    }
+
     default:
       break;
   }

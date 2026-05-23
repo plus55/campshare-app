@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail, sendSavedSearchAlertEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { syncIcalFeed } from "@/lib/ical";
 import type { Booking } from "@/lib/types";
 
 type CfEnv = { CRON_SECRET?: string };
@@ -52,10 +53,14 @@ export async function GET(req: Request) {
   // Pass 3: saved search alerts — check each saved_search against listings published since lastAlertedAt
   const alertsSent = await runSavedSearchAlerts(nowSec);
 
+  // Pass 4: iCal feed sync — refresh all imported calendars
+  const icalSynced = await runIcalSync();
+
   return NextResponse.json({
     started: toStart.results.length,
     completed: toComplete.results.length,
     alertsSent,
+    icalSynced,
   });
 }
 
@@ -161,6 +166,25 @@ function describeFiltersForEmail(f: Record<string, string>): string {
   if (f.petFriendly === "1") parts.push("pet-friendly");
   if (f.instantBook === "1") parts.push("instant book");
   return parts.length === 0 ? "your saved search" : parts.join(", ");
+}
+
+async function runIcalSync(): Promise<number> {
+  const { results: listings } = await db()
+    .prepare(
+      "SELECT id, icalFeedUrl FROM van_listing WHERE icalFeedUrl IS NOT NULL"
+    )
+    .all<{ id: string; icalFeedUrl: string }>();
+
+  let synced = 0;
+  for (const listing of listings) {
+    try {
+      await syncIcalFeed(listing.id, listing.icalFeedUrl);
+      synced++;
+    } catch (e) {
+      console.error(`iCal sync failed for listing ${listing.id}:`, e);
+    }
+  }
+  return synced;
 }
 
 async function startTrip(booking: Booking, nowSec: number, nowMs: number): Promise<void> {

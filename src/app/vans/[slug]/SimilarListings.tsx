@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
 
 interface Props {
@@ -14,7 +15,7 @@ export default async function SimilarListings({ region, excludeId }: Props) {
     .prepare(
       `SELECT
         vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
-        vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
+        vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
         vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
         hp.firstName AS hostFirstName,
         u.image      AS hostImage,
@@ -58,7 +59,14 @@ export default async function SimilarListings({ region, excludeId }: Props) {
       .all<{ vanListingId: string }>();
     savedIds = new Set(saved.map((r) => r.vanListingId));
   }
-  const enriched = listings.map((l) => ({ ...l, isWishlisted: savedIds.has(l.id) ? 1 : 0 }));
+
+  const ibHostIds = Array.from(new Set(listings.filter((l) => l.instantBook).map((l) => l.hostUserId)));
+  const eligibleHosts = await getInstantBookEligibleHosts(ibHostIds);
+  const enriched = listings.map((l) => ({
+    ...l,
+    instantBook: l.instantBook && eligibleHosts.has(l.hostUserId) ? 1 : 0,
+    isWishlisted: savedIds.has(l.id) ? 1 : 0,
+  }));
 
   return (
     <div className="cs-card" style={{ marginTop: 16 }}>

@@ -6,6 +6,8 @@ import { stripe } from "@/lib/stripe";
 import { calcBookingTotals } from "@/lib/money";
 import { sendBookingRequestedEmail, sendPaymentCapturedEmail, sendInstantBookedHostEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isInstantBookEligible } from "@/lib/badges";
 import type { Booking, VanListing } from "@/lib/types";
 
 const schema = z.object({
@@ -31,6 +33,9 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return bad("Sign in required", 401);
 
+  const allowed = await checkRateLimit("RATE_LIMIT_BOOKINGS", session.user.id);
+  if (!allowed) return bad("Too many booking requests. Please wait a moment.", 429);
+
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error.issues[0]?.message ?? "Invalid payload");
 
@@ -51,6 +56,35 @@ export async function POST(req: Request) {
   if (!listing) return bad("Listing not found or not available", 404);
   if (listing.hostUserId === session.user.id) return bad("You cannot book your own listing");
   if (nights < listing.minimumNights) return bad(`Minimum stay is ${listing.minimumNights} night${listing.minimumNights !== 1 ? "s" : ""}`);
+
+  // Block check — either side can refuse the relationship
+  const block = await db()
+    .prepare(
+      `SELECT 1 FROM user_block
+       WHERE (blockerUserId = ? AND blockedUserId = ?)
+          OR (blockerUserId = ? AND blockedUserId = ?)`
+    )
+    .bind(session.user.id, listing.hostUserId, listing.hostUserId, session.user.id)
+    .first();
+  if (block) return bad("This booking is not available", 403);
+
+  // KYC + age guard (defence in depth — also enforced on /api/bookings/payment-intent)
+  const guestUser = await db()
+    .prepare("SELECT kycStatus, dateOfBirth FROM user WHERE id = ?")
+    .bind(session.user.id)
+    .first<{ kycStatus: string; dateOfBirth: number | null }>();
+  if (!guestUser || guestUser.kycStatus !== "verified") {
+    return bad("Identity verification required before booking", 403);
+  }
+  if (listing.minDriverAge > 18) {
+    if (!guestUser.dateOfBirth) {
+      return bad(`This van requires drivers aged ${listing.minDriverAge}+`, 403);
+    }
+    const ageYears = (Date.now() / 1000 - guestUser.dateOfBirth) / (365.25 * 24 * 3600);
+    if (ageYears < listing.minDriverAge) {
+      return bad(`This van requires drivers aged ${listing.minDriverAge}+`, 403);
+    }
+  }
 
   const overlap = await db()
     .prepare(
@@ -101,7 +135,10 @@ export async function POST(req: Request) {
     return bad("Payment amount mismatch. Please start the booking again.");
   }
 
-  const isInstantBook = !!listing.instantBook;
+  // Instant-book is only offered if the host meets eligibility (KYC + 3 completed
+  // bookings + 4.5⋆ avg). Ineligible hosts silently downgrade to request flow —
+  // no error to the guest. PDP also hides the IB CTA, so this is defence-in-depth.
+  const isInstantBook = !!listing.instantBook && await isInstantBookEligible(listing.hostUserId);
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + 48 * 60 * 60;
   const bookingId = crypto.randomUUID();

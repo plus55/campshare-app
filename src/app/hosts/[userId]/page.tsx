@@ -3,8 +3,12 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { photoUrl } from "@/lib/photos";
 import { getReviewsForHost } from "@/lib/reviews";
+import { getSession } from "@/lib/session";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
 import type { HostProfile } from "@/lib/types";
+import ReportButton from "@/components/ReportButton";
+import HostBadges from "@/components/HostBadges";
+import { getBadgesForHost } from "@/lib/badges";
 
 interface HostUser {
   id: string;
@@ -71,7 +75,10 @@ export default async function HostProfilePage({
 
   if (!host) notFound();
 
-  const [reviewSummary, listingsResult] = await Promise.all([
+  const session = await getSession();
+  const canReport = !!session && session.user.id !== userId;
+
+  const [reviewSummary, listingsResult, badges] = await Promise.all([
     getReviewsForHost(userId),
     db()
       .prepare(
@@ -108,6 +115,7 @@ export default async function HostProfilePage({
       )
       .bind(userId)
       .all<SearchResult>(),
+    getBadgesForHost(userId),
   ]);
 
   const { avgRating, reviewCount, items: reviews } = reviewSummary;
@@ -152,13 +160,20 @@ export default async function HostProfilePage({
                   <span className="cs-muted">({reviewCount} review{reviewCount !== 1 ? "s" : ""})</span>
                 </span>
               )}
-              {host.verifiedIdentity ? (
-                <span className="cs-pill" style={{ background: "var(--cream)", color: "var(--forest)" }}>✓ Verified</span>
-              ) : null}
               <span className="cs-muted cs-small">Member since {memberSince}</span>
             </div>
+            {badges.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <HostBadges badges={badges} />
+              </div>
+            )}
             {host.bio && (
               <p className="cs-muted" style={{ marginTop: 12, marginBottom: 0 }}>{host.bio}</p>
+            )}
+            {canReport && (
+              <div style={{ marginTop: 12 }}>
+                <ReportButton reportedUserId={userId} reportedName={host.firstName} />
+              </div>
             )}
           </div>
         </div>
