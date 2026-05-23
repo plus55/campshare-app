@@ -1,7 +1,6 @@
 import type { BookingStatus } from "@/lib/types";
 
 const CONFIG: Record<BookingStatus, { label: string; bg: string; color: string }> = {
-  pending_capture:    { label: "Processing payment", bg: "#fef3c7", color: "#92400e" },
   requested:          { label: "Pending response",  bg: "#fef3c7", color: "#92400e" },
   accepted:           { label: "Confirmed",          bg: "#d1fae5", color: "#065f46" },
   in_progress:        { label: "Trip in progress",   bg: "#dbeafe", color: "#1e40af" },

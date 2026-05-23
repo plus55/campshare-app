@@ -147,8 +147,9 @@ export async function POST(req: Request) {
   // Atomicity: insert the booking row (+ addons, + availability block for IB)
   // BEFORE calling Stripe capture. If the worker dies mid-flight after capture,
   // we have a booking row to reconcile against. The booking starts in
-  // 'pending_capture' for IB; the finalise batch promotes it to 'accepted'.
-  const initialStatus = isInstantBook ? "pending_capture" : "requested";
+  // Instant booking reserves dates while capture is attempted, then promotes
+  // the requested booking to accepted only after Stripe confirms capture.
+  const initialStatus = "requested";
 
   const insertStmts = [
     db()
@@ -186,20 +187,46 @@ export async function POST(req: Request) {
     insertStmts.push(
       db()
         .prepare(
+          "INSERT INTO booking_transition_lock (bookingId, operation, createdAt) VALUES (?, 'accept', ?)"
+        )
+        .bind(bookingId, now),
+      db()
+        .prepare(
           `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
            VALUES (?, ?, ?, ?, 'booking', ?, ?)`
         )
         .bind(blockId, listingId, startMs, endMs, bookingId, now)
     );
   }
-  await db().batch(insertStmts);
+  try {
+    await db().batch(insertStmts);
+  } catch (err) {
+    if (isInstantBook) {
+      console.error("Instant-book reservation failed", err);
+      try {
+        await s.paymentIntents.cancel(
+          paymentIntentId,
+          {},
+          { idempotencyKey: `booking-unavailable-${bookingId}` }
+        );
+      } catch (cancelErr) {
+        console.error("PI cancel after unavailable instant-book dates failed", cancelErr);
+      }
+      return bad("Those dates are no longer available", 409);
+    }
+    throw err;
+  }
 
   // Instant-book: capture, then atomic finalise (or rollback / log).
   if (isInstantBook) {
     let captureResult;
     let captureThrew = false;
     try {
-      captureResult = await s.paymentIntents.capture(paymentIntentId);
+      captureResult = await s.paymentIntents.capture(
+        paymentIntentId,
+        {},
+        { idempotencyKey: `booking-capture-${bookingId}` }
+      );
     } catch (err: unknown) {
       captureThrew = true;
       console.error("Stripe capture threw", err);
@@ -210,23 +237,32 @@ export async function POST(req: Request) {
       try {
         await db().batch([
           db().prepare("DELETE FROM availability_block WHERE bookingId = ?").bind(bookingId),
+          db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(bookingId),
           db().prepare("DELETE FROM booking_addon WHERE bookingId = ?").bind(bookingId),
           db().prepare("DELETE FROM booking WHERE id = ?").bind(bookingId),
         ]);
       } catch (e) {
         console.error("Rollback after failed capture failed", e);
       }
-      try { await s.paymentIntents.cancel(paymentIntentId); } catch (e) { console.error("PI cancel after failed capture failed", e); }
+      try {
+        await s.paymentIntents.cancel(
+          paymentIntentId,
+          {},
+          { idempotencyKey: `booking-capture-failed-${bookingId}` }
+        );
+      } catch (e) { console.error("PI cancel after failed capture failed", e); }
       return NextResponse.json({ error: "Payment could not be processed — please try again" }, { status: 402 });
     }
 
     // Capture succeeded — promote to 'accepted'. If this fails, money is
-    // captured but the row is still 'pending_capture'. Log for the admin sweep.
+    // captured but the row is still reserved in requested state. Log for the admin sweep.
     try {
-      await db()
-        .prepare("UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?")
-        .bind(now, now, now, bookingId)
-        .run();
+      await db().batch([
+        db()
+          .prepare("UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?")
+          .bind(now, now, now, bookingId),
+        db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(bookingId),
+      ]);
     } catch (err) {
       try {
         await db()

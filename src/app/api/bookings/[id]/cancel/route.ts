@@ -31,12 +31,30 @@ export async function POST(
   const isHost  = booking.hostUserId  === session.user.id;
   if (!isGuest && !isHost) return bad("Forbidden", 403);
 
-  const cancellable = ["requested", "accepted", "in_progress"].includes(booking.status);
+  const cancellable = ["requested", "accepted"].includes(booking.status);
   if (!cancellable) return bad("Booking cannot be cancelled in its current state");
 
   const nowSec = Math.floor(Date.now() / 1000);
   const nowMs  = nowSec * 1000;
   const newStatus = isGuest ? "cancelled_by_guest" : "cancelled_by_host";
+
+  try {
+    await db()
+      .prepare("INSERT INTO booking_transition_lock (bookingId, operation, createdAt) VALUES (?, 'cancel', ?)")
+      .bind(id, nowSec)
+      .run();
+  } catch {
+    return bad("This booking is currently being processed. Please refresh and try again.", 409);
+  }
+
+  const current = await db()
+    .prepare("SELECT status FROM booking WHERE id = ?")
+    .bind(id)
+    .first<{ status: string }>();
+  if (!current || !["requested", "accepted"].includes(current.status)) {
+    await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id).run();
+    return bad("Booking cannot be cancelled in its current state");
+  }
 
   // Handle Stripe: cancel or refund PI
   let refundCents = 0;
@@ -46,9 +64,15 @@ export async function POST(
     if (booking.status === "requested") {
       // PI is still in requires_capture — cancel it (no money moved)
       try {
-        await s.paymentIntents.cancel(booking.paymentIntentId);
+        await s.paymentIntents.cancel(
+          booking.paymentIntentId,
+          {},
+          { idempotencyKey: `booking-cancel-authorization-${id}` }
+        );
       } catch (e) {
         console.error("Failed to cancel PI on cancel", e);
+        await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id).run();
+        return bad("Could not release the payment authorization. Please try again.", 502);
       }
     } else {
       // accepted or in_progress — PI was captured; issue a refund per policy
@@ -62,21 +86,32 @@ export async function POST(
 
       if (refundCents > 0) {
         try {
-          await s.refunds.create({
-            payment_intent: booking.paymentIntentId,
-            amount: refundCents,
-          });
+          await s.refunds.create(
+            {
+              payment_intent: booking.paymentIntentId,
+              amount: refundCents,
+            },
+            { idempotencyKey: `booking-cancel-refund-${id}` }
+          );
         } catch (e) {
           console.error("Failed to create Stripe refund", e);
+          await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id).run();
+          return bad("Could not process the refund. Please try again.", 502);
         }
       }
 
       // Cancel deposit hold PI if it exists
       if (booking.depositPaymentIntentId) {
         try {
-          await s.paymentIntents.cancel(booking.depositPaymentIntentId);
+          await s.paymentIntents.cancel(
+            booking.depositPaymentIntentId,
+            {},
+            { idempotencyKey: `booking-cancel-deposit-${id}` }
+          );
         } catch (e) {
           console.error("Failed to cancel deposit PI", e);
+          await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id).run();
+          return bad("Could not release the security deposit authorization. Please try again.", 502);
         }
       }
     }
@@ -87,6 +122,7 @@ export async function POST(
     db()
       .prepare(`UPDATE booking SET status = ?, cancelledAt = ?, updatedAt = ? WHERE id = ?`)
       .bind(newStatus, nowSec, nowSec, id),
+    db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id),
   ];
   if (booking.status === "accepted" || booking.status === "in_progress") {
     stmts.push(
