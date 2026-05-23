@@ -21,15 +21,15 @@ export default async function SiteHeader() {
         </Link>
 
         <ul className="nav-links">
-          <li><Link href="/vans">Browse vans</Link></li>
           {user ? (
             <>
+              <li><Link href="/vans">Find a van</Link></li>
               <li><Link href="/trips">My trips</Link></li>
               <li><Link href="/dashboard">Dashboard</Link></li>
             </>
           ) : (
             <>
-              <li><Link href="/vans">Hire</Link></li>
+              <li><Link href="/vans">Find a van</Link></li>
               <li><Link href="/apply">Become a host</Link></li>
             </>
           )}

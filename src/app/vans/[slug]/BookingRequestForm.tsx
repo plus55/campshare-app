@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import AuthModal from "@/components/AuthModal";
 
 export interface ListingAddon {
   addonId: string;
@@ -21,6 +22,7 @@ interface Props {
   listingAddons: ListingAddon[];
   kycStatus: "unverified" | "pending" | "verified" | "failed";
   minDriverAge: number;
+  isLoggedIn?: boolean;
 }
 
 interface Totals {
@@ -190,6 +192,9 @@ function PaymentStep({
 
 // ── Main form component ───────────────────────────────────────────────────
 export function BookingRequestForm(props: Props) {
+  if (!props.isLoggedIn) {
+    return <BookingRequestFormInner {...props} />;
+  }
   if (props.kycStatus !== "verified") {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -209,7 +214,7 @@ export function BookingRequestForm(props: Props) {
   return <BookingRequestFormInner {...props} />;
 }
 
-function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, instantBook, listingAddons }: Props) {
+function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, instantBook, listingAddons, isLoggedIn }: Props) {
   const [step, setStep] = useState<"details" | "payment">("details");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate]     = useState("");
@@ -221,6 +226,7 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [totals, setTotals]       = useState<Totals | null>(null);
+  const [authOpen, setAuthOpen]   = useState(false);
 
   const nights = startDate && endDate
     ? Math.max(0, Math.round((parseDateMs(endDate) - parseDateMs(startDate)) / 86400000))
@@ -245,6 +251,7 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
   async function continueToPayment() {
     if (!startDate || !endDate) { setError("Please select check-in and check-out dates"); return; }
     if (nights < minimumNights) { setError(`Minimum stay is ${minimumNights} night${minimumNights !== 1 ? "s" : ""}`); return; }
+    if (!isLoggedIn) { setAuthOpen(true); return; }
     setLoading(true);
     setError(null);
     try {
@@ -303,6 +310,14 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {authOpen && (
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          heading="Sign in to book"
+          subheading="Create an account or sign in to confirm your dates."
+        />
+      )}
       {error && <p className="cs-error" style={{ margin: 0 }}>{error}</p>}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -398,7 +413,7 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
         disabled={loading}
         onClick={continueToPayment}
       >
-        {loading ? "Checking…" : instantBook ? "Continue to instant payment" : "Continue to payment"}
+        {loading ? "Checking…" : !isLoggedIn ? "Sign in to book" : instantBook ? "Continue to instant payment" : "Continue to payment"}
       </button>
       <p style={{ margin: 0, fontSize: 12, color: "var(--ink-300)", textAlign: "center" }}>
         {instantBook

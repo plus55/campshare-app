@@ -56,7 +56,7 @@ export default function ListingCard({ listing }: { listing: SearchResult }) {
   const hostName = listing.hostFirstName ?? "Host";
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="listing-card-wrap" style={{ position: "relative" }}>
       <WishlistHeart
         vanListingId={listing.id}
         initialSaved={!!listing.isWishlisted}

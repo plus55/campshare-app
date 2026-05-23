@@ -28,6 +28,7 @@ export default function RegionGrid() {
                 <Link
                   key={r}
                   href={`/hire/${regionToSlug(r)}`}
+                  className="region-pill"
                   style={{
                     padding: "0.7rem 1rem",
                     background: "var(--cream)",
@@ -36,6 +37,8 @@ export default function RegionGrid() {
                     color: "var(--forest-deep)",
                     textDecoration: "none",
                     fontSize: "0.92rem",
+                    display: "block",
+                    transition: "background 0.15s, border-color 0.15s, color 0.15s",
                   }}
                 >
                   {r}
@@ -53,6 +56,7 @@ export default function RegionGrid() {
                 <Link
                   key={r}
                   href={`/hire/${regionToSlug(r)}`}
+                  className="region-pill"
                   style={{
                     padding: "0.7rem 1rem",
                     background: "var(--cream)",
@@ -61,6 +65,8 @@ export default function RegionGrid() {
                     color: "var(--forest-deep)",
                     textDecoration: "none",
                     fontSize: "0.92rem",
+                    display: "block",
+                    transition: "background 0.15s, border-color 0.15s, color 0.15s",
                   }}
                 >
                   {r}

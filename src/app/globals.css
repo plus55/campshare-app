@@ -273,6 +273,173 @@ p  { margin: 0 0 12px; color: var(--ink-700); }
 /* Search page */
 @media (max-width: 768px) { .cs-search-map { display: none !important; } }
 
+/* ---- Stat tile (dashboard summary numbers) ---- */
+.cs-stat-tile {
+  background: var(--sand-50);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: box-shadow 0.15s;
+}
+.cs-stat-tile:hover { box-shadow: var(--shadow); }
+.cs-stat-tile-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--stone);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cs-stat-tile-value {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--ink-900);
+  line-height: 1.1;
+}
+.cs-stat-tile-sub {
+  font-size: 12px;
+  color: var(--stone);
+  margin-top: 2px;
+}
+.cs-stat-tile-warn .cs-stat-tile-value { color: var(--clay-500); }
+
+/* ---- Skeleton loader ---- */
+@keyframes cs-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.cs-skel {
+  background: linear-gradient(90deg, var(--sand-200) 25%, var(--sand-100) 50%, var(--sand-200) 75%);
+  background-size: 800px 100%;
+  animation: cs-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius);
+}
+
+/* ---- Empty state ---- */
+.cs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 24px;
+  gap: 8px;
+}
+.cs-empty-icon {
+  color: var(--stone);
+  opacity: 0.6;
+  margin-bottom: 4px;
+}
+.cs-empty h3 {
+  font-size: 18px;
+  color: var(--ink-900);
+  margin: 0;
+}
+.cs-empty p {
+  color: var(--stone);
+  font-size: 14px;
+  max-width: 36ch;
+  margin: 0;
+}
+
+/* ---- Section header ---- */
+.cs-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.cs-section-header h1,
+.cs-section-header h2 { margin: 0; }
+.cs-section-header-meta {
+  font-size: 13px;
+  color: var(--stone);
+}
+.cs-section-header-action {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ---- Modal ---- */
+.cs-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(2px);
+}
+.cs-modal {
+  background: var(--cream);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px -10px rgba(31,42,32,0.22);
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 32px;
+}
+.cs-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--sand-100);
+  border: 0;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--stone);
+  transition: background 0.15s, color 0.15s;
+}
+.cs-modal-close:hover { background: var(--sand-200); color: var(--ink-900); }
+@media (max-width: 480px) {
+  .cs-modal { padding: 24px 20px; border-radius: var(--radius-lg); }
+}
+
+/* ---- Card hover lift ---- */
+.cs-card { transition: box-shadow 0.18s, transform 0.18s; }
+.category-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(43,33,24,0.12);
+}
+
+/* ---- Region pill hover ---- */
+.region-pill:hover {
+  background: var(--forest-deep) !important;
+  border-color: var(--forest-deep) !important;
+  color: var(--cream) !important;
+}
+
+/* ---- ListingCard hover lift ---- */
+.listing-card-wrap:hover { transform: translateY(-2px); }
+.listing-card-wrap { transition: transform 0.15s; }
+
+/* ---- Dashboard responsive grids ---- */
+@media (max-width: 900px) {
+  .cs-dash-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 720px) {
+  .cs-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 400px) {
+  .cs-stat-grid { grid-template-columns: 1fr !important; }
+}
+
 /* ================================================================== */
 /* Marketing site chrome (header, nav, footer, .btn family, .wrap)    */
 /* Ported from github.com/plus55/campshare/styles.css                  */

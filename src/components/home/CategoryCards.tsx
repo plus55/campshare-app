@@ -1,10 +1,31 @@
 import Link from "next/link";
+import { PawPrint, Users, Droplets, Zap } from "lucide-react";
 
 const CATEGORIES = [
-  { label: "Pet-friendly", href: "/vans?petFriendly=1", body: "Vans that welcome your dog along for the ride." },
-  { label: "Family-size (sleeps 4+)", href: "/vans?sleeps=4", body: "Plenty of room for the whole crew." },
-  { label: "Self-contained", href: "/vans?vanType=self-contained", body: "Freedom-camp anywhere certified parking is allowed." },
-  { label: "Instant book", href: "/vans?instantBook=1", body: "Confirmed bookings without waiting for host approval." },
+  {
+    label: "Pet-friendly",
+    href: "/vans?petFriendly=1",
+    body: "Vans that welcome your dog along for the ride.",
+    icon: <PawPrint size={24} />,
+  },
+  {
+    label: "Family-size (sleeps 4+)",
+    href: "/vans?sleeps=4",
+    body: "Plenty of room for the whole crew.",
+    icon: <Users size={24} />,
+  },
+  {
+    label: "Self-contained",
+    href: "/vans?vanType=self-contained",
+    body: "Freedom-camp anywhere certified parking is allowed.",
+    icon: <Droplets size={24} />,
+  },
+  {
+    label: "Instant book",
+    href: "/vans?instantBook=1",
+    body: "Confirmed bookings without waiting for host approval.",
+    icon: <Zap size={24} />,
+  },
 ];
 
 export default function CategoryCards() {
@@ -28,16 +49,28 @@ export default function CategoryCards() {
             <Link
               key={c.href}
               href={c.href}
-              className="cs-card"
+              className="cs-card category-card"
               style={{
                 padding: "1.5rem",
                 textDecoration: "none",
                 color: "inherit",
                 display: "block",
-                transition: "transform 0.15s, box-shadow 0.15s",
               }}
             >
-              <h3 style={{ fontSize: "1.2rem", marginBottom: "0.4rem", color: "var(--forest-deep)" }}>
+              <div style={{
+                width: 44, height: 44,
+                background: "var(--sand-100)",
+                border: "1px solid var(--line)",
+                borderRadius: "var(--radius)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--clay-500)",
+                marginBottom: "1rem",
+              }}>
+                {c.icon}
+              </div>
+              <h3 style={{ fontSize: "1.1rem", marginBottom: "0.4rem", color: "var(--forest-deep)" }}>
                 {c.label}
               </h3>
               <p className="cs-muted cs-small" style={{ margin: 0 }}>{c.body}</p>

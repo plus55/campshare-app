@@ -99,8 +99,12 @@ export default async function DashboardBookingsPage() {
         </div>
 
         {rows.length === 0 ? (
-          <div className="cs-card" style={{ marginTop: 24, textAlign: "center" }}>
-            <p className="cs-muted">No bookings yet.</p>
+          <div className="cs-card" style={{ marginTop: 24 }}>
+            <div className="cs-empty">
+              <div className="cs-empty-icon"><span style={{ fontSize: 32 }}>📋</span></div>
+              <h3>No bookings yet</h3>
+              <p>Requests from guests will appear here once your listing is live.</p>
+            </div>
           </div>
         ) : (
           <>

@@ -1,16 +1,18 @@
+import { Search, CalendarCheck, MapPin } from "lucide-react";
+
 const STEPS = [
   {
-    n: "1",
+    icon: <Search size={22} />,
     title: "Search",
     body: "Filter by region, dates, sleeps and features. Find a van that fits your trip.",
   },
   {
-    n: "2",
+    icon: <CalendarCheck size={22} />,
     title: "Book",
     body: "Send a request to the host. Pay securely &mdash; your card is only charged when they accept.",
   },
   {
-    n: "3",
+    icon: <MapPin size={22} />,
     title: "Hit the road",
     body: "Meet the owner, pick up the van, and head off on your Aotearoa adventure.",
   },
@@ -34,9 +36,9 @@ export default function HowItWorks() {
           gap: "1.5rem",
         }}>
           {STEPS.map((s) => (
-            <div key={s.n} className="cs-card" style={{ textAlign: "center", padding: "2rem 1.5rem" }}>
+            <div key={s.title} className="cs-card" style={{ textAlign: "center", padding: "2rem 1.5rem" }}>
               <div style={{
-                width: 48, height: 48,
+                width: 52, height: 52,
                 margin: "0 auto 1rem",
                 borderRadius: "50%",
                 background: "var(--forest-deep)",
@@ -44,12 +46,9 @@ export default function HowItWorks() {
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontFamily: "var(--font-serif)",
-                fontSize: "1.2rem",
-                fontWeight: 500,
                 border: "1.5px solid var(--ochre)",
               }}>
-                {s.n}
+                {s.icon}
               </div>
               <h3 style={{ marginBottom: "0.5rem" }}>{s.title}</h3>
               <p className="cs-muted" style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: s.body }} />

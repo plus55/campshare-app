@@ -246,7 +246,7 @@ export default async function VanPage({
 
               {isOwner ? (
                 <p className="cs-muted">This is your listing.</p>
-              ) : isLoggedIn ? (
+              ) : (
                 <BookingRequestForm
                   listingId={listing.id}
                   nightlyRateCents={listing.nightlyRate}
@@ -255,12 +255,8 @@ export default async function VanPage({
                   listingAddons={addonsResult.results}
                   kycStatus={kycStatus}
                   minDriverAge={listing.minDriverAge}
+                  isLoggedIn={isLoggedIn}
                 />
-              ) : (
-                <div style={{ textAlign: "center" }}>
-                  <p className="cs-muted" style={{ marginBottom: 16 }}>Sign in to request a booking.</p>
-                  <a href="/login" className="cs-btn cs-btn-primary">Sign in to book</a>
-                </div>
               )}
             </div>
           </div>
