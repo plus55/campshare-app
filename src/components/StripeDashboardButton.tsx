@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export function StripeDashboardButton() {
   const [loading, setLoading] = useState(false);
@@ -21,8 +22,8 @@ export function StripeDashboardButton() {
   }
 
   return (
-    <button className="cs-btn cs-btn-ghost" disabled={loading} onClick={open}>
+    <Button variant="outline" size="sm" disabled={loading} onClick={open}>
       {loading ? "Opening…" : "Open Stripe dashboard ↗"}
-    </button>
+    </Button>
   );
 }

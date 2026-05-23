@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 interface Props {
   nightlyRateCents: number;
 }
@@ -13,12 +15,12 @@ export default function StickyBookCta({ nightlyRateCents }: Props) {
 
   return (
     <div className="pdp-sticky-cta">
-      <p style={{ margin: 0, fontWeight: 600, fontSize: 16 }}>
-        From ${price}<span style={{ fontWeight: 400, fontSize: 13, color: "var(--stone)" }}>/night</span>
+      <p className="m-0 text-base font-semibold text-foreground">
+        From ${price}<span className="text-[13px] font-normal text-muted-foreground">/night</span>
       </p>
-      <button type="button" className="cs-btn cs-btn-primary" onClick={scrollToForm}>
+      <Button type="button" size="lg" onClick={scrollToForm}>
         Select dates
-      </button>
+      </Button>
     </div>
   );
 }

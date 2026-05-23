@@ -2,16 +2,18 @@
 
 import { signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function SignOutButton() {
   const router = useRouter();
   return (
-    <button
+    <Button
       type="button"
-      className="cs-btn cs-btn-ghost"
+      variant="outline"
+      size="sm"
       onClick={() => signOut({ fetchOptions: { onSuccess: () => router.push("/login") } })}
     >
       Sign out
-    </button>
+    </Button>
   );
 }

@@ -2,9 +2,14 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import AuthModal from "@/components/AuthModal";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export interface ListingAddon {
   addonId: string;
@@ -37,6 +42,9 @@ interface Totals {
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null;
+
+const errorCls = "rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
+const fieldLabelCls = "text-sm font-medium text-foreground";
 
 function parseDateMs(d: string): number {
   const [y, m, day] = d.split("-").map(Number);
@@ -126,62 +134,60 @@ function PaymentStep({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="flex flex-col gap-4">
       {/* Booking summary */}
-      <div style={{ background: "#f5ede0", borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "var(--ink-700)" }}>
-        <p style={{ margin: "0 0 8px", fontWeight: 600 }}>Booking summary</p>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <div className="rounded-[10px] bg-muted px-4 py-3.5 text-sm text-muted-foreground">
+        <p className="mb-2 font-semibold text-foreground">Booking summary</p>
+        <div className="flex justify-between">
           <span>Van hire ({nights} night{nights !== 1 ? "s" : ""})</span>
           <span>{fmtNzd(totals.subtotalCents)}</span>
         </div>
         {selectedAddons.map((a) => (
-          <div key={a.addonId} style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+          <div key={a.addonId} className="mt-1 flex justify-between">
             <span>{a.name}</span>
             <span>{fmtNzd(a.priceNZDCents)}</span>
           </div>
         ))}
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        <div className="mt-1 flex justify-between">
           <span>Service fee (12%)</span>
           <span>{fmtNzd(totals.serviceFeeCents)}</span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        <div className="mt-1 flex justify-between">
           <span>GST on service fee</span>
           <span>{fmtNzd(totals.gstOnFeeCents)}</span>
         </div>
-        <div style={{
-          display: "flex", justifyContent: "space-between", marginTop: 8,
-          paddingTop: 8, borderTop: "1px solid #e7dcc8", fontWeight: 600,
-        }}>
+        <div className="mt-2 flex justify-between border-t border-border pt-2 font-semibold text-foreground">
           <span>Total charged today</span>
           <span>{fmtNzd(totals.totalCents)} NZD</span>
         </div>
-        <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--ink-400)" }}>
+        <p className="mt-2 text-xs text-muted-foreground">
           Security deposit {fmtNzd(totals.depositCents)} authorised on trip start — not charged unless damage is reported.
         </p>
       </div>
 
       <PaymentElement />
 
-      {error && <p className="cs-error" style={{ margin: 0 }}>{error}</p>}
+      {error && <p className={errorCls}>{error}</p>}
 
-      <button
-        className="cs-btn cs-btn-primary cs-btn-block"
+      <Button
+        className="w-full"
+        size="lg"
         disabled={loading || !stripeHook || !elements}
         onClick={submit}
       >
         {loading ? "Processing…" : instantBook ? `Confirm and pay ${fmtNzd(totals.totalCents)}` : `Authorise ${fmtNzd(totals.totalCents)}`}
-      </button>
+      </Button>
 
-      <button
-        className="cs-btn cs-btn-ghost cs-btn-block"
+      <Button
+        variant="outline"
+        className="-mt-2 w-full"
         disabled={loading}
         onClick={onBack}
-        style={{ marginTop: -8 }}
       >
         ← Back to dates
-      </button>
+      </Button>
 
-      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-300)", textAlign: "center" }}>
+      <p className="text-center text-xs text-muted-foreground">
         {instantBook
           ? "Payment charged immediately — booking confirmed instantly, no host approval needed."
           : "Card authorised now — charged only when the host accepts."}
@@ -197,15 +203,15 @@ export function BookingRequestForm(props: Props) {
   }
   if (props.kycStatus !== "verified") {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ background: "#fff4dc", borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "var(--ink-700)" }}>
-          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Verify your identity to book</p>
-          <p className="cs-muted cs-small" style={{ margin: 0 }}>
+      <div className="flex flex-col gap-3">
+        <div className="rounded-[10px] border border-ochre/30 bg-ochre/10 px-4 py-3.5 text-sm text-muted-foreground">
+          <p className="mb-1.5 font-semibold text-foreground">Verify your identity to book</p>
+          <p className="text-[13px] text-muted-foreground">
             CampShare requires all guests to verify their identity (driver&apos;s licence + selfie) before their first booking.
             {props.minDriverAge > 18 ? ` This van requires drivers aged ${props.minDriverAge}+.` : ""}
           </p>
         </div>
-        <a href="/dashboard/profile" className="cs-btn cs-btn-primary cs-btn-block">
+        <a href="/dashboard/profile" className={cn(buttonVariants({ size: "lg" }), "w-full")}>
           {props.kycStatus === "pending" ? "Continue verification" : props.kycStatus === "failed" ? "Retry verification" : "Verify my identity"}
         </a>
       </div>
@@ -215,6 +221,7 @@ export function BookingRequestForm(props: Props) {
 }
 
 function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, instantBook, listingAddons, isLoggedIn }: Props) {
+  const { resolvedTheme } = useTheme();
   const [step, setStep] = useState<"details" | "payment">("details");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate]     = useState("");
@@ -287,7 +294,10 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
         stripe={stripePromise}
         options={{
           clientSecret,
-          appearance: { theme: "stripe", variables: { colorPrimary: "#b8624a", borderRadius: "8px" } },
+          appearance: {
+            theme: resolvedTheme === "dark" ? "night" : "stripe",
+            variables: { colorPrimary: "#c2613a", borderRadius: "8px" },
+          },
         }}
       >
         <PaymentStep
@@ -309,7 +319,7 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex flex-col gap-3">
       {authOpen && (
         <AuthModal
           open={authOpen}
@@ -318,24 +328,24 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
           subheading="Create an account or sign in to confirm your dates."
         />
       )}
-      {error && <p className="cs-error" style={{ margin: 0 }}>{error}</p>}
+      {error && <p className={errorCls}>{error}</p>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <label className="cs-field" style={{ margin: 0 }}>
-          <span className="cs-label">Check-in</span>
-          <input
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className={fieldLabelCls}>Check-in</span>
+          <Input
             type="date"
-            className="cs-input"
+            className="h-9"
             min={todayString()}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
         </label>
-        <label className="cs-field" style={{ margin: 0 }}>
-          <span className="cs-label">Check-out</span>
-          <input
+        <label className="flex flex-col gap-1.5">
+          <span className={fieldLabelCls}>Check-out</span>
+          <Input
             type="date"
-            className="cs-input"
+            className="h-9"
             min={startDate || todayString()}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
@@ -343,11 +353,11 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
         </label>
       </div>
 
-      <label className="cs-field" style={{ margin: 0 }}>
-        <span className="cs-label">Guests</span>
-        <input
+      <label className="flex flex-col gap-1.5">
+        <span className={fieldLabelCls}>Guests</span>
+        <Input
           type="number"
-          className="cs-input"
+          className="h-9"
           min={1}
           max={20}
           value={guestCount}
@@ -357,65 +367,62 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
 
       {listingAddons.length > 0 && (
         <div>
-          <p className="cs-label" style={{ margin: "0 0 8px" }}>Add-ons (optional)</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {listingAddons.map((addon) => (
-              <label
-                key={addon.addonId}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  cursor: "pointer",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: `1px solid ${selectedAddonIds.includes(addon.addonId) ? "var(--clay)" : "var(--line)"}`,
-                  background: selectedAddonIds.includes(addon.addonId) ? "#fdf0eb" : "transparent",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedAddonIds.includes(addon.addonId)}
-                  onChange={() => toggleAddon(addon.addonId)}
-                  style={{ flexShrink: 0 }}
-                />
-                <span style={{ flex: 1, fontSize: 14 }}>{addon.name}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--clay)", flexShrink: 0 }}>
-                  +{fmtNzd(addon.priceNZDCents)}
-                </span>
-              </label>
-            ))}
+          <p className="mb-2 text-sm font-medium text-foreground">Add-ons (optional)</p>
+          <div className="flex flex-col gap-2">
+            {listingAddons.map((addon) => {
+              const active = selectedAddonIds.includes(addon.addonId);
+              return (
+                <label
+                  key={addon.addonId}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2",
+                    active ? "border-clay bg-clay/10" : "border-border",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4 shrink-0 accent-primary"
+                    checked={active}
+                    onChange={() => toggleAddon(addon.addonId)}
+                  />
+                  <span className="flex-1 text-sm text-foreground">{addon.name}</span>
+                  <span className="shrink-0 text-sm font-semibold text-clay">
+                    +{fmtNzd(addon.priceNZDCents)}
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <label className="cs-field" style={{ margin: 0 }}>
-        <span className="cs-label">Message to host (optional)</span>
-        <textarea
-          className="cs-textarea"
+      <label className="flex flex-col gap-1.5">
+        <span className={fieldLabelCls}>Message to host (optional)</span>
+        <Textarea
+          className="min-h-20"
           placeholder="Introduce yourself and share any details about your trip…"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          style={{ minHeight: 80 }}
         />
       </label>
 
       {nights > 0 && nightlyRateCents > 0 && (
-        <p style={{ margin: 0, fontSize: 14, color: "var(--ink-700)" }}>
+        <p className="text-sm text-muted-foreground">
           {nights} night{nights !== 1 ? "s" : ""} · from{" "}
-          <strong>{fmtNzd(nights * nightlyRateCents)} NZD</strong>{" "}
-          <span style={{ fontSize: 12, color: "var(--ink-400)" }}>(+ fees)</span>
+          <strong className="text-foreground">{fmtNzd(nights * nightlyRateCents)} NZD</strong>{" "}
+          <span className="text-xs">(+ fees)</span>
         </p>
       )}
 
-      <button
-        className="cs-btn cs-btn-primary cs-btn-block"
+      <Button
+        className="w-full"
+        size="lg"
         disabled={loading}
         onClick={continueToPayment}
       >
         {loading ? "Checking…" : !isLoggedIn ? "Sign in to book" : instantBook ? "Continue to instant payment" : "Continue to payment"}
-      </button>
-      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-300)", textAlign: "center" }}>
+      </Button>
+      <p className="text-center text-xs text-muted-foreground">
         {instantBook
           ? "Payment charged immediately — booking confirmed with no waiting."
           : "Card authorised now — charged only when the host accepts."}

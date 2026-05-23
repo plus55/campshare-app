@@ -4,7 +4,7 @@ function StarRating({ rating }: { rating: number }) {
   return (
     <span aria-label={`${rating} out of 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} style={{ color: n <= Math.round(rating) ? "var(--ochre)" : "var(--line)" }}>★</span>
+        <span key={n} className={n <= Math.round(rating) ? "text-ochre" : "text-border"}>★</span>
       ))}
     </span>
   );
@@ -24,9 +24,9 @@ export default async function ListingReviews({ listingId }: { listingId: string 
 
   if (reviewCount === 0) {
     return (
-      <div className="cs-card" style={{ marginTop: 16 }}>
-        <h2 style={{ marginBottom: 8 }}>Reviews</h2>
-        <p className="cs-muted cs-small" style={{ margin: 0 }}>
+      <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+        <h2 className="mb-2 font-serif text-xl text-forest-deep dark:text-cream">Reviews</h2>
+        <p className="text-[13px] text-muted-foreground">
           No reviews yet — be the first to book and review.
         </p>
       </div>
@@ -34,34 +34,34 @@ export default async function ListingReviews({ listingId }: { listingId: string 
   }
 
   return (
-    <div className="cs-card" style={{ marginTop: 16 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Reviews</h2>
-        <span style={{ color: "var(--ochre)", fontSize: 16 }}>★</span>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>
+    <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+      <div className="mb-4 flex items-baseline gap-2.5">
+        <h2 className="font-serif text-xl text-forest-deep dark:text-cream">Reviews</h2>
+        <span className="text-base text-ochre">★</span>
+        <span className="text-base font-bold text-foreground">
           {avgRating!.toFixed(1)}
         </span>
-        <span className="cs-muted cs-small">({reviewCount})</span>
+        <span className="text-[13px] text-muted-foreground">({reviewCount})</span>
       </div>
 
-      <div style={{ display: "grid", gap: 16 }}>
+      <div className="grid gap-4">
         {items.map((r) => (
-          <div key={r.id} style={{ borderTop: "1px solid var(--line)", paddingTop: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{r.authorName}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div key={r.id} className="border-t border-border pt-4">
+            <div className="mb-1.5 flex justify-between">
+              <div className="text-sm font-semibold text-foreground">{r.authorName}</div>
+              <div className="flex items-center gap-2">
                 <StarRating rating={r.rating} />
-                <span className="cs-muted cs-small">{relDate(r.createdAt)}</span>
+                <span className="text-[13px] text-muted-foreground">{relDate(r.createdAt)}</span>
               </div>
             </div>
-            <p className="cs-muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.55 }}>{r.text}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{r.text}</p>
             {r.hostResponse && (
-              <div style={{ marginTop: 10, padding: "10px 14px", background: "var(--sand)", borderRadius: 8, borderLeft: "3px solid var(--clay)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--clay)", marginBottom: 4 }}>
+              <div className="mt-2.5 rounded-lg border-l-[3px] border-clay bg-secondary px-3.5 py-2.5">
+                <div className="mb-1 text-xs font-semibold text-clay">
                   Host response
-                  {r.hostRespondedAt && <span style={{ fontWeight: 400, color: "var(--stone)", marginLeft: 6 }}>{relDate(r.hostRespondedAt)}</span>}
+                  {r.hostRespondedAt && <span className="ml-1.5 font-normal text-muted-foreground">{relDate(r.hostRespondedAt)}</span>}
                 </div>
-                <p style={{ margin: 0, fontSize: 13, color: "var(--charcoal-soft)", lineHeight: 1.5 }}>{r.hostResponse}</p>
+                <p className="text-[13px] leading-snug text-foreground">{r.hostResponse}</p>
               </div>
             )}
           </div>

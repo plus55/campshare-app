@@ -153,13 +153,17 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
+.dark body {
+  background: var(--background);
+  color: var(--foreground);
+}
 a { color: var(--clay-500); text-decoration: none; }
 a:hover { color: var(--clay-600); }
 
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-weight: 500;
-  color: var(--ink-900);
+  color: var(--foreground);
   letter-spacing: -0.01em;
   margin: 0 0 12px;
 }
@@ -1122,38 +1126,51 @@ p  { margin: 0 0 12px; color: var(--ink-700); }
   --radius-4xl:       calc(var(--radius) * 2.6);
 }
 
+/* ------------------------------------------------------------------ */
+/* Dark theme — warm, brand-tinted (not greyscale).                    */
+/* Surfaces step up from deep forest-black (page) → forest-deep (card) */
+/* → dark moss (subtle). Text is warm cream. Clay/moss/ochre accents   */
+/* are lifted slightly so they stay vivid on dark surfaces.            */
+/*                                                                      */
+/* Convention for pages/components: use the semantic tokens below for  */
+/* structural surfaces/text/borders (bg-background, bg-card, bg-muted, */
+/* bg-secondary, text-foreground, text-muted-foreground, border-border)*/
+/* so they auto-flip; keep brand utilities (text-clay, bg-forest…) for */
+/* accents and add `dark:` variants where a fixed brand color would    */
+/* lose contrast (e.g. headings: text-forest-deep dark:text-cream).    */
+/* ------------------------------------------------------------------ */
 .dark {
-  --background:       oklch(0.145 0 0);
-  --foreground:       oklch(0.985 0 0);
-  --card:       oklch(0.205 0 0);
-  --card-foreground:       oklch(0.985 0 0);
-  --popover:       oklch(0.205 0 0);
-  --popover-foreground:       oklch(0.985 0 0);
-  --primary:       oklch(0.922 0 0);
-  --primary-foreground:       oklch(0.205 0 0);
-  --secondary:       oklch(0.269 0 0);
-  --secondary-foreground:       oklch(0.985 0 0);
-  --muted:       oklch(0.269 0 0);
-  --muted-foreground:       oklch(0.708 0 0);
-  --accent:       oklch(0.269 0 0);
-  --accent-foreground:       oklch(0.985 0 0);
-  --destructive:       oklch(0.704 0.191 22.216);
-  --border:       oklch(1 0 0 / 10%);
-  --input:       oklch(1 0 0 / 15%);
-  --ring:       oklch(0.556 0 0);
-  --chart-1:       oklch(0.87 0 0);
-  --chart-2:       oklch(0.556 0 0);
-  --chart-3:       oklch(0.439 0 0);
-  --chart-4:       oklch(0.371 0 0);
-  --chart-5:       oklch(0.269 0 0);
-  --sidebar:       oklch(0.205 0 0);
-  --sidebar-foreground:       oklch(0.985 0 0);
-  --sidebar-primary:       oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground:       oklch(0.985 0 0);
-  --sidebar-accent:       oklch(0.269 0 0);
-  --sidebar-accent-foreground:       oklch(0.985 0 0);
-  --sidebar-border:       oklch(1 0 0 / 10%);
-  --sidebar-ring:       oklch(0.556 0 0);
+  --background:                 #161d17;  /* deep forest-black (page base) */
+  --foreground:                 #f3eee2;  /* warm cream text */
+  --card:                       #1f2a20;  /* forest-deep raised surface */
+  --card-foreground:            #f3eee2;
+  --popover:                    #1f2a20;
+  --popover-foreground:         #f3eee2;
+  --primary:                    #cf6e44;  /* clay, lifted for dark */
+  --primary-foreground:         #faf6ee;  /* cream */
+  --secondary:                  #283328;  /* dark forest surface */
+  --secondary-foreground:       #ece7db;
+  --muted:                      #232e24;  /* subtle dark surface */
+  --muted-foreground:           #a8a293;  /* lightened stone */
+  --accent:                     #34432d;  /* dark moss */
+  --accent-foreground:          #d6e0c8;  /* moss-light */
+  --destructive:                #d4674f;  /* lifted rust */
+  --border:                     #2f3a2f;  /* warm dark line */
+  --input:                      #3a463a;
+  --ring:                       #cf6e44;  /* clay */
+  --chart-1:                    #cf6e44;  /* clay */
+  --chart-2:                    #8aa06f;  /* lifted moss */
+  --chart-3:                    #d49a4a;  /* ochre */
+  --chart-4:                    #5a6b4a;  /* moss */
+  --chart-5:                    #a8a293;  /* stone */
+  --sidebar:                    #1f2a20;
+  --sidebar-foreground:         #f3eee2;
+  --sidebar-primary:            #cf6e44;
+  --sidebar-primary-foreground: #faf6ee;
+  --sidebar-accent:             #34432d;
+  --sidebar-accent-foreground:  #d6e0c8;
+  --sidebar-border:             #2f3a2f;
+  --sidebar-ring:               #cf6e44;
 }
 
 @layer base {
