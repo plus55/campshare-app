@@ -1,3 +1,46 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Tailwind v4 theme — brand tokens as design tokens                   */
+/* Mirrors :root below; kept in sync so Tailwind utilities (bg-clay,   */
+/* text-forest, font-serif, etc.) pick up the canonical brand values.  */
+/* ------------------------------------------------------------------ */
+@theme {
+  /* Colors */
+  --color-forest:       #2d3a2e;
+  --color-forest-deep:  #1f2a20;
+  --color-moss:         #5a6b4a;
+  --color-sand:         #f1ebe0;
+  --color-sand-warm:    #e8dfce;
+  --color-cream:        #faf6ee;
+  --color-charcoal:     #1a1a1a;
+  --color-charcoal-soft:#3a3a3a;
+  --color-clay:         #c2613a;
+  --color-clay-deep:    #a04e2c;
+  --color-clay-light:   #f5d4c8;
+  --color-ochre:        #d49a4a;
+  --color-stone:        #8a8478;
+  --color-line:         #d8cfbe;
+  --color-moss-light:   #d6e0c8;
+  --color-ink-300:      #b8b0a3;
+  --color-rust:         #a04030;
+  --color-rust-light:   #f0d4c8;
+
+  /* Typography */
+  --font-serif: var(--font-fraunces, "Fraunces"), Georgia, "Times New Roman", serif;
+  --font-sans:  var(--font-outfit, "Outfit"), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  /* Radii (override Tailwind defaults to match brand scale) */
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(43,33,24,0.06);
+  --shadow:    0 4px 14px rgba(43,33,24,0.08);
+}
+
 /* ------------------------------------------------------------------ */
 /* CampShare design system — synced with www.campshare.co.nz            */
 /* Marketing palette + chrome (header/footer) ported from               */

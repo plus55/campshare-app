@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Outfit } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import CookieConsent from "@/components/CookieConsent";
@@ -47,12 +48,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${outfit.variable}`}>
+    <html lang="en" className={`${fraunces.variable} ${outfit.variable}`} suppressHydrationWarning>
       <body>
-        <SiteHeader />
-        {children}
-        <SiteFooter />
-        <CookieConsent />
+        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+          <SiteHeader />
+          {children}
+          <SiteFooter />
+          <CookieConsent />
+        </ThemeProvider>
       </body>
     </html>
   );

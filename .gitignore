@@ -42,3 +42,6 @@ cloudflare-env.d.ts
 
 # test scratch output
 test-output.txt
+
+# Brainstorm session files
+.superpowers/
