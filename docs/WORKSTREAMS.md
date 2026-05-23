@@ -18,7 +18,23 @@ at task boundaries when ownership or blocked paths change.
 ## Claude
 
 - Branch: `claude/current-work`
-- Work assignment: not yet recorded.
+- Work assignment: Full UI migration — Tailwind v4 + shadcn/ui, Refresh visual treatment,
+  dark mode, Storybook. See plan at `.claude/plans/snazzy-crunching-donut.md`.
+- Owned paths:
+  - `src/components/**` (all)
+  - `src/app/**` (UI pages only — excludes Codex-reserved API routes below)
+  - `src/app/globals.css`
+  - `src/lib/utils.ts`
+  - `tailwind.config.ts`
+  - `postcss.config.js`
+  - `public/**`
+  - `.storybook/**`
+- Avoid concurrent edits in (reserved for Codex):
+  - `src/app/api/bookings/**`
+  - `src/app/api/cron/**`
+  - `src/db/migrations/**`
+  - `src/lib/money.ts`
+  - `src/lib/cancellation.ts`
 - Before editing files listed under Codex ownership, coordinate here and rebase
   from `main` after the relevant remediation merge.
 
