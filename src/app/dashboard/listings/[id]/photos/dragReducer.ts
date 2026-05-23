@@ -76,8 +76,5 @@ export function reduce(state: State, event: Event): State {
       }
       return effective;
     }
-
-    case "drop":
-      return effective; // unreachable due to early collapse above
   }
 }
