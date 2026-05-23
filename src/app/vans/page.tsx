@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "./ListingCard";
@@ -93,23 +93,21 @@ export default async function VansPage({
     LIMIT 60
   `;
 
-  const { results: rawListings } = await db()
+  const database = await getDb();
+  const { results: rawListings } = await database
     .prepare(sql)
     .bind(...binds)
     .all<SearchResult>();
 
   let savedIds = new Set<string>();
   if (session) {
-    const { results: saved } = await db()
+    const { results: saved } = await database
       .prepare("SELECT vanListingId FROM wishlist WHERE userId = ?")
       .bind(session.user.id)
       .all<{ vanListingId: string }>();
     savedIds = new Set(saved.map((r) => r.vanListingId));
   }
 
-  // Drop the IB flag for listings whose host doesn't meet eligibility — otherwise
-  // the pill would over-promise vs the PDP. If the user filtered by IB, also drop
-  // the listing entirely so the count and map match what's actually instant-bookable.
   const ibHostIds = Array.from(new Set(rawListings.filter((l) => l.instantBook).map((l) => l.hostUserId)));
   const eligibleHosts = await getInstantBookEligibleHosts(ibHostIds);
   const gated = rawListings.map((l) => ({
@@ -132,36 +130,32 @@ export default async function VansPage({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - var(--header-h))", overflow: "hidden" }}>
-      {/* Filters */}
+    <div className="flex flex-col overflow-hidden" style={{ height: "calc(100vh - var(--header-h))" }}>
       <SearchFilters initial={initialFilters} isLoggedIn={!!session} />
-
-      {/* Body: list + map */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* List */}
-        <div style={{ flex: "0 0 50%", overflowY: "auto", padding: 16 }}>
-          <p className="cs-muted cs-small" style={{ marginBottom: 12 }}>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Listing grid */}
+        <div className="flex-[0_0_50%] overflow-y-auto p-4">
+          <p className="mb-3 text-xs text-stone">
             {listings.length === 0
               ? "No vans match your filters."
               : `${listings.length} van${listings.length === 1 ? "" : "s"} available`}
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5">
             {listings.map((l) => (
               <ListingCard key={l.id} listing={l} />
             ))}
           </div>
           {listings.length === 0 && (
-            <div className="cs-card" style={{ textAlign: "center", padding: 40 }}>
-              <p style={{ fontWeight: 600, marginBottom: 8 }}>No vans found</p>
-              <p className="cs-muted cs-small">Try removing some filters or check back later — more vans are being added.</p>
+            <div className="cs-card mt-4 p-10 text-center">
+              <p className="mb-2 font-semibold text-charcoal">No vans found</p>
+              <p className="text-xs text-stone">Try removing some filters or check back later — more vans are being added.</p>
             </div>
           )}
         </div>
 
-        {/* Map (hidden on mobile via media query in globals.css) */}
+        {/* Map (hidden on mobile via globals.css cs-search-map) */}
         <div
-          className="cs-search-map"
-          style={{ flex: "0 0 50%", position: "relative", borderLeft: "1px solid var(--sand-200)" }}
+          className="cs-search-map flex-[0_0_50%] relative border-l border-line"
         >
           <MapViewClient listings={listings} />
         </div>

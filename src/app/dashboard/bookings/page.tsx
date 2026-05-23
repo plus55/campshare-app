@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { BookingStatusBadge } from "@/components/BookingStatusBadge";
 import type { Booking } from "@/lib/types";
 
@@ -18,8 +18,9 @@ function fmtDate(ms: number) {
 
 export default async function DashboardBookingsPage() {
   const session = await requireSession();
+  const database = await getDb();
 
-  const result = await db()
+  const result = await database
     .prepare(
       `SELECT b.*, vl.name AS vanName, vl.slug AS vanSlug,
               u.name AS guestName
@@ -43,7 +44,7 @@ export default async function DashboardBookingsPage() {
     .filter((r) => r.status === "requested" && r.expiresAt < nowSec)
     .map((r) => r.id);
   for (const id of expiredIds) {
-    await db().prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?").bind(nowSec, id).run();
+    await database.prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?").bind(nowSec, id).run();
   }
   rows.forEach((r) => { if (expiredIds.includes(r.id)) r.status = "expired"; });
 
@@ -54,56 +55,53 @@ export default async function DashboardBookingsPage() {
   function Section({ title, items }: { title: string; items: BookingRow[] }) {
     if (items.length === 0) return null;
     return (
-      <div className="cs-card" style={{ marginTop: 16 }}>
-        <h2 style={{ marginBottom: 16 }}>{title}</h2>
-        <table className="cs-table">
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Van</th>
-              <th>Guest</th>
-              <th>Dates</th>
-              <th>Total</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((b) => (
-              <tr key={b.id}>
-                <td><BookingStatusBadge status={b.status} /></td>
-                <td className="cs-small">{b.vanName}</td>
-                <td className="cs-small">{b.guestName}</td>
-                <td className="cs-muted cs-small">
-                  {fmtDate(b.startDate)} → {fmtDate(b.endDate)}
-                </td>
-                <td className="cs-small">${(b.totalCents / 100).toFixed(0)}</td>
-                <td>
-                  <Link href={`/dashboard/bookings/${b.id}`} className="cs-small">View →</Link>
-                </td>
+      <div className="cs-card mt-4">
+        <h2 className="mb-4 font-serif text-lg text-forest-deep">{title}</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                {["Status", "Van", "Guest", "Dates", "Total", ""].map((h) => (
+                  <th key={h} className="border-b border-line pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-stone">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((b) => (
+                <tr key={b.id} className="hover:bg-sand">
+                  <td className="py-2.5 pr-3"><BookingStatusBadge status={b.status} /></td>
+                  <td className="py-2.5 pr-3 text-xs text-charcoal-soft">{b.vanName}</td>
+                  <td className="py-2.5 pr-3 text-xs text-charcoal-soft">{b.guestName}</td>
+                  <td className="py-2.5 pr-3 text-xs text-stone">
+                    {fmtDate(b.startDate)} → {fmtDate(b.endDate)}
+                  </td>
+                  <td className="py-2.5 pr-3 text-xs text-charcoal-soft">${(b.totalCents / 100).toFixed(0)}</td>
+                  <td className="py-2.5">
+                    <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-clay hover:text-clay-deep">View →</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
 
   return (
-    <main className="cs-page">
-      <div className="cs-container">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <h1>Bookings</h1>
-            <p className="cs-muted">Requests and bookings across your listings.</p>
-          </div>
-        </div>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[1080px]">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Bookings</h1>
+        <p className="mb-0 text-stone">Requests and bookings across your listings.</p>
 
         {rows.length === 0 ? (
-          <div className="cs-card" style={{ marginTop: 24 }}>
-            <div className="cs-empty">
-              <div className="cs-empty-icon"><span style={{ fontSize: 32 }}>📋</span></div>
-              <h3>No bookings yet</h3>
-              <p>Requests from guests will appear here once your listing is live.</p>
+          <div className="cs-card mt-6">
+            <div className="flex flex-col items-center gap-2 py-10 text-center">
+              <span className="text-[2rem]">📋</span>
+              <h3 className="font-serif text-lg text-charcoal">No bookings yet</h3>
+              <p className="max-w-[36ch] text-sm text-stone">Requests from guests will appear here once your listing is live.</p>
             </div>
           </div>
         ) : (
@@ -113,7 +111,6 @@ export default async function DashboardBookingsPage() {
             <Section title="Past & cancelled" items={archived} />
           </>
         )}
-
       </div>
     </main>
   );

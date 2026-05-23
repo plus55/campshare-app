@@ -6,10 +6,10 @@ import AuthModal from "@/components/AuthModal";
 interface Props {
   vanListingId: string;
   initialSaved: boolean;
-  style?: React.CSSProperties;
+  className?: string;
 }
 
-export default function WishlistHeart({ vanListingId, initialSaved, style }: Props) {
+export default function WishlistHeart({ vanListingId, initialSaved, className }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [busy, setBusy] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -53,8 +53,7 @@ export default function WishlistHeart({ vanListingId, initialSaved, style }: Pro
         type="button"
         onClick={toggle}
         aria-label={saved ? "Remove from saved" : "Save this van"}
-        className="wishlist-heart"
-        style={style}
+        className={`flex size-[34px] cursor-pointer items-center justify-center rounded-full border-0 bg-white/88 transition-transform hover:scale-110 hover:bg-white ${className ?? ""}`}
       >
         <svg
           width="20"

@@ -33,18 +33,12 @@ function HostAvatar({ image, firstName }: { image: string | null; firstName: str
       <img
         src={image}
         alt={firstName ?? "Host"}
-        style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+        className="size-6 shrink-0 rounded-full object-cover"
       />
     );
   }
   return (
-    <span style={{
-      width: 24, height: 24, borderRadius: "50%",
-      background: "var(--forest)", color: "var(--cream)",
-      display: "inline-flex", alignItems: "center", justifyContent: "center",
-      fontSize: 11, fontFamily: "var(--font-serif)", fontWeight: 500,
-      flexShrink: 0,
-    }}>
+    <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-forest font-serif text-[11px] font-medium text-cream">
       {initial}
     </span>
   );
@@ -56,66 +50,66 @@ export default function ListingCard({ listing }: { listing: SearchResult }) {
   const hostName = listing.hostFirstName ?? "Host";
 
   return (
-    <div className="listing-card-wrap" style={{ position: "relative" }}>
+    <div className="relative transition-transform hover:-translate-y-0.5">
       <WishlistHeart
         vanListingId={listing.id}
         initialSaved={!!listing.isWishlisted}
-        style={{ position: "absolute", top: 10, right: 10, zIndex: 2 }}
+        className="absolute right-2.5 top-2.5 z-10"
       />
-      <Link href={`/vans/${listing.slug}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-      <div className="cs-card" style={{ padding: 0, overflow: "hidden", cursor: "pointer" }}>
-        <div style={{
-          aspectRatio: "4/3",
-          background: "var(--sand-100)",
-          overflow: "hidden",
-        }}>
-          {imgUrl ? (
-            <img
-              src={imgUrl}
-              alt={listing.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          ) : (
-            <div style={{
-              width: "100%", height: "100%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "var(--ink-400)", fontSize: 13,
-            }}>
-              No photo yet
+      <Link href={`/vans/${listing.slug}`} className="block no-underline">
+        <div className="cs-card cursor-pointer overflow-hidden p-0">
+          <div className="aspect-[4/3] overflow-hidden bg-sand">
+            {imgUrl ? (
+              <img
+                src={imgUrl}
+                alt={listing.name}
+                className="size-full object-cover"
+              />
+            ) : (
+              <div className="flex size-full items-center justify-center text-xs text-stone">
+                No photo yet
+              </div>
+            )}
+          </div>
+          <div className="px-3.5 py-3">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <HostAvatar image={listing.hostImage} firstName={listing.hostFirstName} />
+                <span className="truncate text-xs text-stone">{hostName}</span>
+              </div>
+              <div className="shrink-0 text-[15px] font-bold text-charcoal">
+                ${priceNzd}<span className="text-xs font-normal text-stone">/night</span>
+              </div>
             </div>
-          )}
-        </div>
-        <div style={{ padding: "12px 14px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-              <HostAvatar image={listing.hostImage} firstName={listing.hostFirstName} />
-              <span className="cs-muted cs-small" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {hostName}
+            <div className="text-[15px] font-semibold leading-snug text-charcoal">{listing.name}</div>
+            <div className="mt-1 text-xs text-stone">
+              {listing.region} · {listing.island} Island · Sleeps {listing.sleeps}
+            </div>
+            {listing.reviewCount > 0 && listing.avgRating !== null && (
+              <div className="mt-1.5 text-xs text-charcoal-soft">
+                <span className="text-ochre">★</span>{" "}
+                <span className="font-semibold">{listing.avgRating.toFixed(1)}</span>{" "}
+                <span className="text-stone">({listing.reviewCount})</span>
+              </div>
+            )}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span className="inline-block rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium capitalize text-charcoal-soft">
+                {listing.vanType}
               </span>
+              {listing.petFriendly ? (
+                <span className="inline-block rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium text-charcoal-soft">
+                  Pets welcome
+                </span>
+              ) : null}
+              {listing.instantBook ? (
+                <span className="inline-block rounded-full bg-moss-light px-2.5 py-0.5 text-[11px] font-medium text-moss">
+                  Instant book
+                </span>
+              ) : null}
             </div>
-            <div style={{ fontWeight: 700, fontSize: 15, whiteSpace: "nowrap" }}>
-              ${priceNzd}<span className="cs-muted" style={{ fontWeight: 400, fontSize: 12 }}>/night</span>
-            </div>
-          </div>
-          <div style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.3 }}>{listing.name}</div>
-          <div className="cs-muted cs-small" style={{ marginTop: 4 }}>
-            {listing.region} · {listing.island} Island · Sleeps {listing.sleeps}
-          </div>
-          {listing.reviewCount > 0 && listing.avgRating !== null && (
-            <div className="cs-small" style={{ marginTop: 6, color: "var(--ink-700)" }}>
-              <span style={{ color: "var(--ochre)" }}>★</span>{" "}
-              <span style={{ fontWeight: 600 }}>{listing.avgRating.toFixed(1)}</span>{" "}
-              <span className="cs-muted">({listing.reviewCount})</span>
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-            <span className="cs-pill">{listing.vanType}</span>
-            {listing.petFriendly ? <span className="cs-pill">Pets welcome</span> : null}
-            {listing.instantBook ? <span className="cs-pill">Instant book</span> : null}
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
     </div>
   );
 }
