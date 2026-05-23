@@ -10,12 +10,14 @@ export default async function ResetPasswordPage({
 
   if (!token) {
     return (
-      <div className="cs-card">
-        <h1>Reset link invalid</h1>
-        <p>This password reset link is missing its token, or has expired.</p>
-        <p style={{ marginTop: 16 }} className="cs-small">
-          <Link href="/forgot-password">Request a new reset link</Link>
+      <div className="rounded-2xl bg-cream p-8 shadow">
+        <h1 className="mb-2 font-serif text-2xl text-forest-deep">Reset link invalid</h1>
+        <p className="mb-4 text-stone">
+          This password reset link is missing its token, or has expired.
         </p>
+        <Link href="/forgot-password" className="text-sm text-clay hover:text-clay-deep">
+          Request a new reset link
+        </Link>
       </div>
     );
   }

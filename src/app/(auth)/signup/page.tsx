@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signIn, signUp } from "@/lib/auth-client";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -13,9 +16,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [magicSent, setMagicSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<"email" | "google" | "magic" | null>(
-    null
-  );
+  const [loading, setLoading] = useState<"email" | "google" | "magic" | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   async function verifyBot(): Promise<boolean> {
@@ -75,91 +76,98 @@ export default function SignupPage() {
 
   if (magicSent) {
     return (
-      <div className="cs-card">
-        <h1>Check your email</h1>
-        <p>
-          We sent a sign-in link to <strong>{email}</strong>. It expires in 15
-          minutes.
+      <div className="rounded-2xl bg-cream p-8 shadow">
+        <h1 className="mb-2 font-serif text-2xl text-forest-deep">Check your email</h1>
+        <p className="text-stone">
+          We sent a sign-in link to <strong className="font-medium text-charcoal">{email}</strong>. It expires in 15 minutes.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="cs-card">
-      <h1>Create your account</h1>
-      <p className="cs-muted">Join CampShare in under a minute.</p>
+    <div className="rounded-2xl bg-cream p-8 shadow">
+      <h1 className="mb-1 font-serif text-2xl text-forest-deep">Create your account</h1>
+      <p className="mb-6 text-sm text-stone">Join CampShare in under a minute.</p>
 
-      {error && <div className="cs-error">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-[var(--radius)] bg-rust-light px-3.5 py-2.5 text-sm text-rust">
+          {error}
+        </div>
+      )}
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={handleGoogle}
         disabled={loading !== null}
-        className="cs-btn cs-btn-ghost cs-btn-block"
-        style={{ marginBottom: 12 }}
+        className="mb-3 h-11 w-full text-[0.95rem]"
       >
         Continue with Google
-      </button>
+      </Button>
 
-      <form onSubmit={handleEmail}>
-        <div className="cs-field">
-          <label className="cs-label">Name</label>
-          <input
+      <form onSubmit={handleEmail} className="flex flex-col gap-4">
+        <div>
+          <Label htmlFor="name" className="mb-1.5 text-xs text-stone">Name</Label>
+          <Input
+            id="name"
             type="text"
             required
-            className="cs-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
+            className="h-11 bg-cream text-[0.95rem]"
           />
         </div>
-        <div className="cs-field">
-          <label className="cs-label">Email</label>
-          <input
+        <div>
+          <Label htmlFor="email" className="mb-1.5 text-xs text-stone">Email</Label>
+          <Input
+            id="email"
             type="email"
             required
-            className="cs-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            className="h-11 bg-cream text-[0.95rem]"
           />
         </div>
-        <div className="cs-field">
-          <label className="cs-label">Password</label>
-          <input
+        <div>
+          <Label htmlFor="password" className="mb-1.5 text-xs text-stone">Password</Label>
+          <Input
+            id="password"
             type="password"
             required
             minLength={8}
-            className="cs-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
+            className="h-11 bg-cream text-[0.95rem]"
           />
         </div>
-        <button
+        <Button
           type="submit"
           disabled={loading !== null}
-          className="cs-btn cs-btn-primary cs-btn-block"
+          className="h-11 w-full text-[0.95rem]"
         >
           {loading === "email" ? "Creating account…" : "Create account"}
-        </button>
+        </Button>
       </form>
 
       <TurnstileWidget onToken={setTurnstileToken} />
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={handleMagic}
         disabled={loading !== null}
-        className="cs-btn cs-btn-ghost cs-btn-block"
-        style={{ marginTop: 12 }}
+        className="mt-3 h-11 w-full text-[0.95rem]"
       >
         {loading === "magic" ? "Sending…" : "Email me a magic link"}
-      </button>
+      </Button>
 
-      <p style={{ marginTop: 20, textAlign: "center" }} className="cs-small">
-        Already have an account? <Link href="/login">Sign in</Link>
+      <p className="mt-5 text-center text-sm text-stone">
+        Already have an account?{" "}
+        <Link href="/login" className="text-clay hover:text-clay-deep">Sign in</Link>
       </p>
     </div>
   );

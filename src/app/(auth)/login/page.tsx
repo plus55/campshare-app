@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,9 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [magicSent, setMagicSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<"email" | "google" | "magic" | null>(
-    null
-  );
+  const [loading, setLoading] = useState<"email" | "google" | "magic" | null>(null);
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -52,81 +53,86 @@ export default function LoginPage() {
 
   if (magicSent) {
     return (
-      <div className="cs-card">
-        <h1>Check your email</h1>
-        <p>
-          We sent a sign-in link to <strong>{email}</strong>. It expires in 15
-          minutes.
+      <div className="rounded-2xl bg-cream p-8 shadow">
+        <h1 className="mb-2 font-serif text-2xl text-forest-deep">Check your email</h1>
+        <p className="text-stone">
+          We sent a sign-in link to <strong className="font-medium text-charcoal">{email}</strong>. It expires in 15 minutes.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="cs-card">
-      <h1>Sign in</h1>
-      <p className="cs-muted">Welcome back to CampShare.</p>
+    <div className="rounded-2xl bg-cream p-8 shadow">
+      <h1 className="mb-1 font-serif text-2xl text-forest-deep">Sign in</h1>
+      <p className="mb-6 text-sm text-stone">Welcome back to CampShare.</p>
 
-      {error && <div className="cs-error">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-[var(--radius)] bg-rust-light px-3.5 py-2.5 text-sm text-rust">
+          {error}
+        </div>
+      )}
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={handleGoogle}
         disabled={loading !== null}
-        className="cs-btn cs-btn-ghost cs-btn-block"
-        style={{ marginBottom: 12 }}
+        className="mb-3 h-11 w-full text-[0.95rem]"
       >
         Continue with Google
-      </button>
+      </Button>
 
       <Divider />
 
-      <form onSubmit={handleEmail}>
-        <div className="cs-field">
-          <label className="cs-label">Email</label>
-          <input
+      <form onSubmit={handleEmail} className="flex flex-col gap-4">
+        <div>
+          <Label htmlFor="email" className="mb-1.5 text-xs text-stone">Email</Label>
+          <Input
+            id="email"
             type="email"
             required
-            className="cs-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            className="h-11 bg-cream text-[0.95rem]"
           />
         </div>
-        <div className="cs-field">
-          <label className="cs-label">Password</label>
-          <input
+        <div>
+          <Label htmlFor="password" className="mb-1.5 text-xs text-stone">Password</Label>
+          <Input
+            id="password"
             type="password"
             required
-            className="cs-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
+            className="h-11 bg-cream text-[0.95rem]"
           />
         </div>
-        <button
+        <Button
           type="submit"
           disabled={loading !== null}
-          className="cs-btn cs-btn-primary cs-btn-block"
+          className="h-11 w-full text-[0.95rem]"
         >
           {loading === "email" ? "Signing in…" : "Sign in"}
-        </button>
+        </Button>
       </form>
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={handleMagic}
         disabled={loading !== null}
-        className="cs-btn cs-btn-ghost cs-btn-block"
-        style={{ marginTop: 12 }}
+        className="mt-3 h-11 w-full text-[0.95rem]"
       >
         {loading === "magic" ? "Sending…" : "Email me a magic link"}
-      </button>
+      </Button>
 
-      <p style={{ marginTop: 20, textAlign: "center" }} className="cs-small">
-        <Link href="/forgot-password">Forgot password?</Link>
+      <p className="mt-5 text-center text-sm text-stone">
+        <Link href="/forgot-password" className="text-clay hover:text-clay-deep">Forgot password?</Link>
         {" · "}
-        <Link href="/signup">Create an account</Link>
+        <Link href="/signup" className="text-clay hover:text-clay-deep">Create an account</Link>
       </p>
     </div>
   );
@@ -134,19 +140,10 @@ export default function LoginPage() {
 
 function Divider() {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        margin: "16px 0",
-        color: "var(--ink-300)",
-        fontSize: 12,
-      }}
-    >
-      <span style={{ flex: 1, height: 1, background: "var(--sand-200)" }} />
+    <div className="my-4 flex items-center gap-3 text-xs text-stone">
+      <span className="flex-1 border-t border-line" />
       OR
-      <span style={{ flex: 1, height: 1, background: "var(--sand-200)" }} />
+      <span className="flex-1 border-t border-line" />
     </div>
   );
 }

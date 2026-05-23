@@ -8,16 +8,15 @@ export default async function VerifyEmailPage({
   const { email } = await searchParams;
 
   return (
-    <div className="cs-card">
-      <h1>Check your inbox</h1>
-      <p>
+    <div className="rounded-2xl bg-cream p-8 shadow">
+      <h1 className="mb-2 font-serif text-2xl text-forest-deep">Check your inbox</h1>
+      <p className="mb-2 text-stone">
         We&apos;ve sent a verification link to{" "}
-        <strong>{email ?? "your email"}</strong>. Click it to activate your
-        CampShare account.
+        <strong className="font-medium text-charcoal">{email ?? "your email"}</strong>. Click it to activate your CampShare account.
       </p>
-      <p className="cs-muted cs-small" style={{ marginTop: 16 }}>
+      <p className="mt-4 text-sm text-stone">
         Didn&apos;t get it? Check your spam folder, or{" "}
-        <Link href="/signup">try signing up again</Link>.
+        <Link href="/signup" className="text-clay hover:text-clay-deep">try signing up again</Link>.
       </p>
     </div>
   );

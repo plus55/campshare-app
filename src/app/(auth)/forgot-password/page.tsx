@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { requestPasswordReset } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -14,10 +17,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await requestPasswordReset({
-      email,
-      redirectTo: "/reset-password",
-    });
+    const res = await requestPasswordReset({ email, redirectTo: "/reset-password" });
     setLoading(false);
     if (res.error) {
       setError(res.error.message ?? "Unable to send reset email.");
@@ -28,52 +28,55 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="cs-card">
-        <h1>Check your inbox</h1>
-        <p>
-          If an account exists for <strong>{email}</strong>, you&apos;ll receive
-          a password reset link in the next minute or two.
+      <div className="rounded-2xl bg-cream p-8 shadow">
+        <h1 className="mb-2 font-serif text-2xl text-forest-deep">Check your inbox</h1>
+        <p className="mb-4 text-stone">
+          If an account exists for <strong className="font-medium text-charcoal">{email}</strong>, you&apos;ll receive a password reset link in the next minute or two.
         </p>
-        <p style={{ marginTop: 16 }} className="cs-small">
-          <Link href="/login">Back to sign in</Link>
-        </p>
+        <Link href="/login" className="text-sm text-clay hover:text-clay-deep">
+          Back to sign in
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="cs-card">
-      <h1>Reset your password</h1>
-      <p className="cs-muted">
-        Enter the email associated with your account and we&apos;ll send you a
-        link to choose a new password.
+    <div className="rounded-2xl bg-cream p-8 shadow">
+      <h1 className="mb-1 font-serif text-2xl text-forest-deep">Reset your password</h1>
+      <p className="mb-6 text-sm text-stone">
+        Enter the email associated with your account and we&apos;ll send you a link to choose a new password.
       </p>
 
-      {error && <div className="cs-error">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-[var(--radius)] bg-rust-light px-3.5 py-2.5 text-sm text-rust">
+          {error}
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit}>
-        <div className="cs-field">
-          <label className="cs-label">Email</label>
-          <input
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <Label htmlFor="email" className="mb-1.5 text-xs text-stone">Email</Label>
+          <Input
+            id="email"
             type="email"
             required
-            className="cs-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            className="h-11 bg-cream text-[0.95rem]"
           />
         </div>
-        <button
+        <Button
           type="submit"
           disabled={loading}
-          className="cs-btn cs-btn-primary cs-btn-block"
+          className="h-11 w-full text-[0.95rem]"
         >
           {loading ? "Sending…" : "Send reset link"}
-        </button>
+        </Button>
       </form>
 
-      <p style={{ marginTop: 20, textAlign: "center" }} className="cs-small">
-        <Link href="/login">Back to sign in</Link>
+      <p className="mt-5 text-center text-sm text-stone">
+        <Link href="/login" className="text-clay hover:text-clay-deep">Back to sign in</Link>
       </p>
     </div>
   );

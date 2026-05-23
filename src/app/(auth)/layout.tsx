@@ -1,11 +1,7 @@
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="cs-page">
-      <div className="cs-narrow">{children}</div>
+    <main className="min-h-screen bg-sand px-4 py-12">
+      <div className="mx-auto max-w-[460px]">{children}</div>
     </main>
   );
 }
