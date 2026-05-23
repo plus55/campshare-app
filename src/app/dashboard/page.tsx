@@ -105,7 +105,15 @@ export default async function DashboardPage() {
     templateCountResult,
   ] = await Promise.all([
     database
-      .prepare("SELECT id, name, status, nightlyRate, region, createdAt, coverPhotoKey FROM van_listing WHERE hostUserId = ? ORDER BY createdAt DESC")
+      .prepare(
+        `SELECT vl.id, vl.name, vl.status, vl.nightlyRate, vl.region, vl.createdAt,
+                (SELECT r2Key FROM van_photo
+                 WHERE vanListingId = vl.id
+                 ORDER BY position ASC, createdAt ASC LIMIT 1) AS coverPhotoKey
+         FROM van_listing vl
+         WHERE vl.hostUserId = ?
+         ORDER BY vl.createdAt DESC`
+      )
       .bind(userId)
       .all<ListingRow>(),
     database
