@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { MAX_TEMPLATES_PER_HOST } from "@/lib/constants";
 import type { MessageTemplate } from "@/lib/types";
 import { TemplateManager } from "./TemplateManager";
 
 export default async function TemplatesPage() {
   const session = await requireSession();
+  const database = await getDb();
 
-  const { results } = await db()
+  const { results } = await database
     .prepare(
       "SELECT id, userId, title, body, position, createdAt, updatedAt FROM message_template WHERE userId = ? ORDER BY position ASC, createdAt ASC"
     )
@@ -16,13 +17,13 @@ export default async function TemplatesPage() {
     .all<MessageTemplate>();
 
   return (
-    <main className="cs-page">
-      <div className="cs-container" style={{ maxWidth: 720 }}>
-        <p className="cs-small" style={{ margin: "0 0 8px" }}>
-          <Link href="/dashboard" className="cs-muted">← Dashboard</Link>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[720px]">
+        <p className="mb-2 text-sm">
+          <Link href="/dashboard" className="text-stone hover:text-charcoal">← Dashboard</Link>
         </p>
-        <h1 style={{ marginBottom: 4 }}>Message templates</h1>
-        <p className="cs-muted">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Message templates</h1>
+        <p className="mb-6 text-stone">
           Save the answers you give guests over and over — pickup directions, bedding, refundable bond.
           Tap a template when replying to a booking to drop it into the message box.
           Up to {MAX_TEMPLATES_PER_HOST} templates.

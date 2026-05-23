@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import ReviewForm from "./ReviewForm";
 import type { Booking, ReviewRole } from "@/lib/types";
 
@@ -19,7 +19,9 @@ export default async function LeaveReviewPage({
   const session = await getSession();
   if (!session) redirect(`/login?next=/trips/${id}/review`);
 
-  const booking = await db()
+  const database = await getDb();
+
+  const booking = await database
     .prepare(
       `SELECT b.*, vl.name AS vanName, vl.slug AS vanSlug
        FROM booking b
@@ -40,7 +42,7 @@ export default async function LeaveReviewPage({
   }
 
   const role: ReviewRole = isGuest ? "guest" : "host";
-  const existing = await db()
+  const existing = await database
     .prepare("SELECT id FROM review WHERE bookingId = ? AND role = ?")
     .bind(id, role)
     .first<{ id: string }>();
@@ -52,14 +54,20 @@ export default async function LeaveReviewPage({
   const subjectLabel = isGuest ? "your trip" : "your guest";
 
   return (
-    <main className="cs-page">
-      <div className="cs-container" style={{ maxWidth: 640 }}>
-        <Link href={`/trips/${id}`} className="cs-muted cs-small" style={{ display: "inline-block", marginBottom: 12 }}>
-          &larr; Back to trip
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[640px]">
+        <Link
+          href={`/trips/${id}`}
+          className="mb-3 inline-block text-sm text-stone hover:text-charcoal"
+        >
+          ← Back to trip
         </Link>
-        <h1 style={{ marginBottom: 4 }}>How was {subjectLabel}?</h1>
-        <p className="cs-muted" style={{ marginBottom: 24 }}>
-          Reviewing <strong>{booking.vanName}</strong>. Reviews stay hidden until both sides submit, or after 14 days — whichever comes first.
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep">
+          How was {subjectLabel}?
+        </h1>
+        <p className="mb-6 text-stone">
+          Reviewing <strong className="text-charcoal">{booking.vanName}</strong>.
+          Reviews stay hidden until both sides submit, or after 14 days — whichever comes first.
         </p>
         <ReviewForm bookingId={id} role={role} vanName={booking.vanName} />
       </div>
