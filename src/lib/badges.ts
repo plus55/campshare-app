@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { getDb } from "./db";
 
 export type BadgeKind = "super_host" | "responds_reliably" | "verified";
 
@@ -35,16 +35,11 @@ interface ResponseTimeRow {
   threadCount: number;
 }
 
-/**
- * Compute the badges for a given host user.
- * Runs three lightweight queries; intended to be called per page (e.g. host profile, PDP).
- * If this becomes hot, cache for ~5 minutes by userId.
- */
 export async function getBadgesForHost(userId: string): Promise<Badge[]> {
+  const database = await getDb();
   const badges: Badge[] = [];
 
-  // Verified — KYC
-  const userRow = await db()
+  const userRow = await database
     .prepare("SELECT kycStatus FROM user WHERE id = ?")
     .bind(userId)
     .first<{ kycStatus: string }>();
@@ -52,8 +47,7 @@ export async function getBadgesForHost(userId: string): Promise<Badge[]> {
     badges.push({ kind: "verified", ...BADGE_META.verified });
   }
 
-  // Stats for super host
-  const stats = await db()
+  const stats = await database
     .prepare(
       `SELECT
          SUM(CASE WHEN b.status = 'completed' THEN 1 ELSE 0 END) AS completedCount,
@@ -85,8 +79,7 @@ export async function getBadgesForHost(userId: string): Promise<Badge[]> {
   const ratingCount = stats?.totalForRating ?? 0;
   const completionRate = completed + hostCancels > 0 ? completed / (completed + hostCancels) : 1;
 
-  // Response time — avg seconds from booking requestedAt to host's first message reply
-  const resp = await db()
+  const resp = await database
     .prepare(
       `SELECT
          AVG(firstReply.firstReplyAt - b.requestedAt) AS avgFirstReplySec,
@@ -109,12 +102,10 @@ export async function getBadgesForHost(userId: string): Promise<Badge[]> {
   const avgReplySec = resp?.avgFirstReplySec ?? null;
   const threadCount = resp?.threadCount ?? 0;
 
-  // Responds reliably — at least 5 threads with avg first-reply < 2h
   if (threadCount >= 5 && avgReplySec !== null && avgReplySec < 2 * 3600) {
     badges.push({ kind: "responds_reliably", ...BADGE_META.responds_reliably });
   }
 
-  // Super Host — composite
   if (
     completed >= 10 &&
     avgRating !== null &&
@@ -131,16 +122,11 @@ export async function getBadgesForHost(userId: string): Promise<Badge[]> {
   return badges;
 }
 
-/**
- * Filter a set of host user IDs down to those eligible to offer Instant Book.
- * Criteria: kycStatus='verified' + 3+ completed bookings + avg rating >= 4.5 from 3+ visible ratings.
- * "Visible" rating = guest review with either a matching host review OR booking ended 14d+ ago (double-blind window).
- * One SQL call regardless of input size.
- */
 export async function getInstantBookEligibleHosts(hostUserIds: string[]): Promise<Set<string>> {
   if (hostUserIds.length === 0) return new Set();
+  const database = await getDb();
   const placeholders = hostUserIds.map(() => "?").join(", ");
-  const { results } = await db()
+  const { results } = await database
     .prepare(
       `SELECT u.id
        FROM user u

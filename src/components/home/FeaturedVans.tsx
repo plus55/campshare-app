@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
 
 export default async function FeaturedVans() {
+  const database = await getDb();
   const [session, rawResult] = await Promise.all([
     getSession(),
-    db()
+    database
       .prepare(
         `SELECT
           vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
@@ -35,13 +36,16 @@ export default async function FeaturedVans() {
 
   let savedIds = new Set<string>();
   if (session) {
-    const { results: saved } = await db()
+    const { results: saved } = await database
       .prepare("SELECT vanListingId FROM wishlist WHERE userId = ?")
       .bind(session.user.id)
       .all<{ vanListingId: string }>();
     savedIds = new Set(saved.map((r) => r.vanListingId));
   }
-  const ibHostIds = Array.from(new Set(rawResult.results.filter((l) => l.instantBook).map((l) => l.hostUserId)));
+
+  const ibHostIds = Array.from(
+    new Set(rawResult.results.filter((l) => l.instantBook).map((l) => l.hostUserId))
+  );
   const eligibleHosts = await getInstantBookEligibleHosts(ibHostIds);
   const listings = rawResult.results.map((l) => ({
     ...l,
@@ -50,19 +54,18 @@ export default async function FeaturedVans() {
   }));
 
   return (
-    <section style={{ padding: "clamp(3rem, 6vw, 5rem) 0", background: "var(--sand)" }}>
+    <section className="py-[clamp(3rem,6vw,5rem)] bg-sand">
       <div className="wrap">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "clamp(1.5rem, 3vw, 2.5rem)", flexWrap: "wrap", gap: "0.5rem" }}>
-          <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.4rem)", margin: 0 }}>
-            Recently listed
-          </h2>
-          <Link href="/vans" className="btn btn-ghost btn-sm">Browse all vans</Link>
+        <div className="mb-[clamp(1.5rem,3vw,2.5rem)] flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="m-0 text-[clamp(1.8rem,3vw,2.4rem)]">Recently listed</h2>
+          <Link
+            href="/vans"
+            className="text-sm font-medium text-clay hover:text-clay-deep transition-colors"
+          >
+            Browse all vans →
+          </Link>
         </div>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: "1.25rem",
-        }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-5">
           {listings.map((l) => (
             <ListingCard key={l.id} listing={l} />
           ))}

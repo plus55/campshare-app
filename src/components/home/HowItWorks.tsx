@@ -9,7 +9,7 @@ const STEPS = [
   {
     icon: <CalendarCheck size={22} />,
     title: "Book",
-    body: "Send a request to the host. Pay securely &mdash; your card is only charged when they accept.",
+    body: "Send a request to the host. Pay securely — your card is only charged when they accept.",
   },
   {
     icon: <MapPin size={22} />,
@@ -20,38 +20,25 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section style={{ padding: "clamp(3rem, 6vw, 5rem) 0", background: "var(--cream)" }}>
+    <section className="bg-cream py-[clamp(3rem,6vw,5rem)]">
       <div className="wrap">
-        <div style={{ textAlign: "center", marginBottom: "clamp(2rem, 4vw, 3rem)" }}>
-          <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.4rem)", marginBottom: "0.75rem" }}>
-            How CampShare works
-          </h2>
-          <p className="cs-muted" style={{ maxWidth: "48ch", margin: "0 auto" }}>
+        <div className="mb-[clamp(2rem,4vw,3rem)] text-center">
+          <h2 className="mb-3 text-[clamp(1.8rem,3vw,2.4rem)]">How CampShare works</h2>
+          <p className="mx-auto max-w-[48ch] text-stone">
             Three simple steps between you and a Kiwi road trip.
           </p>
         </div>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: "1.5rem",
-        }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6">
           {STEPS.map((s) => (
-            <div key={s.title} className="cs-card" style={{ textAlign: "center", padding: "2rem 1.5rem" }}>
-              <div style={{
-                width: 52, height: 52,
-                margin: "0 auto 1rem",
-                borderRadius: "50%",
-                background: "var(--forest-deep)",
-                color: "var(--cream)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1.5px solid var(--ochre)",
-              }}>
+            <div
+              key={s.title}
+              className="cs-card flex flex-col items-center p-8 text-center"
+            >
+              <div className="mb-4 flex size-[52px] items-center justify-center rounded-full border-[1.5px] border-ochre bg-forest-deep text-cream">
                 {s.icon}
               </div>
-              <h3 style={{ marginBottom: "0.5rem" }}>{s.title}</h3>
-              <p className="cs-muted" style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: s.body }} />
+              <h3 className="mb-2 font-serif text-[1.1rem] text-forest-deep">{s.title}</h3>
+              <p className="m-0 text-stone">{s.body}</p>
             </div>
           ))}
         </div>

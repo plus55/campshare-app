@@ -1,13 +1,15 @@
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { ShieldCheck, Star, Lock } from "lucide-react";
 
 export default async function TrustBanner() {
-  const row = await db()
+  const database = await getDb();
+
+  const row = await database
     .prepare(`SELECT count(*) AS n FROM van_listing WHERE status = 'published'`)
     .first<{ n: number }>();
   const count = row?.n ?? 0;
 
-  const reviewRow = await db()
+  const reviewRow = await database
     .prepare(`SELECT ROUND(AVG(rating),1) AS avg, count(*) AS n FROM review`)
     .first<{ avg: number | null; n: number }>();
   const avgRating = reviewRow?.avg ?? null;
@@ -16,7 +18,9 @@ export default async function TrustBanner() {
   const items = [
     {
       icon: <ShieldCheck size={15} />,
-      text: count > 0 ? `${count} verified van${count === 1 ? "" : "s"} across Aotearoa` : "Verified campervans across Aotearoa",
+      text: count > 0
+        ? `${count} verified van${count === 1 ? "" : "s"} across Aotearoa`
+        : "Verified campervans across Aotearoa",
     },
     {
       icon: <Star size={15} />,
@@ -31,23 +35,11 @@ export default async function TrustBanner() {
   ];
 
   return (
-    <section style={{
-      background: "var(--forest-deep)",
-      color: "rgba(250,246,238,0.85)",
-      padding: "1rem 0",
-      fontSize: "0.9rem",
-    }}>
-      <div className="wrap" style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: "2rem",
-        flexWrap: "wrap",
-        textAlign: "center",
-      }}>
+    <section className="bg-forest-deep py-4 text-[0.9rem] text-cream/85">
+      <div className="wrap flex flex-wrap items-center justify-center gap-6 text-center sm:gap-8">
         {items.map((it, i) => (
-          <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ color: "var(--ochre)", display: "flex" }}>{it.icon}</span>
+          <span key={i} className="inline-flex items-center gap-2">
+            <span className="flex text-ochre">{it.icon}</span>
             {it.text}
           </span>
         ))}
