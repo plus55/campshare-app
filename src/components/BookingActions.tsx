@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BookingStatus } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+const errorCls = "rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
 
 interface Props {
   bookingId: string;
@@ -42,51 +47,49 @@ export function BookingActions({ bookingId, status, viewerRole }: Props) {
   if (status === "requested" && viewerRole === "host") {
     if (showDeclineForm) {
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {error && <p className="cs-error">{error}</p>}
-          <textarea
-            className="cs-textarea"
+        <div className="flex flex-col gap-2">
+          {error && <p className={errorCls}>{error}</p>}
+          <Textarea
+            className="min-h-20"
             placeholder="Optional: reason for declining (sent to guest)"
             value={declineReason}
             onChange={(e) => setDeclineReason(e.target.value)}
-            style={{ minHeight: 80 }}
           />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              className="cs-btn cs-btn-danger"
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
               disabled={loading !== null}
               onClick={() => action("decline", { reason: declineReason || null })}
             >
               {loading === "decline" ? "Declining…" : "Confirm decline"}
-            </button>
-            <button
-              className="cs-btn cs-btn-ghost"
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => { setShowDeclineForm(false); setError(null); }}
             >
               Back
-            </button>
+            </Button>
           </div>
         </div>
       );
     }
 
     return (
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {error && <p className="cs-error" style={{ width: "100%" }}>{error}</p>}
-        <button
-          className="cs-btn cs-btn-primary"
+      <div className="flex flex-wrap gap-2">
+        {error && <p className={cn(errorCls, "w-full")}>{error}</p>}
+        <Button
           disabled={loading !== null}
           onClick={() => action("accept")}
         >
           {loading === "accept" ? "Accepting…" : "Accept booking"}
-        </button>
-        <button
-          className="cs-btn cs-btn-ghost"
+        </Button>
+        <Button
+          variant="outline"
           disabled={loading !== null}
           onClick={() => setShowDeclineForm(true)}
         >
           Decline
-        </button>
+        </Button>
       </div>
     );
   }
@@ -94,14 +97,14 @@ export function BookingActions({ bookingId, status, viewerRole }: Props) {
   if ((status === "accepted" || status === "in_progress") && (viewerRole === "guest" || viewerRole === "host")) {
     return (
       <div>
-        {error && <p className="cs-error">{error}</p>}
-        <button
-          className="cs-btn cs-btn-ghost"
+        {error && <p className={errorCls}>{error}</p>}
+        <Button
+          variant="outline"
           disabled={loading !== null}
           onClick={() => action("cancel")}
         >
           {loading === "cancel" ? "Cancelling…" : "Cancel booking"}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -109,14 +112,14 @@ export function BookingActions({ bookingId, status, viewerRole }: Props) {
   if (status === "requested" && viewerRole === "guest") {
     return (
       <div>
-        {error && <p className="cs-error">{error}</p>}
-        <button
-          className="cs-btn cs-btn-ghost"
+        {error && <p className={errorCls}>{error}</p>}
+        <Button
+          variant="outline"
           disabled={loading !== null}
           onClick={() => action("cancel")}
         >
           {loading === "cancel" ? "Cancelling…" : "Cancel request"}
-        </button>
+        </Button>
       </div>
     );
   }

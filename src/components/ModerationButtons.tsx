@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Props {
   id: string;
@@ -35,18 +37,18 @@ export default function ModerationButtons({ id, apiEndpoint }: Props) {
 
   return (
     <>
-      {error && <div className="cs-error">{error}</div>}
-      <div className="cs-field">
-        <label className="cs-label">Note to host (optional, included in email)</label>
-        <textarea className="cs-textarea" value={note} onChange={(e) => setNote(e.target.value)} />
+      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>}
+      <div className="mb-4 flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-foreground">Note to host (optional, included in email)</label>
+        <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
-      <div style={{ display: "flex", gap: 12 }}>
-        <button type="button" className="cs-btn cs-btn-primary" onClick={() => send("approve")} disabled={busy !== null}>
+      <div className="flex gap-3">
+        <Button type="button" onClick={() => send("approve")} disabled={busy !== null}>
           {busy === "approve" ? "Approving…" : "Approve"}
-        </button>
-        <button type="button" className="cs-btn cs-btn-danger" onClick={() => send("reject")} disabled={busy !== null}>
+        </Button>
+        <Button type="button" variant="destructive" onClick={() => send("reject")} disabled={busy !== null}>
           {busy === "reject" ? "Rejecting…" : "Reject"}
-        </button>
+        </Button>
       </div>
     </>
   );

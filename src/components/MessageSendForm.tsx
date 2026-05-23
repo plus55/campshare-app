@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { MessageTemplate } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+
+const errorCls = "rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
 
 interface Props {
   bookingId: string;
@@ -72,55 +76,33 @@ export function MessageSendForm({ bookingId, showTemplates = false }: Props) {
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
-      {error && <p className="cs-error">{error}</p>}
-      <textarea
-        className="cs-textarea"
+    <div className="mt-4">
+      {error && <p className={errorCls}>{error}</p>}
+      <Textarea
+        className="min-h-20"
         placeholder="Write a message…"
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        style={{ minHeight: 80 }}
       />
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
-        <button
-          className="cs-btn cs-btn-primary"
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button
           disabled={loading || !body.trim()}
           onClick={send}
         >
           {loading ? "Sending…" : "Send message"}
-        </button>
+        </Button>
         {showTemplates && (
-          <div style={{ position: "relative" }}>
-            <button
-              type="button"
-              className="cs-btn cs-btn-ghost"
-              onClick={openPicker}
-            >
+          <div className="relative">
+            <Button type="button" variant="outline" onClick={openPicker}>
               Templates
-            </button>
+            </Button>
             {pickerOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "calc(100% + 8px)",
-                  left: 0,
-                  background: "var(--paper, #fff)",
-                  border: "1px solid var(--sand-200, #e5e1d8)",
-                  borderRadius: 8,
-                  padding: 8,
-                  minWidth: 260,
-                  maxWidth: 360,
-                  maxHeight: 320,
-                  overflow: "auto",
-                  boxShadow: "0 6px 24px rgba(0,0,0,0.08)",
-                  zIndex: 10,
-                }}
-              >
-                {templatesLoading && <p className="cs-muted cs-small" style={{ margin: 8 }}>Loading…</p>}
+              <div className="absolute bottom-[calc(100%+8px)] left-0 z-10 max-h-80 min-w-[260px] max-w-[360px] overflow-auto rounded-lg border border-border bg-popover p-2 shadow-lg">
+                {templatesLoading && <p className="m-2 text-[13px] text-muted-foreground">Loading…</p>}
                 {!templatesLoading && templates !== null && templates.length === 0 && (
-                  <div style={{ padding: 8 }}>
-                    <p className="cs-small" style={{ margin: "0 0 6px" }}>No templates yet.</p>
-                    <Link href="/dashboard/templates" className="cs-small">
+                  <div className="p-2">
+                    <p className="mb-1.5 text-[13px] text-foreground">No templates yet.</p>
+                    <Link href="/dashboard/templates" className="text-[13px] text-clay hover:text-clay-deep">
                       Create one →
                     </Link>
                   </div>
@@ -132,27 +114,16 @@ export function MessageSendForm({ bookingId, showTemplates = false }: Props) {
                         key={t.id}
                         type="button"
                         onClick={() => applyTemplate(t)}
-                        style={{
-                          display: "block",
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "6px 8px",
-                          border: "none",
-                          background: "transparent",
-                          cursor: "pointer",
-                          borderRadius: 4,
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--sand-100, #f5f2ec)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                        className="block w-full rounded px-2 py-1.5 text-left transition-colors hover:bg-muted"
                       >
-                        <p style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>{t.title}</p>
-                        <p className="cs-muted" style={{ margin: "2px 0 0", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <p className="text-[13px] font-semibold text-foreground">{t.title}</p>
+                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                           {t.body}
                         </p>
                       </button>
                     ))}
-                    <div style={{ borderTop: "1px solid var(--sand-200, #e5e1d8)", marginTop: 6, paddingTop: 6 }}>
-                      <Link href="/dashboard/templates" className="cs-small" style={{ padding: "0 8px" }}>
+                    <div className="mt-1.5 border-t border-border pt-1.5">
+                      <Link href="/dashboard/templates" className="px-2 text-[13px] text-clay hover:text-clay-deep">
                         Manage templates →
                       </Link>
                     </div>
