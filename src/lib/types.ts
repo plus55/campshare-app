@@ -68,6 +68,7 @@ export interface AvailabilityBlock {
 }
 
 export type BookingStatus =
+  | "pending_capture"
   | "requested"
   | "accepted"
   | "in_progress"
@@ -147,6 +148,16 @@ export interface BookingMessage {
   createdAt: number;
 }
 
+export interface MessageTemplate {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  position: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface UserPaymentProfile {
   userId: string;
   stripeCustomerId: string;
@@ -172,5 +183,14 @@ export interface PaymentEvent {
   payload: string;
   status: "pending" | "processed" | "failed";
   processedAt: number | null;
+  createdAt: number;
+}
+
+export interface PaymentReconciliation {
+  id: string;
+  bookingId: string;
+  paymentIntentId: string;
+  kind: "capture_orphan" | "finalise_failed";
+  detail: string | null;
   createdAt: number;
 }

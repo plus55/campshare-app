@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
 import { SavedSearches } from "./SavedSearches";
 
@@ -33,7 +34,7 @@ export default async function SavedPage({
       .prepare(
         `SELECT
           vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
-          vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
+          vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
           vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
           hp.firstName AS hostFirstName,
           u.image      AS hostImage,
@@ -71,7 +72,12 @@ export default async function SavedPage({
       .all<SavedSearchRow>(),
   ]);
 
-  const listings = vansResult.results;
+  const ibHostIds = Array.from(new Set(vansResult.results.filter((l) => l.instantBook).map((l) => l.hostUserId)));
+  const eligibleHosts = await getInstantBookEligibleHosts(ibHostIds);
+  const listings = vansResult.results.map((l) => ({
+    ...l,
+    instantBook: l.instantBook && eligibleHosts.has(l.hostUserId) ? 1 : 0,
+  }));
   const savedSearches = searchesResult.results.map((s) => ({
     ...s,
     filters: JSON.parse(s.filters) as Record<string, string>,

@@ -39,6 +39,10 @@ export const VAN_TYPES = [
 
 export const MINIMUM_NIGHTS = [1, 2, 3, 5, 7] as const;
 
+export const MAX_TEMPLATES_PER_HOST = 20;
+export const TEMPLATE_TITLE_MAX = 80;
+export const TEMPLATE_BODY_MAX = 2000;
+
 export const REGION_COORDS: Record<string, { lat: number; lng: number }> = {
   "Northland":           { lat: -35.73, lng: 174.32 },
   "Auckland":            { lat: -36.86, lng: 174.76 },

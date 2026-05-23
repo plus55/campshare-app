@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { getInstantBookEligibleHosts } from "@/lib/badges";
 import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
 
 export default async function FeaturedVans() {
@@ -10,7 +11,7 @@ export default async function FeaturedVans() {
       .prepare(
         `SELECT
           vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
-          vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
+          vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
           vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
           hp.firstName AS hostFirstName,
           u.image      AS hostImage,
@@ -40,7 +41,13 @@ export default async function FeaturedVans() {
       .all<{ vanListingId: string }>();
     savedIds = new Set(saved.map((r) => r.vanListingId));
   }
-  const listings = rawResult.results.map((l) => ({ ...l, isWishlisted: savedIds.has(l.id) ? 1 : 0 }));
+  const ibHostIds = Array.from(new Set(rawResult.results.filter((l) => l.instantBook).map((l) => l.hostUserId)));
+  const eligibleHosts = await getInstantBookEligibleHosts(ibHostIds);
+  const listings = rawResult.results.map((l) => ({
+    ...l,
+    isWishlisted: savedIds.has(l.id) ? 1 : 0,
+    instantBook: l.instantBook && eligibleHosts.has(l.hostUserId) ? 1 : 0,
+  }));
 
   return (
     <section style={{ padding: "clamp(3rem, 6vw, 5rem) 0", background: "var(--sand)" }}>

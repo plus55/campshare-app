@@ -65,21 +65,43 @@ export async function POST(
     }
   }
 
-  await db()
-    .prepare(
-      `UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?`
-    )
-    .bind(nowSec, booking.paymentIntentId ? nowSec : null, nowSec, id)
-    .run();
-
+  // Atomic finalise: status + availability block in one batch. If this fails
+  // after Stripe capture, the captured PI is logged for reconciliation; the
+  // booking sits in 'requested' until the admin sweep retries.
   const blockId = crypto.randomUUID();
-  await db()
-    .prepare(
-      `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
-       VALUES (?, ?, ?, ?, 'booking', ?, ?)`
-    )
-    .bind(blockId, booking.vanListingId, booking.startDate, booking.endDate, id, nowSec)
-    .run();
+  try {
+    await db().batch([
+      db()
+        .prepare(
+          `UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?`
+        )
+        .bind(nowSec, booking.paymentIntentId ? nowSec : null, nowSec, id),
+      db()
+        .prepare(
+          `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
+           VALUES (?, ?, ?, ?, 'booking', ?, ?)`
+        )
+        .bind(blockId, booking.vanListingId, booking.startDate, booking.endDate, id, nowSec),
+    ]);
+  } catch (err) {
+    if (booking.paymentIntentId) {
+      try {
+        await db()
+          .prepare(
+            `INSERT INTO payment_reconciliation (id, bookingId, paymentIntentId, kind, detail, createdAt) VALUES (?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            crypto.randomUUID(), id, booking.paymentIntentId, "finalise_failed",
+            err instanceof Error ? err.message : "accept finalise batch threw",
+            nowSec,
+          )
+          .run();
+      } catch (e) {
+        console.error("Failed to log payment_reconciliation row", e);
+      }
+    }
+    return NextResponse.json({ error: "Could not finalise booking — admin notified" }, { status: 500 });
+  }
 
   const guest = await db()
     .prepare("SELECT email, name FROM user WHERE id = ?")

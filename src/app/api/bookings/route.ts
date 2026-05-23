@@ -142,72 +142,111 @@ export async function POST(req: Request) {
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + 48 * 60 * 60;
   const bookingId = crypto.randomUUID();
+  const blockId = crypto.randomUUID();
 
-  // For instant-book: capture payment before creating the booking record
+  // Atomicity: insert the booking row (+ addons, + availability block for IB)
+  // BEFORE calling Stripe capture. If the worker dies mid-flight after capture,
+  // we have a booking row to reconcile against. The booking starts in
+  // 'pending_capture' for IB; the finalise batch promotes it to 'accepted'.
+  const initialStatus = isInstantBook ? "pending_capture" : "requested";
+
+  const insertStmts = [
+    db()
+      .prepare(
+        `INSERT INTO booking
+           (id, vanListingId, guestUserId, hostUserId,
+            startDate, endDate, nights, guestCount,
+            nightlyRateCents, subtotalCents, serviceFeeCents, gstOnFeeCents,
+            hostPayoutCents, totalCents, depositCents, cancellationPolicy,
+            guestMessage, status, addonTotalCents,
+            paymentIntentId, depositPaymentMethodId, customerStripeId,
+            requestedAt, expiresAt, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        bookingId, listingId, session.user.id, listing.hostUserId,
+        startMs, endMs, nights, guestCount,
+        listing.nightlyRate,
+        totals.subtotalCents, totals.serviceFeeCents, totals.gstOnFeeCents,
+        totals.hostPayoutCents, totals.totalCents, totals.depositCents, "standard_v1",
+        message ?? null,
+        initialStatus, addonTotalCents,
+        paymentIntentId, paymentMethod ?? null, customerStripeId ?? null,
+        now, expiresAt, now, now
+      ),
+    ...resolvedAddons.map((addon) =>
+      db()
+        .prepare(
+          "INSERT INTO booking_addon (id, bookingId, addonId, name, priceNZDCents) VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(crypto.randomUUID(), bookingId, addon.addonId, addon.name, addon.priceNZDCents)
+    ),
+  ];
+  if (isInstantBook) {
+    insertStmts.push(
+      db()
+        .prepare(
+          `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
+           VALUES (?, ?, ?, ?, 'booking', ?, ?)`
+        )
+        .bind(blockId, listingId, startMs, endMs, bookingId, now)
+    );
+  }
+  await db().batch(insertStmts);
+
+  // Instant-book: capture, then atomic finalise (or rollback / log).
   if (isInstantBook) {
     let captureResult;
+    let captureThrew = false;
     try {
       captureResult = await s.paymentIntents.capture(paymentIntentId);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Payment capture failed";
-      return NextResponse.json({ error: `Could not process payment: ${msg}` }, { status: 402 });
+      captureThrew = true;
+      console.error("Stripe capture threw", err);
     }
-    if (captureResult.status !== "succeeded") {
+
+    if (captureThrew || !captureResult || captureResult.status !== "succeeded") {
+      // Capture did not take money — roll back the booking + block atomically.
+      try {
+        await db().batch([
+          db().prepare("DELETE FROM availability_block WHERE bookingId = ?").bind(bookingId),
+          db().prepare("DELETE FROM booking_addon WHERE bookingId = ?").bind(bookingId),
+          db().prepare("DELETE FROM booking WHERE id = ?").bind(bookingId),
+        ]);
+      } catch (e) {
+        console.error("Rollback after failed capture failed", e);
+      }
+      try { await s.paymentIntents.cancel(paymentIntentId); } catch (e) { console.error("PI cancel after failed capture failed", e); }
       return NextResponse.json({ error: "Payment could not be processed — please try again" }, { status: 402 });
     }
-  }
 
-  const bookingStatus = isInstantBook ? "accepted" : "requested";
-
-  await db()
-    .prepare(
-      `INSERT INTO booking
-         (id, vanListingId, guestUserId, hostUserId,
-          startDate, endDate, nights, guestCount,
-          nightlyRateCents, subtotalCents, serviceFeeCents, gstOnFeeCents,
-          hostPayoutCents, totalCents, depositCents, cancellationPolicy,
-          guestMessage, status, addonTotalCents,
-          paymentIntentId, depositPaymentMethodId, customerStripeId,
-          requestedAt, expiresAt, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      bookingId, listingId, session.user.id, listing.hostUserId,
-      startMs, endMs, nights, guestCount,
-      listing.nightlyRate,
-      totals.subtotalCents, totals.serviceFeeCents, totals.gstOnFeeCents,
-      totals.hostPayoutCents, totals.totalCents, totals.depositCents, "standard_v1",
-      message ?? null,
-      bookingStatus, addonTotalCents,
-      paymentIntentId, paymentMethod ?? null, customerStripeId ?? null,
-      now, expiresAt, now, now
-    )
-    .run();
-
-  // Store add-on selections as a snapshot
-  for (const addon of resolvedAddons) {
-    await db()
-      .prepare(
-        "INSERT INTO booking_addon (id, bookingId, addonId, name, priceNZDCents) VALUES (?, ?, ?, ?, ?)"
-      )
-      .bind(crypto.randomUUID(), bookingId, addon.addonId, addon.name, addon.priceNZDCents)
-      .run();
-  }
-
-  if (isInstantBook) {
-    // Mark payment as received and create the availability block immediately
-    await db()
-      .prepare("UPDATE booking SET respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?")
-      .bind(now, now, now, bookingId)
-      .run();
-
-    await db()
-      .prepare(
-        `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
-         VALUES (?, ?, ?, ?, 'booking', ?, ?)`
-      )
-      .bind(crypto.randomUUID(), listingId, startMs, endMs, bookingId, now)
-      .run();
+    // Capture succeeded — promote to 'accepted'. If this fails, money is
+    // captured but the row is still 'pending_capture'. Log for the admin sweep.
+    try {
+      await db()
+        .prepare("UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?")
+        .bind(now, now, now, bookingId)
+        .run();
+    } catch (err) {
+      try {
+        await db()
+          .prepare(
+            `INSERT INTO payment_reconciliation (id, bookingId, paymentIntentId, kind, detail, createdAt) VALUES (?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            crypto.randomUUID(), bookingId, paymentIntentId, "finalise_failed",
+            err instanceof Error ? err.message : "post-capture UPDATE threw",
+            now,
+          )
+          .run();
+      } catch (e) {
+        console.error("Failed to log payment_reconciliation row", e);
+      }
+      return NextResponse.json(
+        { error: "Payment captured but booking finalisation failed — admin notified. Please contact support.", id: bookingId },
+        { status: 500 },
+      );
+    }
   }
 
   const hostRow = await db()

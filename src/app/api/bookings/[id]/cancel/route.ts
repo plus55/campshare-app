@@ -82,19 +82,18 @@ export async function POST(
     }
   }
 
-  await db()
-    .prepare(
-      `UPDATE booking SET status = ?, cancelledAt = ?, updatedAt = ? WHERE id = ?`
-    )
-    .bind(newStatus, nowSec, nowSec, id)
-    .run();
-
+  // Atomic: status flip + (optional) availability block release.
+  const stmts = [
+    db()
+      .prepare(`UPDATE booking SET status = ?, cancelledAt = ?, updatedAt = ? WHERE id = ?`)
+      .bind(newStatus, nowSec, nowSec, id),
+  ];
   if (booking.status === "accepted" || booking.status === "in_progress") {
-    await db()
-      .prepare("DELETE FROM availability_block WHERE bookingId = ?")
-      .bind(id)
-      .run();
+    stmts.push(
+      db().prepare("DELETE FROM availability_block WHERE bookingId = ?").bind(id)
+    );
   }
+  await db().batch(stmts);
 
   const [guest, host, listing] = await Promise.all([
     db().prepare("SELECT email, name FROM user WHERE id = ?").bind(booking.guestUserId).first<{ email: string; name: string }>(),

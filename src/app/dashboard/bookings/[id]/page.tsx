@@ -217,7 +217,7 @@ export default async function DashboardBookingDetailPage({
             <p className="cs-muted cs-small">No messages yet.</p>
           )}
 
-          {isActive && <MessageSendForm bookingId={id} />}
+          {isActive && <MessageSendForm bookingId={id} showTemplates />}
         </div>
       </div>
     </main>

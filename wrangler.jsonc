@@ -31,7 +31,10 @@
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51TZ1CtL0Mn9hYRhmN0PBuIp31pa59AZ1zckkmeHxECKRFpgDsKUS1xSpQgJNQ2tutULhq9kMukjU0Ihz50ux78iK00Qk67U4cp",
     "NEXT_PUBLIC_MAPBOX_TOKEN": "pk.eyJ1Ijoiam9udHlkNyIsImEiOiJjbXBlNHJzdTkwMGlxMnJvam04ZGV5M3J5In0.d2qPJyXlFxIAfu0h6Jflcw",
     // Turnstile site key (public — safe to commit). Secret key goes in: wrangler secret put TURNSTILE_SECRET_KEY
-    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAADUHciCF9p7f_62D"
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAADUHciCF9p7f_62D",
+    "NEXT_PUBLIC_SENTRY_DSN": "https://3562682582b05615a20045c8f9a13239@o4511437827604480.ingest.us.sentry.io/4511437853097984",
+    // Cloudflare Web Analytics token — get from CF dashboard → Web Analytics → Add a site.
+    // Uncomment and fill in: "NEXT_PUBLIC_CF_ANALYTICS_TOKEN": "your_token_here"
   },
 
   // Rate limiters: 10 auth attempts / 60s per IP; 5 booking attempts / 60s per user

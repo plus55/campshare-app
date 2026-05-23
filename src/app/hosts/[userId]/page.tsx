@@ -8,7 +8,7 @@ import ListingCard, { type SearchResult } from "@/app/vans/ListingCard";
 import type { HostProfile } from "@/lib/types";
 import ReportButton from "@/components/ReportButton";
 import HostBadges from "@/components/HostBadges";
-import { getBadgesForHost } from "@/lib/badges";
+import { getBadgesForHost, isInstantBookEligible } from "@/lib/badges";
 
 interface HostUser {
   id: string;
@@ -78,7 +78,7 @@ export default async function HostProfilePage({
   const session = await getSession();
   const canReport = !!session && session.user.id !== userId;
 
-  const [reviewSummary, listingsResult, badges] = await Promise.all([
+  const [reviewSummary, listingsResult, badges, hostIbEligible] = await Promise.all([
     getReviewsForHost(userId),
     db()
       .prepare(
@@ -116,10 +116,14 @@ export default async function HostProfilePage({
       .bind(userId)
       .all<SearchResult>(),
     getBadgesForHost(userId),
+    isInstantBookEligible(userId),
   ]);
 
   const { avgRating, reviewCount, items: reviews } = reviewSummary;
-  const listings = listingsResult.results;
+  const listings = listingsResult.results.map((l) => ({
+    ...l,
+    instantBook: l.instantBook && hostIbEligible ? 1 : 0,
+  }));
 
   const initial = (host.firstName[0] ?? "H").toUpperCase();
   const memberSince = new Date(host.createdAt * 1000).toLocaleDateString("en-NZ", {
