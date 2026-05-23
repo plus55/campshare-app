@@ -24,7 +24,12 @@ at task boundaries when ownership or blocked paths change.
 ## Claude
 
 - Branch: `claude/current-work`
+- Saved WIP checkpoint: `caf56f3` preserves the interrupted multistage
+  Tailwind/shadcn UI migration through partial Stage 5 work.
 - Work assignment: UI/readiness improvements outside Codex-owned payment paths.
+- Known overlap with Codex correctness changes: trips, dashboard bookings, and
+  dashboard payouts pages were edited in both branches. Preserve Codex payment
+  behavior while resolving the UI migration.
 - Before editing files listed under Codex ownership, coordinate here and rebase
   from `main` after the relevant remediation merge.
 
