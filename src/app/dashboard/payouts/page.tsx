@@ -55,7 +55,7 @@ export default async function PayoutsPage({
     try {
       const s = await stripe();
       const account = await s.accounts.retrieve(hp.stripeAccountId);
-      if (account.charges_enabled) {
+      if (account.charges_enabled && account.payouts_enabled) {
         const nowSec = Math.floor(Date.now() / 1000);
         await db()
           .prepare("UPDATE host_profile SET stripeOnboardingCompleted = 1, updatedAt = ? WHERE userId = ?")

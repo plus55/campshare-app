@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import type { Booking } from "@/lib/types";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 
 function bad(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -53,11 +54,7 @@ export async function GET(
   if (booking.status === "requested") {
     const nowSec = Math.floor(Date.now() / 1000);
     if (booking.expiresAt < nowSec) {
-      await db()
-        .prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?")
-        .bind(nowSec, id)
-        .run();
-      booking.status = "expired";
+      if (await expireBookingRequest(booking, nowSec)) booking.status = "expired";
     }
   }
 

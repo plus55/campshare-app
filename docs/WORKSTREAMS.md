@@ -11,6 +11,9 @@ at task boundaries when ownership or blocked paths change.
 - Current checkpoint: booking/payment integrity guards, including overlap
   protection, transition locking, cancellation failure behavior, date-change
   restrictions, and payout idempotency.
+- Follow-on checkpoint: authorization ownership validation, expired-request
+  authorization release, authenticated cron execution, retryable Stripe
+  webhook processing, and consistent Stripe payout-readiness checks.
 - Avoid concurrent edits in:
   - `src/app/api/bookings/**`
   - `src/app/api/cron/**`

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { sendPaymentCapturedEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking, HostProfile } from "@/lib/types";
 
 function bad(message: string, status = 400) {
@@ -30,10 +31,7 @@ export async function POST(
 
   const nowSec = Math.floor(Date.now() / 1000);
   if (booking.expiresAt < nowSec) {
-    await db()
-      .prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?")
-      .bind(nowSec, id)
-      .run();
+    await expireBookingRequest(booking, nowSec);
     return bad("Booking request has expired");
   }
 

@@ -5,6 +5,7 @@ import { stripe } from "@/lib/stripe";
 import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail, sendSavedSearchAlertEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { syncIcalFeed } from "@/lib/ical";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking } from "@/lib/types";
 
 type CfEnv = { CRON_SECRET?: string };
@@ -15,15 +16,27 @@ export async function GET(req: Request) {
   const cfEnv = env as unknown as CfEnv;
   const secret = cfEnv.CRON_SECRET ?? process.env.CRON_SECRET;
 
-  if (secret) {
-    const provided = req.headers.get("x-cron-secret");
-    if (provided !== secret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    console.error("CRON_SECRET is not configured");
+    return NextResponse.json({ error: "Cron is not configured" }, { status: 503 });
+  }
+
+  const provided = req.headers.get("x-cron-secret");
+  if (provided !== secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const nowMs  = Date.now();
   const nowSec = Math.floor(nowMs / 1000);
+
+  const toExpire = await db()
+    .prepare("SELECT * FROM booking WHERE status = 'requested' AND expiresAt < ?")
+    .bind(nowSec)
+    .all<Booking>();
+  let expired = 0;
+  for (const booking of toExpire.results) {
+    if (await expireBookingRequest(booking, nowSec)) expired++;
+  }
 
   // Pass 1: accepted → in_progress when trip has started
   const toStart = await db()
@@ -57,6 +70,7 @@ export async function GET(req: Request) {
   const icalSynced = await runIcalSync();
 
   return NextResponse.json({
+    expired,
     started: toStart.results.length,
     completed: toComplete.results.length,
     alertsSent,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { BookingStatusBadge } from "@/components/BookingStatusBadge";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking, BookingStatus } from "@/lib/types";
 
 interface TripRow extends Booking {
@@ -39,11 +40,9 @@ export default async function TripsPage() {
 
   // Lazy expiry
   const nowSec = Math.floor(Date.now() / 1000);
-  const expiredIds = trips
-    .filter((t) => t.status === "requested" && t.expiresAt < nowSec)
-    .map((t) => t.id);
-  for (const id of expiredIds) {
-    await db().prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?").bind(nowSec, id).run();
+  const expiredIds: string[] = [];
+  for (const trip of trips.filter((t) => t.status === "requested" && t.expiresAt < nowSec)) {
+    if (await expireBookingRequest(trip, nowSec)) expiredIds.push(trip.id);
   }
   trips.forEach((t) => {
     if (expiredIds.includes(t.id)) t.status = "expired";

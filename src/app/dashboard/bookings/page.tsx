@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { BookingStatusBadge } from "@/components/BookingStatusBadge";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking } from "@/lib/types";
 
 interface BookingRow extends Booking {
@@ -39,11 +40,9 @@ export default async function DashboardBookingsPage() {
 
   // Lazy expiry
   const nowSec = Math.floor(Date.now() / 1000);
-  const expiredIds = rows
-    .filter((r) => r.status === "requested" && r.expiresAt < nowSec)
-    .map((r) => r.id);
-  for (const id of expiredIds) {
-    await db().prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?").bind(nowSec, id).run();
+  const expiredIds: string[] = [];
+  for (const booking of rows.filter((r) => r.status === "requested" && r.expiresAt < nowSec)) {
+    if (await expireBookingRequest(booking, nowSec)) expiredIds.push(booking.id);
   }
   rows.forEach((r) => { if (expiredIds.includes(r.id)) r.status = "expired"; });
 

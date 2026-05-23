@@ -44,8 +44,37 @@ export async function POST(req: Request) {
       .bind(eventId, event.id, event.type, bookingId ?? null, JSON.stringify(event.data), nowSec)
       .run();
   } catch {
-    // UNIQUE constraint violation — already processed
-    return NextResponse.json({ received: true });
+    const existing = await db()
+      .prepare("SELECT status, createdAt FROM payment_event WHERE stripeEventId = ?")
+      .bind(event.id)
+      .first<{ status: string; createdAt: number }>();
+    if (existing?.status === "processed") {
+      return NextResponse.json({ received: true });
+    }
+    if (existing?.status === "pending") {
+      if (existing.createdAt > nowSec - 300) {
+        return NextResponse.json({ error: "Event is already processing" }, { status: 409 });
+      }
+      const reclaimed = await db()
+        .prepare("UPDATE payment_event SET createdAt = ? WHERE stripeEventId = ? AND status = 'pending' AND createdAt = ?")
+        .bind(nowSec, event.id, existing.createdAt)
+        .run();
+      if (reclaimed.meta.changes === 0) {
+        return NextResponse.json({ error: "Event retry is already processing" }, { status: 409 });
+      }
+    }
+    if (!existing || !["pending", "failed"].includes(existing.status)) {
+      return NextResponse.json({ error: "Could not register event" }, { status: 500 });
+    }
+    if (existing.status === "failed") {
+      const claimed = await db()
+        .prepare("UPDATE payment_event SET status = 'pending', createdAt = ? WHERE stripeEventId = ? AND status = 'failed'")
+        .bind(nowSec, event.id)
+        .run();
+      if (claimed.meta.changes === 0) {
+        return NextResponse.json({ error: "Event retry is already processing" }, { status: 409 });
+      }
+    }
   }
 
   try {
@@ -75,15 +104,14 @@ async function handleEvent(event: Stripe.Event, nowSec: number): Promise<void> {
   switch (event.type) {
     case "account.updated": {
       const account = event.data.object as Stripe.Account;
-      if (account.charges_enabled) {
-        await db()
-          .prepare(
-            `UPDATE host_profile SET stripeOnboardingCompleted = 1, updatedAt = ?
-             WHERE stripeAccountId = ?`
-          )
-          .bind(nowSec, account.id)
-          .run();
-      }
+      const enabled = account.charges_enabled && account.payouts_enabled ? 1 : 0;
+      await db()
+        .prepare(
+          `UPDATE host_profile SET stripeOnboardingCompleted = ?, updatedAt = ?
+           WHERE stripeAccountId = ?`
+        )
+        .bind(enabled, nowSec, account.id)
+        .run();
       break;
     }
 
