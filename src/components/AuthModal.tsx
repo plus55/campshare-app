@@ -3,8 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Globe, LogIn, UserPlus } from "lucide-react";
-import Modal from "@/components/ui/Modal";
 import { authClient } from "@/lib/auth-client";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -13,11 +18,8 @@ interface Props {
   subheading?: string;
 }
 
-type Tab = "magic" | "signup";
-
 export default function AuthModal({ open, onClose, heading, subheading }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("magic");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -26,6 +28,14 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
   const [error, setError] = useState<string | null>(null);
 
   const callbackURL = typeof window !== "undefined" ? window.location.href : "/dashboard";
+
+  function reset() {
+    setSent(false);
+    setError(null);
+    setEmail("");
+    setPassword("");
+    setName("");
+  }
 
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +58,10 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
     setLoading(true);
     setError(null);
     try {
-      const res = await authClient.signUp.email({ name, email, password, callbackURL: "/verify-email?email=" + encodeURIComponent(email) });
+      const res = await authClient.signUp.email({
+        name, email, password,
+        callbackURL: "/verify-email?email=" + encodeURIComponent(email),
+      });
       if (res.error) {
         setError(res.error.message ?? "Could not create account");
       } else {
@@ -73,162 +86,149 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
     }
   }
 
-  function reset() {
-    setSent(false);
-    setError(null);
-    setEmail("");
-    setPassword("");
-    setName("");
-  }
-
   return (
-    <Modal open={open} onClose={() => { reset(); onClose(); }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ margin: "0 0 6px", fontSize: 22 }}>{heading ?? "Sign in to continue"}</h2>
-        {subheading && <p className="cs-muted" style={{ margin: 0, fontSize: 14 }}>{subheading}</p>}
-      </div>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
+      <DialogContent className="max-w-[440px] bg-cream border-line rounded-[var(--radius-xl)] p-8">
+        <div className="mb-6">
+          <DialogTitle className="text-[22px] font-serif font-medium text-charcoal m-0 mb-[6px]">
+            {heading ?? "Sign in to continue"}
+          </DialogTitle>
+          {subheading && (
+            <p className="text-[14px] text-stone m-0">{subheading}</p>
+          )}
+        </div>
 
-      {/* Google */}
-      <button
-        type="button"
-        className="cs-btn cs-btn-ghost cs-btn-block"
-        onClick={handleGoogle}
-        disabled={loading}
-        style={{ marginBottom: 16, gap: 10 }}
-      >
-        <Globe size={16} />
-        Continue with Google
-      </button>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <hr style={{ flex: 1, border: "none", borderTop: "1px solid var(--line)" }} />
-        <span className="cs-muted" style={{ fontSize: 12 }}>or</span>
-        <hr style={{ flex: 1, border: "none", borderTop: "1px solid var(--line)" }} />
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "var(--sand-100)", borderRadius: "var(--radius)", padding: 4 }}>
-        <button
+        {/* Google */}
+        <Button
           type="button"
-          onClick={() => { setTab("magic"); reset(); }}
-          style={{
-            flex: 1, padding: "8px 0", borderRadius: "var(--radius-sm)", border: 0,
-            background: tab === "magic" ? "var(--cream)" : "transparent",
-            boxShadow: tab === "magic" ? "var(--shadow-sm)" : "none",
-            fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 500,
-            color: tab === "magic" ? "var(--ink-900)" : "var(--stone)", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          }}
+          variant="outline"
+          className="w-full mb-4 gap-[10px] border-line"
+          onClick={handleGoogle}
+          disabled={loading}
         >
-          <Mail size={13} />
-          Magic link
-        </button>
-        <button
-          type="button"
-          onClick={() => { setTab("signup"); reset(); }}
-          style={{
-            flex: 1, padding: "8px 0", borderRadius: "var(--radius-sm)", border: 0,
-            background: tab === "signup" ? "var(--cream)" : "transparent",
-            boxShadow: tab === "signup" ? "var(--shadow-sm)" : "none",
-            fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 500,
-            color: tab === "signup" ? "var(--ink-900)" : "var(--stone)", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          }}
-        >
-          <UserPlus size={13} />
-          Create account
-        </button>
-      </div>
+          <Globe size={16} />
+          Continue with Google
+        </Button>
 
-      {error && <p className="cs-error" style={{ margin: "0 0 12px" }}>{error}</p>}
+        <div className="flex items-center gap-3 mb-4">
+          <hr className="flex-1 border-0 border-t border-line" />
+          <span className="text-[12px] text-stone">or</span>
+          <hr className="flex-1 border-0 border-t border-line" />
+        </div>
 
-      {tab === "magic" ? (
-        sent ? (
-          <div style={{ textAlign: "center", padding: "16px 0" }}>
-            <Mail size={32} style={{ color: "var(--clay-500)", marginBottom: 12 }} />
-            <p style={{ fontWeight: 600, margin: "0 0 6px" }}>Check your inbox</p>
-            <p className="cs-muted" style={{ margin: "0 0 16px", fontSize: 14 }}>
-              We sent a sign-in link to <strong>{email}</strong>
-            </p>
-            <button
-              type="button"
-              className="cs-btn cs-btn-ghost"
-              onClick={reset}
-              style={{ fontSize: 13 }}
-            >
-              Use a different email
-            </button>
+        {error && (
+          <div className="bg-rust-light text-rust rounded-[var(--radius)] text-[14px] px-[14px] py-[10px] mb-3">
+            {error}
           </div>
-        ) : (
-          <form onSubmit={handleMagicLink} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <label className="cs-field" style={{ margin: 0 }}>
-              <span className="cs-label">Email address</span>
-              <input
-                type="email"
-                className="cs-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@email.com"
-                autoFocus
-                required
-              />
-            </label>
-            <button type="submit" className="cs-btn cs-btn-primary cs-btn-block" disabled={loading}>
-              <LogIn size={15} />
-              {loading ? "Sending…" : "Send magic link"}
-            </button>
-          </form>
-        )
-      ) : (
-        <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <label className="cs-field" style={{ margin: 0 }}>
-            <span className="cs-label">Full name</span>
-            <input
-              type="text"
-              className="cs-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              autoFocus
-              required
-            />
-          </label>
-          <label className="cs-field" style={{ margin: 0 }}>
-            <span className="cs-label">Email address</span>
-            <input
-              type="email"
-              className="cs-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@email.com"
-              required
-            />
-          </label>
-          <label className="cs-field" style={{ margin: 0 }}>
-            <span className="cs-label">Password</span>
-            <input
-              type="password"
-              className="cs-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Choose a password"
-              required
-              minLength={8}
-            />
-          </label>
-          <button type="submit" className="cs-btn cs-btn-primary cs-btn-block" disabled={loading}>
-            <UserPlus size={15} />
-            {loading ? "Creating account…" : "Create account"}
-          </button>
-        </form>
-      )}
+        )}
 
-      <p className="cs-muted" style={{ marginTop: 16, fontSize: 12, textAlign: "center" }}>
-        Already have an account?{" "}
-        <a href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/")}`} style={{ color: "var(--clay-500)" }}>
-          Sign in
-        </a>
-      </p>
-    </Modal>
+        <Tabs defaultValue="magic" onValueChange={() => reset()}>
+          <TabsList className="w-full bg-sand rounded-[var(--radius)] p-1 mb-5">
+            <TabsTrigger value="magic" className="flex-1 gap-[6px] text-[13px] data-[state=active]:bg-cream data-[state=active]:shadow-sm">
+              <Mail size={13} />
+              Magic link
+            </TabsTrigger>
+            <TabsTrigger value="signup" className="flex-1 gap-[6px] text-[13px] data-[state=active]:bg-cream data-[state=active]:shadow-sm">
+              <UserPlus size={13} />
+              Create account
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="magic">
+            {sent ? (
+              <div className="text-center py-4">
+                <Mail size={32} className="text-clay mx-auto mb-3" />
+                <p className="font-semibold m-0 mb-[6px]">Check your inbox</p>
+                <p className="text-stone text-[14px] m-0 mb-4">
+                  We sent a sign-in link to <strong>{email}</strong>
+                </p>
+                <Button variant="outline" size="sm" onClick={reset} className="border-line">
+                  Use a different email
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleMagicLink} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-[6px]">
+                  <Label htmlFor="magic-email" className="text-[13px] text-stone font-medium">
+                    Email address
+                  </Label>
+                  <Input
+                    id="magic-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@email.com"
+                    autoFocus
+                    required
+                    className="border-line focus:border-clay"
+                  />
+                </div>
+                <Button type="submit" className="w-full gap-[6px]" disabled={loading}>
+                  <LogIn size={15} />
+                  {loading ? "Sending…" : "Send magic link"}
+                </Button>
+              </form>
+            )}
+          </TabsContent>
+
+          <TabsContent value="signup">
+            <form onSubmit={handleSignup} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-[6px]">
+                <Label htmlFor="signup-name" className="text-[13px] text-stone font-medium">Full name</Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  autoFocus
+                  required
+                  className="border-line focus:border-clay"
+                />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <Label htmlFor="signup-email" className="text-[13px] text-stone font-medium">Email address</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  required
+                  className="border-line focus:border-clay"
+                />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <Label htmlFor="signup-password" className="text-[13px] text-stone font-medium">Password</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Choose a password"
+                  required
+                  minLength={8}
+                  className="border-line focus:border-clay"
+                />
+              </div>
+              <Button type="submit" className="w-full gap-[6px]" disabled={loading}>
+                <UserPlus size={15} />
+                {loading ? "Creating account…" : "Create account"}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+
+        <p className={cn("mt-4 text-[12px] text-stone text-center")}>
+          Already have an account?{" "}
+          <a
+            href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/")}`}
+            className="text-clay hover:text-clay-deep"
+          >
+            Sign in
+          </a>
+        </p>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,72 +1,77 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function UserMenu({ name, email }: { name: string; email: string }) {
-  const [open, setOpen] = useState(false);
   const router = useRouter();
-  const ref = useRef<HTMLDivElement>(null);
+  const initial = (name || email || "?").trim().charAt(0).toUpperCase();
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const handleSignOut = () => {
-    setOpen(false);
-    signOut({ fetchOptions: { onSuccess: () => router.push("/login") } });
+  const handleSignOut = async () => {
+    await signOut({ fetchOptions: { onSuccess: () => router.push("/login") } });
   };
 
-  const initial = (name || email || "?").trim().charAt(0).toUpperCase();
-  const close = () => setOpen(false);
+  const menuItems = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/bookings", label: "Bookings" },
+    { href: "/trips", label: "My trips" },
+    { href: "/dashboard/saved", label: "Saved" },
+    { href: "/dashboard/reviews", label: "Reviews" },
+    { href: "/dashboard/notifications", label: "Notifications" },
+    { href: "/dashboard/payouts", label: "Payouts" },
+    { href: "/dashboard/profile", label: "Profile" },
+  ];
 
   return (
-    <div className="user-menu" ref={ref}>
-      <button
-        type="button"
-        className="user-menu-button"
-        aria-haspopup="menu"
-        aria-expanded={open}
+    <DropdownMenu>
+      <DropdownMenuTrigger
         aria-label="Account menu"
-        onClick={() => setOpen(!open)}
+        className="inline-flex items-center justify-center size-[38px] rounded-full bg-forest text-cream font-serif font-medium text-base border-[1.5px] border-ochre transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-clay focus-visible:outline-offset-2 cursor-pointer"
       >
-        <span className="user-menu-avatar">{initial}</span>
-      </button>
+        {initial}
+      </DropdownMenuTrigger>
 
-      {open ? (
-        <div className="user-menu-panel" role="menu">
-          <div className="user-menu-header">
-            <strong>{name}</strong>
-            {email && email !== name ? <span>{email}</span> : null}
-          </div>
-          <Link href="/dashboard" role="menuitem" onClick={close}>Dashboard</Link>
-          <Link href="/dashboard/bookings" role="menuitem" onClick={close}>Bookings</Link>
-          <Link href="/trips" role="menuitem" onClick={close}>My trips</Link>
-          <Link href="/dashboard/saved" role="menuitem" onClick={close}>Saved</Link>
-          <Link href="/dashboard/reviews" role="menuitem" onClick={close}>Reviews</Link>
-          <Link href="/dashboard/notifications" role="menuitem" onClick={close}>Notifications</Link>
-          <Link href="/dashboard/payouts" role="menuitem" onClick={close}>Payouts</Link>
-          <Link href="/dashboard/profile" role="menuitem" onClick={close}>Profile</Link>
-          <div className="user-menu-divider" />
-          <button type="button" role="menuitem" onClick={handleSignOut}>Sign out</button>
-        </div>
-      ) : null}
-    </div>
+      <DropdownMenuContent
+        align="end"
+        className="w-56 bg-cream border-line shadow-[0_18px_50px_-12px_rgba(31,42,32,0.18)]"
+      >
+        <DropdownMenuLabel className="font-normal pb-2">
+          <div className="font-serif text-forest-deep text-[0.95rem]">{name}</div>
+          {email && email !== name && (
+            <div className="text-[0.78rem] text-stone truncate">{email}</div>
+          )}
+        </DropdownMenuLabel>
+
+        <DropdownMenuSeparator className="bg-line" />
+
+        {menuItems.map(({ href, label }) => (
+          <DropdownMenuItem
+            key={href}
+            render={<Link href={href} />}
+            className="text-charcoal-soft hover:text-forest-deep cursor-pointer"
+          >
+            {label}
+          </DropdownMenuItem>
+        ))}
+
+        <DropdownMenuSeparator className="bg-line" />
+
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="text-charcoal-soft hover:text-forest-deep cursor-pointer"
+        >
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

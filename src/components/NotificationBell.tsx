@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
+import { Bell } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface NotifItem {
   id: string;
@@ -63,85 +65,74 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<NotifItem[] | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const fetchedRef = useRef(false);
 
-  useEffect(() => {
-    if (!open) return;
-    const onOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onOutside);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onOutside);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const handleOpen = async () => {
-    setOpen((v) => !v);
-    if (items === null) {
+  const handleOpenChange = async (next: boolean) => {
+    setOpen(next);
+    if (next && !fetchedRef.current) {
+      fetchedRef.current = true;
       const res = await fetch("/api/notifications?limit=10");
       const data = await res.json() as { items: NotifItem[] };
       setItems(data.items);
     }
-    if (unread > 0) {
+    if (next && unread > 0) {
       setUnread(0);
       fetch("/api/notifications", { method: "PATCH", body: JSON.stringify({}) });
     }
   };
 
   return (
-    <div className="notif-bell" ref={ref}>
-      <button
-        type="button"
-        className="notif-bell-btn"
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
         aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={handleOpen}
+        className="relative inline-flex items-center justify-center size-8 rounded-lg text-forest-deep hover:bg-sand transition-colors border-0 bg-transparent cursor-pointer focus-visible:outline-2 focus-visible:outline-clay focus-visible:outline-offset-2"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
+        <Bell size={20} aria-hidden="true" />
         {unread > 0 && (
-          <span className="notif-badge" aria-hidden="true">
+          <span
+            aria-hidden="true"
+            className="absolute top-[2px] right-[2px] min-w-[16px] h-4 bg-clay text-cream text-[10px] font-bold rounded-full flex items-center justify-center px-[3px] pointer-events-none"
+          >
             {unread > 9 ? "9+" : unread}
           </span>
         )}
-      </button>
+      </PopoverTrigger>
 
-      {open && (
-        <div className="notif-panel" role="menu">
-          <div className="notif-panel-header">
-            <strong>Notifications</strong>
-            <Link href="/dashboard/notifications" onClick={() => setOpen(false)} style={{ fontSize: 12, color: "var(--clay)" }}>
-              See all
-            </Link>
-          </div>
+      <PopoverContent
+        align="end"
+        className="w-[300px] p-0 bg-cream border-line shadow-[0_18px_50px_-12px_rgba(31,42,32,0.18)] overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-[14px] py-3 border-b border-line">
+          <strong className="font-serif text-[0.9rem] text-forest-deep">Notifications</strong>
+          <Link
+            href="/dashboard/notifications"
+            className="text-[12px] text-clay hover:text-clay-deep"
+            onClick={() => setOpen(false)}
+          >
+            See all
+          </Link>
+        </div>
 
+        <div className="flex flex-col max-h-[360px] overflow-y-auto">
           {items === null ? (
-            <div className="notif-empty">Loading…</div>
+            <p className="px-[14px] py-5 text-[0.85rem] text-stone text-center m-0">Loading…</p>
           ) : items.length === 0 ? (
-            <div className="notif-empty">No notifications yet</div>
+            <p className="px-[14px] py-5 text-[0.85rem] text-stone text-center m-0">No notifications yet</p>
           ) : (
             items.slice(0, 8).map((n) => (
               <Link
                 key={n.id}
                 href={notifHref(n.type, n.payload)}
-                role="menuitem"
-                className={`notif-item${n.readAt === null ? " notif-item--unread" : ""}`}
+                className={`block px-[14px] py-[10px] border-b border-line last:border-0 no-underline text-charcoal-soft hover:bg-sand transition-colors ${n.readAt === null ? "bg-clay/5" : ""}`}
                 onClick={() => setOpen(false)}
               >
-                <span className="notif-item-text">{notifLabel(n.type, n.payload)}</span>
-                <span className="notif-item-time">{relTime(n.createdAt)}</span>
+                <span className="block text-[0.85rem] leading-[1.4]">{notifLabel(n.type, n.payload)}</span>
+                <span className="block text-[0.75rem] text-stone mt-[2px]">{relTime(n.createdAt)}</span>
               </Link>
             ))
           )}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
