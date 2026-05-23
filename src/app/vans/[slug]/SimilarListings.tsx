@@ -16,7 +16,7 @@ export default async function SimilarListings({ region, excludeId }: Props) {
       `SELECT
         vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
         vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
-        vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
+        vl.minimumNights, NULL AS pickupLat, NULL AS pickupLng, NULL AS pickupLocationText,
         hp.firstName AS hostFirstName,
         u.image      AS hostImage,
         COALESCE(rv.avgRating, NULL) AS avgRating,

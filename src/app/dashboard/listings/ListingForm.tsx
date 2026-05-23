@@ -130,15 +130,6 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
         setError("Please wait for the security check to complete.");
         return;
       }
-      const vRes = await fetch("/api/verify-turnstile", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: turnstileToken }),
-      });
-      if (!vRes.ok) {
-        setError("Security check failed. Please refresh and try again.");
-        return;
-      }
     }
 
     setSaving(true);
@@ -168,7 +159,10 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
       isNew ? "/api/listings" : `/api/listings/${listing!.id}`,
       {
         method: isNew ? "POST" : "PATCH",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(isNew ? { "x-turnstile-token": turnstileToken ?? "" } : {}),
+        },
         body: JSON.stringify(payload),
       }
     );

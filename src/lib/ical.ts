@@ -1,5 +1,73 @@
 import { db } from "@/lib/db";
 
+export const MAX_ICAL_FEED_BYTES = 1_048_576;
+
+export function validateIcalFeedUrl(rawUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid iCal feed URL");
+  }
+
+  if (url.protocol !== "https:") {
+    throw new Error("iCal feeds must use HTTPS");
+  }
+  if (url.username || url.password) {
+    throw new Error("iCal feed URLs cannot contain credentials");
+  }
+
+  const hostname = url.hostname
+    .toLowerCase()
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .replace(/\.$/, "");
+  const blockedNames = ["localhost", "localhost.localdomain"];
+  const blockedSuffixes = [".localhost", ".local", ".internal", ".lan", ".home.arpa"];
+
+  if (
+    !hostname.includes(".") ||
+    blockedNames.includes(hostname) ||
+    blockedSuffixes.some((suffix) => hostname.endsWith(suffix)) ||
+    /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) ||
+    hostname.includes(":")
+  ) {
+    throw new Error("iCal feed URL must use a public hostname");
+  }
+
+  return url.toString();
+}
+
+async function readLimitedText(resp: Response): Promise<string> {
+  const declaredLength = Number(resp.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_ICAL_FEED_BYTES) {
+    throw new Error("iCal feed is too large");
+  }
+  if (!resp.body) return "";
+
+  const reader = resp.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    byteLength += value.byteLength;
+    if (byteLength > MAX_ICAL_FEED_BYTES) {
+      await reader.cancel();
+      throw new Error("iCal feed is too large");
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 // ---------------------------------------------------------------------------
 // Formatting (export)
 // ---------------------------------------------------------------------------
@@ -140,13 +208,23 @@ function parseDuration(val: string): number {
 // ---------------------------------------------------------------------------
 
 export async function syncIcalFeed(listingId: string, url: string): Promise<void> {
-  const resp = await fetch(url, {
+  const safeUrl = validateIcalFeedUrl(url);
+  const resp = await fetch(safeUrl, {
     headers: { "User-Agent": "CampShare-iCal/1.0" },
     signal: AbortSignal.timeout(30_000),
+    redirect: "error",
   });
   if (!resp.ok) throw new Error(`iCal fetch failed: ${resp.status}`);
 
-  const text = await resp.text();
+  const contentType = resp.headers.get("content-type")?.toLowerCase() ?? "";
+  if (contentType.includes("text/html") || contentType.includes("application/xhtml")) {
+    throw new Error("iCal feed returned an HTML document");
+  }
+
+  const text = await readLimitedText(resp);
+  if (!text.includes("BEGIN:VCALENDAR")) {
+    throw new Error("Response is not an iCal calendar");
+  }
   const incoming = parseIcal(text);
   const nowSec = Math.floor(Date.now() / 1000);
 

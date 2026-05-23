@@ -57,15 +57,34 @@ export default function MapView({ listings }: { listings: SearchResult[] }) {
       el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.1)"; });
       el.addEventListener("mouseleave", () => { el.style.transform = ""; });
 
+      const popupContent = document.createElement("div");
+      popupContent.style.cssText = "font-size:13px;line-height:1.4;max-width:180px";
+
+      const name = document.createElement("strong");
+      name.textContent = listing.name;
+      popupContent.appendChild(name);
+      popupContent.appendChild(document.createElement("br"));
+
+      const details = document.createElement("span");
+      details.style.color = "#666";
+      details.textContent = `${listing.region} \u00b7 Sleeps ${listing.sleeps}`;
+      popupContent.appendChild(details);
+      popupContent.appendChild(document.createElement("br"));
+
+      const rate = document.createElement("span");
+      rate.style.fontWeight = "600";
+      rate.textContent = `$${price}/night`;
+      popupContent.appendChild(rate);
+      popupContent.appendChild(document.createElement("br"));
+
+      const link = document.createElement("a");
+      link.href = `/vans/${encodeURIComponent(listing.slug)}`;
+      link.style.cssText = "color:var(--clay,#8B5E3C);font-weight:600";
+      link.textContent = "View listing \u2192";
+      popupContent.appendChild(link);
+
       const popup = new mapboxgl.Popup({ offset: 20, closeButton: false })
-        .setHTML(`
-          <div style="font-size:13px;line-height:1.4;max-width:180px">
-            <strong>${listing.name}</strong><br>
-            <span style="color:#666">${listing.region} · Sleeps ${listing.sleeps}</span><br>
-            <span style="font-weight:600">$${price}/night</span><br>
-            <a href="/vans/${listing.slug}" style="color:var(--clay,#8B5E3C);font-weight:600">View listing →</a>
-          </div>
-        `);
+        .setDOMContent(popupContent);
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([coords.lng, coords.lat])

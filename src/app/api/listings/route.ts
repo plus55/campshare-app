@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { NORTH_ISLAND_REGIONS } from "@/lib/constants";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const schema = z.object({
   name: z.string().min(1).max(80),
@@ -48,6 +49,11 @@ export async function POST(req: Request) {
     .bind(session.user.id)
     .first<{ userId: string }>();
   if (!profile) return bad("Create a host profile before adding a listing", 403);
+
+  const token = req.headers.get("x-turnstile-token") ?? undefined;
+  if (!(await verifyTurnstile(token))) {
+    return bad("Security check failed. Please refresh and try again.", 400);
+  }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error.issues[0]?.message ?? "Invalid payload");

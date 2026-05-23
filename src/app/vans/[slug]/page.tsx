@@ -16,6 +16,7 @@ import WishlistHeart from "@/components/WishlistHeart";
 import { getReviewsForListing } from "@/lib/reviews";
 import HostBadges from "@/components/HostBadges";
 import { getBadgesForHost, isInstantBookEligible } from "@/lib/badges";
+import { REGION_COORDS } from "@/lib/constants";
 
 interface ListingWithHost extends VanListing {
   hostFirstName: string;
@@ -112,6 +113,7 @@ export default async function VanPage({
   try { features = JSON.parse(listing.features) as string[]; } catch { features = []; }
 
   const nightlyDollars = Math.round(listing.nightlyRate / 100);
+  const publicPickupCoords = REGION_COORDS[listing.region];
 
   const galleryPhotos = photosResult.results
     .map((p) => {
@@ -181,13 +183,13 @@ export default async function VanPage({
               </div>
             )}
 
-            {listing.pickupLat && listing.pickupLng && (
+            {publicPickupCoords && (
               <div className="cs-card" style={{ marginTop: 16 }}>
                 <h2>Pickup area</h2>
                 <p className="cs-muted cs-small" style={{ marginBottom: 12 }}>
-                  Exact pickup location shared after booking is confirmed.
+                  Approximate pickup region shown. Exact pickup location is shared after booking is confirmed.
                 </p>
-                <PickupMapClient lat={listing.pickupLat} lng={listing.pickupLng} />
+                <PickupMapClient lat={publicPickupCoords.lat} lng={publicPickupCoords.lng} />
               </div>
             )}
 
