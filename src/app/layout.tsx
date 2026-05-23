@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Fraunces, Outfit } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import CookieConsent from "@/components/CookieConsent";
+import { cn } from "@/lib/utils";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -48,13 +51,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${outfit.variable}`} suppressHydrationWarning>
+    <html lang="en" className={cn(fraunces.variable, outfit.variable)} suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
-          <SiteHeader />
-          {children}
-          <SiteFooter />
-          <CookieConsent />
+          <TooltipProvider>
+            <SiteHeader />
+            {children}
+            <SiteFooter />
+            <CookieConsent />
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
