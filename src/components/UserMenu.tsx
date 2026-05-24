@@ -42,32 +42,32 @@ export default function UserMenu({ name, email }: { name: string; email: string 
 
       <DropdownMenuContent
         align="end"
-        className="w-56 bg-cream border-line shadow-[0_18px_50px_-12px_rgba(31,42,32,0.18)]"
+        className="w-56 bg-card border-border shadow-[0_18px_50px_-12px_rgba(31,42,32,0.18)]"
       >
         <DropdownMenuLabel className="font-normal pb-2">
-          <div className="font-serif text-forest-deep text-[0.95rem]">{name}</div>
+          <div className="font-serif text-forest-deep dark:text-cream text-[0.95rem]">{name}</div>
           {email && email !== name && (
-            <div className="text-[0.78rem] text-stone truncate">{email}</div>
+            <div className="text-[0.78rem] text-muted-foreground truncate">{email}</div>
           )}
         </DropdownMenuLabel>
 
-        <DropdownMenuSeparator className="bg-line" />
+        <DropdownMenuSeparator className="bg-border" />
 
         {menuItems.map(({ href, label }) => (
           <DropdownMenuItem
             key={href}
             render={<Link href={href} />}
-            className="text-charcoal-soft hover:text-forest-deep cursor-pointer"
+            className="text-muted-foreground hover:text-foreground cursor-pointer"
           >
             {label}
           </DropdownMenuItem>
         ))}
 
-        <DropdownMenuSeparator className="bg-line" />
+        <DropdownMenuSeparator className="bg-border" />
 
         <DropdownMenuItem
           onClick={handleSignOut}
-          className="text-charcoal-soft hover:text-forest-deep cursor-pointer"
+          className="text-muted-foreground hover:text-foreground cursor-pointer"
         >
           Sign out
         </DropdownMenuItem>

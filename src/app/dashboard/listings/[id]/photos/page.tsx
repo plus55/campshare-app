@@ -30,12 +30,12 @@ export default async function ListingPhotosPage({
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[720px]">
         <p className="mb-2 text-sm">
-          <Link href={`/dashboard/listings/${id}`} className="text-stone hover:text-charcoal">
+          <Link href={`/dashboard/listings/${id}`} className="text-muted-foreground hover:text-foreground">
             ← {listing.name}
           </Link>
         </p>
-        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Photos</h1>
-        <p className="mb-6 text-stone">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep dark:text-cream">Photos</h1>
+        <p className="mb-6 text-muted-foreground">
           Up to 10 photos. Drag to reorder. First photo is used as the cover image.
         </p>
         <PhotoManager listingId={id} initialPhotos={photos.results} />

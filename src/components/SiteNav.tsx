@@ -44,11 +44,11 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
       {/* Brand */}
       <Link
         href="/"
-        className="flex items-center gap-[0.55rem] font-serif text-[1.45rem] font-semibold text-forest-deep tracking-[-0.02em] no-underline hover:text-forest-deep"
+        className="flex items-center gap-[0.55rem] font-serif text-[1.45rem] font-semibold text-forest-deep dark:text-cream tracking-[-0.02em] no-underline hover:text-forest-deep dark:hover:text-cream"
       >
         <span className="brand-mark" aria-hidden="true" />
         CampShare
-        <small className="block font-sans text-[0.65rem] font-medium tracking-[0.2em] text-stone uppercase mt-[-2px]">
+        <small className="block font-sans text-[0.65rem] font-medium tracking-[0.2em] text-muted-foreground uppercase mt-[-2px]">
           Aotearoa NZ
         </small>
       </Link>
@@ -66,8 +66,8 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
                   "relative text-[0.95rem] font-medium transition-colors no-underline",
                   "focus-visible:outline-2 focus-visible:outline-clay focus-visible:outline-offset-4 focus-visible:rounded-sm",
                   active
-                    ? "text-forest-deep after:absolute after:bottom-[-6px] after:left-0 after:right-0 after:h-[2px] after:bg-clay after:content-['']"
-                    : "text-charcoal-soft hover:text-forest-deep"
+                    ? "text-forest-deep dark:text-cream after:absolute after:bottom-[-6px] after:left-0 after:right-0 after:h-[2px] after:bg-clay after:content-['']"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {label}
@@ -109,7 +109,7 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
           type="button"
           aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="hidden md:inline-flex items-center justify-center size-8 rounded-lg text-forest-deep hover:bg-sand transition-colors border-0 bg-transparent cursor-pointer"
+          className="hidden md:inline-flex items-center justify-center size-8 rounded-lg text-foreground hover:bg-muted transition-colors border-0 bg-transparent cursor-pointer"
         >
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
@@ -117,7 +117,7 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
         {/* Mobile hamburger */}
         <button
           type="button"
-          className="md:hidden flex items-center justify-center p-[0.4rem] bg-transparent border-0 cursor-pointer text-forest-deep"
+          className="md:hidden flex items-center justify-center p-[0.4rem] bg-transparent border-0 cursor-pointer text-foreground"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
@@ -128,7 +128,7 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div className="absolute top-full left-0 right-0 flex flex-col bg-cream border-b border-line px-[var(--gutter)] py-4 gap-1 z-50 md:hidden shadow-md">
+        <div className="absolute top-full left-0 right-0 flex flex-col bg-background border-b border-border px-[var(--gutter)] py-4 gap-1 z-50 md:hidden shadow-md">
           {navLinks.map(({ href, label }) => {
             const active = isActive(href, pathname);
             return (
@@ -138,7 +138,7 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "py-2 px-1 text-[0.95rem] font-medium no-underline transition-colors rounded",
-                  active ? "text-forest-deep" : "text-charcoal-soft hover:text-forest-deep"
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => setMobileOpen(false)}
               >
@@ -147,17 +147,17 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
             );
           })}
           {!user && (
-            <div className="flex gap-2 pt-3 border-t border-line mt-2">
+            <div className="flex gap-2 pt-3 border-t border-border mt-2">
               <Link
                 href="/login"
-                className="btn btn-ghost btn-sm flex-1 text-center"
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1 text-center")}
                 onClick={() => setMobileOpen(false)}
               >
                 Log in
               </Link>
               <Link
                 href="/signup"
-                className="btn btn-primary btn-sm flex-1 text-center"
+                className={cn(buttonVariants({ size: "sm" }), "flex-1 text-center")}
                 onClick={() => setMobileOpen(false)}
               >
                 Sign up

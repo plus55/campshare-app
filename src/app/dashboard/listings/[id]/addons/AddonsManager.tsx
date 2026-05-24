@@ -83,7 +83,7 @@ export default function AddonsManager({ listingId, catalogue, enabledMap }: Prop
       {catalogue.map((addon) => (
         <div
           key={addon.id}
-          className={`flex items-start gap-4 rounded-2xl border border-line bg-cream p-4 transition-opacity ${enabled[addon.id] ? "opacity-100" : "opacity-60"}`}
+          className={`flex items-start gap-4 rounded-2xl border border-border bg-card p-4 transition-opacity ${enabled[addon.id] ? "opacity-100" : "opacity-60"}`}
         >
           <input
             type="checkbox"
@@ -93,22 +93,22 @@ export default function AddonsManager({ listingId, catalogue, enabledMap }: Prop
             className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-forest-deep"
           />
           <div className="flex-1">
-            <label htmlFor={`addon-${addon.id}`} className="cursor-pointer text-sm font-semibold text-charcoal">
+            <label htmlFor={`addon-${addon.id}`} className="cursor-pointer text-sm font-semibold text-foreground">
               {addon.name}
             </label>
             {addon.description && (
-              <p className="mt-0.5 text-xs text-stone">{addon.description}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{addon.description}</p>
             )}
           </div>
           {enabled[addon.id] && (
             <div className="flex min-w-[120px] flex-col gap-1">
-              <label htmlFor={`price-${addon.id}`} className="text-xs font-medium text-charcoal">Price (NZD)</label>
+              <label htmlFor={`price-${addon.id}`} className="text-xs font-medium text-foreground">Price (NZD)</label>
               <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-stone">$</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <input
                   id={`price-${addon.id}`}
                   type="number"
-                  className="w-full rounded-lg border border-line bg-white py-1.5 pl-6 pr-3 text-sm text-charcoal placeholder:text-stone focus:border-forest-deep focus:outline-none"
+                  className="w-full rounded-lg border border-line bg-background py-1.5 pl-6 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-forest-deep focus:outline-none"
                   min="0"
                   step="1"
                   placeholder="0"
@@ -116,21 +116,21 @@ export default function AddonsManager({ listingId, catalogue, enabledMap }: Prop
                   onChange={(e) => setPrice(addon.id, e.target.value)}
                 />
               </div>
-              <span className="text-xs text-stone">{addon.priceType === "per_night" ? "per night" : "per booking"}</span>
+              <span className="text-xs text-muted-foreground">{addon.priceType === "per_night" ? "per night" : "per booking"}</span>
             </div>
           )}
         </div>
       ))}
 
       {error && (
-        <p className="rounded-lg bg-rust-light px-3 py-2 text-sm text-rust">{error}</p>
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <div className="flex items-center gap-3 pt-2">
         <Button onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save add-ons"}
         </Button>
-        {saved && <span className="text-sm text-stone">Saved</span>}
+        {saved && <span className="text-sm text-muted-foreground">Saved</span>}
       </div>
     </div>
   );

@@ -38,12 +38,12 @@ export default async function CalendarPage({
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[720px]">
         <p className="mb-2 text-sm">
-          <Link href={`/dashboard/listings/${id}`} className="text-stone hover:text-charcoal">
+          <Link href={`/dashboard/listings/${id}`} className="text-muted-foreground hover:text-foreground">
             ← {listing.name}
           </Link>
         </p>
-        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Availability</h1>
-        <p className="mb-6 text-stone">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep dark:text-cream">Availability</h1>
+        <p className="mb-6 text-muted-foreground">
           Click to block / unblock dates. Blocked dates are greyed on your public page.
         </p>
         <AvailabilityCalendar

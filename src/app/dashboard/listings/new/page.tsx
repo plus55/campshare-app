@@ -19,10 +19,10 @@ export default async function NewListingPage() {
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[720px]">
         <p className="mb-2 text-sm">
-          <Link href="/dashboard" className="text-stone hover:text-charcoal">← Dashboard</Link>
+          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">← Dashboard</Link>
         </p>
-        <h1 className="mb-1 font-serif text-3xl text-forest-deep">New listing</h1>
-        <p className="mb-6 text-stone">Tell travellers about your van.</p>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep dark:text-cream">New listing</h1>
+        <p className="mb-6 text-muted-foreground">Tell travellers about your van.</p>
         <ListingForm listing={null} />
       </div>
     </main>

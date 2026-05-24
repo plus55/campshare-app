@@ -7,12 +7,12 @@ import ListingForm from "../ListingForm";
 import ListingActions from "./ListingActions";
 
 const statusBadge: Record<string, string> = {
-  draft:          "rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium text-stone",
-  pending_review: "rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium text-charcoal-soft",
-  published:      "rounded-full bg-moss-light px-2.5 py-0.5 text-[11px] font-medium text-moss",
-  paused:         "rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium text-stone",
-  rejected:       "rounded-full bg-rust-light px-2.5 py-0.5 text-[11px] font-medium text-rust",
-  archived:       "rounded-full bg-sand-warm px-2.5 py-0.5 text-[11px] font-medium text-ink-300",
+  draft:          "rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground",
+  pending_review: "rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground",
+  published:      "rounded-full bg-moss/10 px-2.5 py-0.5 text-[11px] font-medium text-moss",
+  paused:         "rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground",
+  rejected:       "rounded-full bg-destructive/10 px-2.5 py-0.5 text-[11px] font-medium text-destructive",
+  archived:       "rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground",
 };
 
 export default async function EditListingPage({
@@ -37,39 +37,39 @@ export default async function EditListingPage({
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[720px]">
         <p className="mb-2 text-sm">
-          <Link href="/dashboard" className="text-stone hover:text-charcoal">← Dashboard</Link>
+          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">← Dashboard</Link>
         </p>
 
         <div className="mb-4 flex items-center gap-3">
-          <h1 className="m-0 font-serif text-3xl text-forest-deep">{listing.name}</h1>
+          <h1 className="m-0 font-serif text-3xl text-forest-deep dark:text-cream">{listing.name}</h1>
           <span className={statusBadge[listing.status] ?? statusBadge.draft}>{statusLabel}</span>
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
-          <Link href={`/dashboard/listings/${id}/photos`} className="rounded-lg border border-line bg-cream px-3 py-1.5 text-sm text-charcoal-soft hover:bg-sand transition-colors">
+          <Link href={`/dashboard/listings/${id}/photos`} className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors">
             Photos
           </Link>
-          <Link href={`/dashboard/listings/${id}/calendar`} className="rounded-lg border border-line bg-cream px-3 py-1.5 text-sm text-charcoal-soft hover:bg-sand transition-colors">
+          <Link href={`/dashboard/listings/${id}/calendar`} className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors">
             Calendar
           </Link>
-          <Link href={`/dashboard/listings/${id}/addons`} className="rounded-lg border border-line bg-cream px-3 py-1.5 text-sm text-charcoal-soft hover:bg-sand transition-colors">
+          <Link href={`/dashboard/listings/${id}/addons`} className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors">
             Add-ons
           </Link>
           {listing.status === "published" && (
-            <Link href={`/vans/${listing.slug}`} className="rounded-lg border border-line bg-cream px-3 py-1.5 text-sm text-charcoal-soft hover:bg-sand transition-colors" target="_blank">
+            <Link href={`/vans/${listing.slug}`} className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors" target="_blank">
               View public page ↗
             </Link>
           )}
         </div>
 
         {listing.status === "pending_review" ? (
-          <div className="rounded-2xl border border-line bg-cream p-6">
-            <p className="text-stone">
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <p className="text-muted-foreground">
               This listing is under review. You can&apos;t edit it until the review is complete.
             </p>
             {listing.adminNote && (
-              <p className="mt-2 text-sm text-charcoal-soft">
-                <strong className="text-charcoal">Admin note:</strong> {listing.adminNote}
+              <p className="mt-2 text-sm text-muted-foreground">
+                <strong className="text-foreground">Admin note:</strong> {listing.adminNote}
               </p>
             )}
           </div>

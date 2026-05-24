@@ -85,7 +85,7 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
-        className="relative inline-flex items-center justify-center size-8 rounded-lg text-forest-deep hover:bg-sand transition-colors border-0 bg-transparent cursor-pointer focus-visible:outline-2 focus-visible:outline-clay focus-visible:outline-offset-2"
+        className="relative inline-flex items-center justify-center size-8 rounded-lg text-foreground hover:bg-muted transition-colors border-0 bg-transparent cursor-pointer focus-visible:outline-2 focus-visible:outline-clay focus-visible:outline-offset-2"
       >
         <Bell size={20} aria-hidden="true" />
         {unread > 0 && (
@@ -100,10 +100,10 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
 
       <PopoverContent
         align="end"
-        className="w-[300px] p-0 bg-cream border-line shadow-[0_18px_50px_-12px_rgba(31,42,32,0.18)] overflow-hidden"
+        className="w-[300px] p-0 bg-card border-border shadow-[0_18px_50px_-12px_rgba(31,42,32,0.18)] overflow-hidden"
       >
-        <div className="flex items-center justify-between px-[14px] py-3 border-b border-line">
-          <strong className="font-serif text-[0.9rem] text-forest-deep">Notifications</strong>
+        <div className="flex items-center justify-between px-[14px] py-3 border-b border-border">
+          <strong className="font-serif text-[0.9rem] text-forest-deep dark:text-cream">Notifications</strong>
           <Link
             href="/dashboard/notifications"
             className="text-[12px] text-clay hover:text-clay-deep"
@@ -115,19 +115,19 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
 
         <div className="flex flex-col max-h-[360px] overflow-y-auto">
           {items === null ? (
-            <p className="px-[14px] py-5 text-[0.85rem] text-stone text-center m-0">Loading…</p>
+            <p className="px-[14px] py-5 text-[0.85rem] text-muted-foreground text-center m-0">Loading…</p>
           ) : items.length === 0 ? (
-            <p className="px-[14px] py-5 text-[0.85rem] text-stone text-center m-0">No notifications yet</p>
+            <p className="px-[14px] py-5 text-[0.85rem] text-muted-foreground text-center m-0">No notifications yet</p>
           ) : (
             items.slice(0, 8).map((n) => (
               <Link
                 key={n.id}
                 href={notifHref(n.type, n.payload)}
-                className={`block px-[14px] py-[10px] border-b border-line last:border-0 no-underline text-charcoal-soft hover:bg-sand transition-colors ${n.readAt === null ? "bg-clay/5" : ""}`}
+                className={`block px-[14px] py-[10px] border-b border-border last:border-0 no-underline text-foreground hover:bg-muted transition-colors ${n.readAt === null ? "bg-clay/5" : ""}`}
                 onClick={() => setOpen(false)}
               >
                 <span className="block text-[0.85rem] leading-[1.4]">{notifLabel(n.type, n.payload)}</span>
-                <span className="block text-[0.75rem] text-stone mt-[2px]">{relTime(n.createdAt)}</span>
+                <span className="block text-[0.75rem] text-muted-foreground mt-[2px]">{relTime(n.createdAt)}</span>
               </Link>
             ))
           )}

@@ -76,22 +76,22 @@ export default function SignupPage() {
 
   if (magicSent) {
     return (
-      <div className="rounded-2xl bg-cream p-8 shadow">
-        <h1 className="mb-2 font-serif text-2xl text-forest-deep">Check your email</h1>
-        <p className="text-stone">
-          We sent a sign-in link to <strong className="font-medium text-charcoal">{email}</strong>. It expires in 15 minutes.
+      <div className="rounded-2xl border border-border bg-card p-8 shadow">
+        <h1 className="mb-2 font-serif text-2xl text-forest-deep dark:text-cream">Check your email</h1>
+        <p className="text-muted-foreground">
+          We sent a sign-in link to <strong className="font-medium text-foreground">{email}</strong>. It expires in 15 minutes.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl bg-cream p-8 shadow">
-      <h1 className="mb-1 font-serif text-2xl text-forest-deep">Create your account</h1>
-      <p className="mb-6 text-sm text-stone">Join CampShare in under a minute.</p>
+    <div className="rounded-2xl border border-border bg-card p-8 shadow">
+      <h1 className="mb-1 font-serif text-2xl text-forest-deep dark:text-cream">Create your account</h1>
+      <p className="mb-6 text-sm text-muted-foreground">Join CampShare in under a minute.</p>
 
       {error && (
-        <div className="mb-4 rounded-[var(--radius)] bg-rust-light px-3.5 py-2.5 text-sm text-rust">
+        <div className="mb-4 rounded-[var(--radius)] bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -108,7 +108,7 @@ export default function SignupPage() {
 
       <form onSubmit={handleEmail} className="flex flex-col gap-4">
         <div>
-          <Label htmlFor="name" className="mb-1.5 text-xs text-stone">Name</Label>
+          <Label htmlFor="name" className="mb-1.5 text-xs text-muted-foreground">Name</Label>
           <Input
             id="name"
             type="text"
@@ -116,11 +116,11 @@ export default function SignupPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
-            className="h-11 bg-cream text-[0.95rem]"
+            className="h-11 bg-background text-[0.95rem]"
           />
         </div>
         <div>
-          <Label htmlFor="email" className="mb-1.5 text-xs text-stone">Email</Label>
+          <Label htmlFor="email" className="mb-1.5 text-xs text-muted-foreground">Email</Label>
           <Input
             id="email"
             type="email"
@@ -128,11 +128,11 @@ export default function SignupPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            className="h-11 bg-cream text-[0.95rem]"
+            className="h-11 bg-background text-[0.95rem]"
           />
         </div>
         <div>
-          <Label htmlFor="password" className="mb-1.5 text-xs text-stone">Password</Label>
+          <Label htmlFor="password" className="mb-1.5 text-xs text-muted-foreground">Password</Label>
           <Input
             id="password"
             type="password"
@@ -141,7 +141,7 @@ export default function SignupPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
-            className="h-11 bg-cream text-[0.95rem]"
+            className="h-11 bg-background text-[0.95rem]"
           />
         </div>
         <Button
@@ -165,7 +165,7 @@ export default function SignupPage() {
         {loading === "magic" ? "Sending…" : "Email me a magic link"}
       </Button>
 
-      <p className="mt-5 text-center text-sm text-stone">
+      <p className="mt-5 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className="text-clay hover:text-clay-deep">Sign in</Link>
       </p>

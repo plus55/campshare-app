@@ -45,9 +45,9 @@ export default function CookieConsent() {
         />
       )}
       {visible && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-cream shadow-md">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card shadow-md">
           <div className="mx-auto flex max-w-4xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p className="text-sm text-stone m-0">
+            <p className="text-sm text-muted-foreground m-0">
               We use cookies to improve your experience and understand how CampShare is used.{" "}
               <Link href="/privacy" className="underline text-clay hover:text-clay-deep">
                 Privacy Policy
@@ -55,7 +55,7 @@ export default function CookieConsent() {
             </p>
             <div className="flex shrink-0 gap-2">
               <Button variant="outline" size="sm" onClick={decline}
-                className="border-line text-charcoal-soft hover:bg-sand">
+                className="border-border text-muted-foreground hover:bg-muted">
                 Decline
               </Button>
               <Button size="sm" onClick={accept}>

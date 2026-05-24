@@ -101,7 +101,7 @@ export default async function PayoutsPage({
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[1080px]">
         <div className="mb-6 flex items-start justify-between">
-          <h1 className="m-0 font-serif text-3xl text-forest-deep">Payouts</h1>
+          <h1 className="m-0 font-serif text-3xl text-forest-deep dark:text-cream">Payouts</h1>
           {hp?.stripeAccountId && hp.stripeOnboardingCompleted ? (
             <StripeDashboardButton />
           ) : (
@@ -125,26 +125,26 @@ export default async function PayoutsPage({
 
         {paidPayouts.length > 0 && (
           <div className="cs-card mb-6">
-            <p className="mb-4 text-lg font-semibold text-charcoal">Earnings — {periodLabel(period)}</p>
+            <p className="mb-4 text-lg font-semibold text-foreground">Earnings — {periodLabel(period)}</p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
               <div>
-                <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Nightly hire</p>
-                <p className="mt-0.5 text-xl font-semibold text-charcoal">{fmtNzd(totalNightlyCents)}</p>
+                <p className="m-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">Nightly hire</p>
+                <p className="mt-0.5 text-xl font-semibold text-foreground">{fmtNzd(totalNightlyCents)}</p>
               </div>
               {totalAddonCents > 0 && (
                 <div>
-                  <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Add-ons</p>
-                  <p className="mt-0.5 text-xl font-semibold text-charcoal">{fmtNzd(totalAddonCents)}</p>
+                  <p className="m-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">Add-ons</p>
+                  <p className="mt-0.5 text-xl font-semibold text-foreground">{fmtNzd(totalAddonCents)}</p>
                 </div>
               )}
               <div>
-                <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Platform fees (guest)</p>
-                <p className="mt-0.5 text-xl font-semibold text-stone">−{fmtNzd(totalPlatformFeeCents)}</p>
-                <p className="m-0 text-xs text-stone">incl. GST</p>
+                <p className="m-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">Platform fees (guest)</p>
+                <p className="mt-0.5 text-xl font-semibold text-muted-foreground">−{fmtNzd(totalPlatformFeeCents)}</p>
+                <p className="m-0 text-xs text-muted-foreground">incl. GST</p>
               </div>
-              <div className="border-l-2 border-line pl-4">
-                <p className="m-0 text-xs font-medium uppercase tracking-wider text-stone">Your total payout</p>
-                <p className="mt-0.5 text-2xl font-bold text-charcoal">{fmtNzd(totalPaidCents)}</p>
+              <div className="border-l-2 border-border pl-4">
+                <p className="m-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">Your total payout</p>
+                <p className="mt-0.5 text-2xl font-bold text-foreground">{fmtNzd(totalPaidCents)}</p>
               </div>
             </div>
           </div>
@@ -152,17 +152,17 @@ export default async function PayoutsPage({
 
         {payouts.length === 0 ? (
           <div className="cs-card">
-            <p className="text-stone">No payouts in this period. Payouts are issued 24 hours after each trip ends.</p>
+            <p className="text-muted-foreground">No payouts in this period. Payouts are issued 24 hours after each trip ends.</p>
           </div>
         ) : (
           <div className="cs-card">
-            <p className="mb-3 text-xs text-stone">Click a row to see the per-booking breakdown.</p>
+            <p className="mb-3 text-xs text-muted-foreground">Click a row to see the per-booking breakdown.</p>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr>
                     {["Van", "Nightly hire", "Add-ons", "Platform fee", "Your payout", "Status", "Date"].map((h) => (
-                      <th key={h} className="border-b border-line pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-stone">{h}</th>
+                      <th key={h} className="border-b border-border pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">{h}</th>
                     ))}
                   </tr>
                 </thead>

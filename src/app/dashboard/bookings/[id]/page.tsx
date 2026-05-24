@@ -31,7 +31,7 @@ function fmtDate(ms: number) {
   });
 }
 
-const detailLabel = "text-[11px] font-medium uppercase tracking-wide text-stone";
+const detailLabel = "text-[11px] font-medium uppercase tracking-wide text-muted-foreground";
 
 export default async function DashboardBookingDetailPage({
   params,
@@ -102,52 +102,52 @@ export default async function DashboardBookingDetailPage({
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[700px]">
         <p className="mb-2 text-sm">
-          <Link href="/dashboard/bookings" className="text-stone hover:text-charcoal">← Bookings</Link>
+          <Link href="/dashboard/bookings" className="text-muted-foreground hover:text-foreground">← Bookings</Link>
         </p>
 
         <div className="mb-4 flex items-center gap-3">
-          <h1 className="m-0 font-serif text-3xl text-forest-deep">{booking.vanName}</h1>
+          <h1 className="m-0 font-serif text-3xl text-forest-deep dark:text-cream">{booking.vanName}</h1>
           <BookingStatusBadge status={booking.status} />
         </div>
 
         {/* Booking details card */}
-        <div className="rounded-2xl border border-line bg-cream p-6">
+        <div className="rounded-2xl border border-border bg-card p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className={detailLabel}>Check-in</p>
-              <p className="mt-0.5 text-sm text-charcoal">{fmtDate(booking.startDate)}</p>
+              <p className="mt-0.5 text-sm text-foreground">{fmtDate(booking.startDate)}</p>
             </div>
             <div>
               <p className={detailLabel}>Check-out</p>
-              <p className="mt-0.5 text-sm text-charcoal">{fmtDate(booking.endDate)}</p>
+              <p className="mt-0.5 text-sm text-foreground">{fmtDate(booking.endDate)}</p>
             </div>
             <div>
               <p className={detailLabel}>Duration</p>
-              <p className="mt-0.5 text-sm text-charcoal">{booking.nights} night{booking.nights !== 1 ? "s" : ""}</p>
+              <p className="mt-0.5 text-sm text-foreground">{booking.nights} night{booking.nights !== 1 ? "s" : ""}</p>
             </div>
             <div>
               <p className={detailLabel}>Guest paid</p>
-              <p className="mt-0.5 text-sm font-semibold text-charcoal">${(booking.totalCents / 100).toFixed(0)} NZD</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">${(booking.totalCents / 100).toFixed(0)} NZD</p>
               {booking.hostPayoutCents != null && (
-                <p className="text-xs text-stone">Your payout: ${(booking.hostPayoutCents / 100).toFixed(0)} NZD</p>
+                <p className="text-xs text-muted-foreground">Your payout: ${(booking.hostPayoutCents / 100).toFixed(0)} NZD</p>
               )}
               {bookingAddons.map((a) => (
-                <p key={a.id} className="text-xs text-stone">+ {a.name} (${(a.priceNZDCents / 100).toFixed(0)})</p>
+                <p key={a.id} className="text-xs text-muted-foreground">+ {a.name} (${(a.priceNZDCents / 100).toFixed(0)})</p>
               ))}
             </div>
             <div>
               <p className={detailLabel}>Guest</p>
-              <p className="mt-0.5 text-sm text-charcoal">{booking.guestName}</p>
-              <p className="text-xs text-stone">{booking.guestEmail}</p>
+              <p className="mt-0.5 text-sm text-foreground">{booking.guestName}</p>
+              <p className="text-xs text-muted-foreground">{booking.guestEmail}</p>
             </div>
             <div>
               <p className={detailLabel}>Guests</p>
-              <p className="mt-0.5 text-sm text-charcoal">{booking.guestCount}</p>
+              <p className="mt-0.5 text-sm text-foreground">{booking.guestCount}</p>
             </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Link href={`/vans/${booking.vanSlug}`} className="rounded-lg border border-line px-3 py-1.5 text-sm text-charcoal-soft hover:bg-sand transition-colors">
+            <Link href={`/vans/${booking.vanSlug}`} className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors">
               View listing ↗
             </Link>
             {canDispute && <DisputeForm bookingId={id} />}
@@ -157,14 +157,14 @@ export default async function DashboardBookingDetailPage({
           </div>
 
           {openDispute && (
-            <div className="mt-3 rounded-lg bg-rust-light px-3 py-2 text-sm text-rust">
+            <div className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
               <strong>Dispute open</strong> — status: {openDispute.status}. CampShare admin will follow up.
             </div>
           )}
         </div>
 
         {booking.status === "requested" && (
-          <div className="mt-4 rounded-2xl border border-ochre bg-[#fef3c7] px-4 py-3 text-sm text-[#92400e]">
+          <div className="mt-4 rounded-2xl border border-ochre/40 bg-ochre/5 px-4 py-3 text-sm text-ochre">
             This request expires in 48 hours. Accept or decline to let the guest know.
           </div>
         )}
@@ -174,14 +174,14 @@ export default async function DashboardBookingDetailPage({
         </div>
 
         {/* Message thread */}
-        <div className="mt-4 rounded-2xl border border-line bg-cream p-6">
-          <h2 className="mb-4 font-serif text-xl text-forest-deep">Messages</h2>
+        <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+          <h2 className="mb-4 font-serif text-xl text-forest-deep dark:text-cream">Messages</h2>
 
           {booking.guestMessage && (
             <div className="mb-3">
-              <div className="ml-auto max-w-[75%] rounded-xl bg-clay-light px-4 py-2.5">
-                <p className="text-xs font-medium text-clay-deep">{booking.guestName} (with request)</p>
-                <p className="mt-1 text-sm text-charcoal">{booking.guestMessage}</p>
+              <div className="ml-auto max-w-[75%] rounded-xl bg-clay/10 px-4 py-2.5">
+                <p className="text-xs font-medium text-clay">{booking.guestName} (with request)</p>
+                <p className="mt-1 text-sm text-foreground">{booking.guestMessage}</p>
               </div>
             </div>
           )}
@@ -190,16 +190,16 @@ export default async function DashboardBookingDetailPage({
             const isMine = m.senderUserId === session.user.id;
             return (
               <div key={m.id} className="mb-3">
-                <div className={`max-w-[75%] rounded-xl px-4 py-2.5 ${isMine ? "ml-auto bg-clay-light" : "bg-sand-warm"}`}>
-                  <p className="text-xs font-medium text-stone">{isMine ? "You" : m.senderName}</p>
-                  <p className="mt-1 text-sm text-charcoal">{m.body}</p>
+                <div className={`max-w-[75%] rounded-xl px-4 py-2.5 ${isMine ? "ml-auto bg-clay/10" : "bg-muted"}`}>
+                  <p className="text-xs font-medium text-muted-foreground">{isMine ? "You" : m.senderName}</p>
+                  <p className="mt-1 text-sm text-foreground">{m.body}</p>
                 </div>
               </div>
             );
           })}
 
           {msgs.results.length === 0 && !booking.guestMessage && (
-            <p className="text-sm text-stone">No messages yet.</p>
+            <p className="text-sm text-muted-foreground">No messages yet.</p>
           )}
 
           {isActive && <MessageSendForm bookingId={id} showTemplates />}

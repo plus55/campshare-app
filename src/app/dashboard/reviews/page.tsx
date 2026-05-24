@@ -98,15 +98,15 @@ export default async function ReviewsDashboardPage() {
   return (
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[1080px]">
-        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Reviews</h1>
-        <p className="mb-6 text-stone">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep dark:text-cream">Reviews</h1>
+        <p className="mb-6 text-muted-foreground">
           Trips you can still review. Reviews are double-blind — both sides write in private and both go live together (or after 14 days).
         </p>
 
         {pending.length === 0 ? (
           <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
-            <p className="font-semibold text-charcoal">No reviews waiting</p>
-            <p className="max-w-[40ch] text-sm text-stone">
+            <p className="font-semibold text-foreground">No reviews waiting</p>
+            <p className="max-w-[40ch] text-sm text-muted-foreground">
               We&apos;ll email you when a trip wraps up and is ready for review.
             </p>
             <Link href="/vans" className={cn(buttonVariants())}>Browse vans</Link>
@@ -116,8 +116,8 @@ export default async function ReviewsDashboardPage() {
             {pending.map((t) => (
               <div key={t.bookingId} className="cs-card flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
-                  <div className="font-semibold text-charcoal">{t.vanName}</div>
-                  <div className="mt-1 text-xs text-stone">
+                  <div className="font-semibold text-foreground">{t.vanName}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
                     {t.role === "guest" ? `Hosted by ${t.counterpartName}` : `Guest: ${t.counterpartName}`} ·{" "}
                     {fmtDate(t.startDate)} – {fmtDate(t.endDate)}
                   </div>

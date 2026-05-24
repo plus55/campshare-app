@@ -53,22 +53,22 @@ export default function LoginPage() {
 
   if (magicSent) {
     return (
-      <div className="rounded-2xl bg-cream p-8 shadow">
-        <h1 className="mb-2 font-serif text-2xl text-forest-deep">Check your email</h1>
-        <p className="text-stone">
-          We sent a sign-in link to <strong className="font-medium text-charcoal">{email}</strong>. It expires in 15 minutes.
+      <div className="rounded-2xl border border-border bg-card p-8 shadow">
+        <h1 className="mb-2 font-serif text-2xl text-forest-deep dark:text-cream">Check your email</h1>
+        <p className="text-muted-foreground">
+          We sent a sign-in link to <strong className="font-medium text-foreground">{email}</strong>. It expires in 15 minutes.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl bg-cream p-8 shadow">
-      <h1 className="mb-1 font-serif text-2xl text-forest-deep">Sign in</h1>
-      <p className="mb-6 text-sm text-stone">Welcome back to CampShare.</p>
+    <div className="rounded-2xl border border-border bg-card p-8 shadow">
+      <h1 className="mb-1 font-serif text-2xl text-forest-deep dark:text-cream">Sign in</h1>
+      <p className="mb-6 text-sm text-muted-foreground">Welcome back to CampShare.</p>
 
       {error && (
-        <div className="mb-4 rounded-[var(--radius)] bg-rust-light px-3.5 py-2.5 text-sm text-rust">
+        <div className="mb-4 rounded-[var(--radius)] bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
       <form onSubmit={handleEmail} className="flex flex-col gap-4">
         <div>
-          <Label htmlFor="email" className="mb-1.5 text-xs text-stone">Email</Label>
+          <Label htmlFor="email" className="mb-1.5 text-xs text-muted-foreground">Email</Label>
           <Input
             id="email"
             type="email"
@@ -95,11 +95,11 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            className="h-11 bg-cream text-[0.95rem]"
+            className="h-11 bg-background text-[0.95rem]"
           />
         </div>
         <div>
-          <Label htmlFor="password" className="mb-1.5 text-xs text-stone">Password</Label>
+          <Label htmlFor="password" className="mb-1.5 text-xs text-muted-foreground">Password</Label>
           <Input
             id="password"
             type="password"
@@ -107,7 +107,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
-            className="h-11 bg-cream text-[0.95rem]"
+            className="h-11 bg-background text-[0.95rem]"
           />
         </div>
         <Button
@@ -129,7 +129,7 @@ export default function LoginPage() {
         {loading === "magic" ? "Sending…" : "Email me a magic link"}
       </Button>
 
-      <p className="mt-5 text-center text-sm text-stone">
+      <p className="mt-5 text-center text-sm text-muted-foreground">
         <Link href="/forgot-password" className="text-clay hover:text-clay-deep">Forgot password?</Link>
         {" · "}
         <Link href="/signup" className="text-clay hover:text-clay-deep">Create an account</Link>
@@ -140,10 +140,10 @@ export default function LoginPage() {
 
 function Divider() {
   return (
-    <div className="my-4 flex items-center gap-3 text-xs text-stone">
-      <span className="flex-1 border-t border-line" />
+    <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+      <span className="flex-1 border-t border-border" />
       OR
-      <span className="flex-1 border-t border-line" />
+      <span className="flex-1 border-t border-border" />
     </div>
   );
 }

@@ -10,9 +10,9 @@ export default async function ResetPasswordPage({
 
   if (!token) {
     return (
-      <div className="rounded-2xl bg-cream p-8 shadow">
-        <h1 className="mb-2 font-serif text-2xl text-forest-deep">Reset link invalid</h1>
-        <p className="mb-4 text-stone">
+      <div className="rounded-2xl border border-border bg-card p-8 shadow">
+        <h1 className="mb-2 font-serif text-2xl text-forest-deep dark:text-cream">Reset link invalid</h1>
+        <p className="mb-4 text-muted-foreground">
           This password reset link is missing its token, or has expired.
         </p>
         <Link href="/forgot-password" className="text-sm text-clay hover:text-clay-deep">

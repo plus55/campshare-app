@@ -88,13 +88,13 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
-      <DialogContent className="max-w-[440px] bg-cream border-line rounded-[var(--radius-xl)] p-8">
+      <DialogContent className="max-w-[440px] bg-card border-border rounded-[var(--radius-xl)] p-8">
         <div className="mb-6">
-          <DialogTitle className="text-[22px] font-serif font-medium text-charcoal m-0 mb-[6px]">
+          <DialogTitle className="text-[22px] font-serif font-medium text-foreground m-0 mb-[6px]">
             {heading ?? "Sign in to continue"}
           </DialogTitle>
           {subheading && (
-            <p className="text-[14px] text-stone m-0">{subheading}</p>
+            <p className="text-[14px] text-muted-foreground m-0">{subheading}</p>
           )}
         </div>
 
@@ -102,7 +102,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
         <Button
           type="button"
           variant="outline"
-          className="w-full mb-4 gap-[10px] border-line"
+          className="w-full mb-4 gap-[10px] border-border"
           onClick={handleGoogle}
           disabled={loading}
         >
@@ -111,24 +111,24 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
         </Button>
 
         <div className="flex items-center gap-3 mb-4">
-          <hr className="flex-1 border-0 border-t border-line" />
-          <span className="text-[12px] text-stone">or</span>
-          <hr className="flex-1 border-0 border-t border-line" />
+          <hr className="flex-1 border-0 border-t border-border" />
+          <span className="text-[12px] text-muted-foreground">or</span>
+          <hr className="flex-1 border-0 border-t border-border" />
         </div>
 
         {error && (
-          <div className="bg-rust-light text-rust rounded-[var(--radius)] text-[14px] px-[14px] py-[10px] mb-3">
+          <div className="bg-destructive/10 text-destructive rounded-[var(--radius)] text-[14px] px-[14px] py-[10px] mb-3">
             {error}
           </div>
         )}
 
         <Tabs defaultValue="magic" onValueChange={() => reset()}>
-          <TabsList className="w-full bg-sand rounded-[var(--radius)] p-1 mb-5">
-            <TabsTrigger value="magic" className="flex-1 gap-[6px] text-[13px] data-[state=active]:bg-cream data-[state=active]:shadow-sm">
+          <TabsList className="w-full bg-muted rounded-[var(--radius)] p-1 mb-5">
+            <TabsTrigger value="magic" className="flex-1 gap-[6px] text-[13px] data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Mail size={13} />
               Magic link
             </TabsTrigger>
-            <TabsTrigger value="signup" className="flex-1 gap-[6px] text-[13px] data-[state=active]:bg-cream data-[state=active]:shadow-sm">
+            <TabsTrigger value="signup" className="flex-1 gap-[6px] text-[13px] data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <UserPlus size={13} />
               Create account
             </TabsTrigger>
@@ -139,17 +139,17 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
               <div className="text-center py-4">
                 <Mail size={32} className="text-clay mx-auto mb-3" />
                 <p className="font-semibold m-0 mb-[6px]">Check your inbox</p>
-                <p className="text-stone text-[14px] m-0 mb-4">
+                <p className="text-muted-foreground text-[14px] m-0 mb-4">
                   We sent a sign-in link to <strong>{email}</strong>
                 </p>
-                <Button variant="outline" size="sm" onClick={reset} className="border-line">
+                <Button variant="outline" size="sm" onClick={reset} className="border-border">
                   Use a different email
                 </Button>
               </div>
             ) : (
               <form onSubmit={handleMagicLink} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-[6px]">
-                  <Label htmlFor="magic-email" className="text-[13px] text-stone font-medium">
+                  <Label htmlFor="magic-email" className="text-[13px] text-muted-foreground font-medium">
                     Email address
                   </Label>
                   <Input
@@ -160,7 +160,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
                     placeholder="you@email.com"
                     autoFocus
                     required
-                    className="border-line focus:border-clay"
+                    className="border-border focus:border-clay"
                   />
                 </div>
                 <Button type="submit" className="w-full gap-[6px]" disabled={loading}>
@@ -174,7 +174,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
           <TabsContent value="signup">
             <form onSubmit={handleSignup} className="flex flex-col gap-3">
               <div className="flex flex-col gap-[6px]">
-                <Label htmlFor="signup-name" className="text-[13px] text-stone font-medium">Full name</Label>
+                <Label htmlFor="signup-name" className="text-[13px] text-muted-foreground font-medium">Full name</Label>
                 <Input
                   id="signup-name"
                   type="text"
@@ -183,11 +183,11 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
                   placeholder="Your name"
                   autoFocus
                   required
-                  className="border-line focus:border-clay"
+                  className="border-border focus:border-clay"
                 />
               </div>
               <div className="flex flex-col gap-[6px]">
-                <Label htmlFor="signup-email" className="text-[13px] text-stone font-medium">Email address</Label>
+                <Label htmlFor="signup-email" className="text-[13px] text-muted-foreground font-medium">Email address</Label>
                 <Input
                   id="signup-email"
                   type="email"
@@ -195,11 +195,11 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@email.com"
                   required
-                  className="border-line focus:border-clay"
+                  className="border-border focus:border-clay"
                 />
               </div>
               <div className="flex flex-col gap-[6px]">
-                <Label htmlFor="signup-password" className="text-[13px] text-stone font-medium">Password</Label>
+                <Label htmlFor="signup-password" className="text-[13px] text-muted-foreground font-medium">Password</Label>
                 <Input
                   id="signup-password"
                   type="password"
@@ -208,7 +208,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
                   placeholder="Choose a password"
                   required
                   minLength={8}
-                  className="border-line focus:border-clay"
+                  className="border-border focus:border-clay"
                 />
               </div>
               <Button type="submit" className="w-full gap-[6px]" disabled={loading}>
@@ -219,7 +219,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
           </TabsContent>
         </Tabs>
 
-        <p className={cn("mt-4 text-[12px] text-stone text-center")}>
+        <p className={cn("mt-4 text-[12px] text-muted-foreground text-center")}>
           Already have an account?{" "}
           <a
             href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/")}`}

@@ -20,10 +20,10 @@ export default async function TemplatesPage() {
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[720px]">
         <p className="mb-2 text-sm">
-          <Link href="/dashboard" className="text-stone hover:text-charcoal">← Dashboard</Link>
+          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">← Dashboard</Link>
         </p>
-        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Message templates</h1>
-        <p className="mb-6 text-stone">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep dark:text-cream">Message templates</h1>
+        <p className="mb-6 text-muted-foreground">
           Save the answers you give guests over and over — pickup directions, bedding, refundable bond.
           Tap a template when replying to a booking to drop it into the message box.
           Up to {MAX_TEMPLATES_PER_HOST} templates.

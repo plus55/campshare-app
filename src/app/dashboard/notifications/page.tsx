@@ -93,13 +93,13 @@ export default async function NotificationsPage() {
   return (
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[1080px]">
-        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Notifications</h1>
-        <p className="mb-6 text-stone">Your last 50 notifications.</p>
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep dark:text-cream">Notifications</h1>
+        <p className="mb-6 text-muted-foreground">Your last 50 notifications.</p>
 
         {items.length === 0 ? (
           <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
-            <p className="font-semibold text-charcoal">Nothing here yet</p>
-            <p className="max-w-[36ch] text-sm text-stone">
+            <p className="font-semibold text-foreground">Nothing here yet</p>
+            <p className="max-w-[36ch] text-sm text-muted-foreground">
               Booking updates, review prompts, and messages will appear here.
             </p>
             <Link href="/vans" className="text-sm text-clay hover:text-clay-deep">Browse vans</Link>
@@ -110,15 +110,15 @@ export default async function NotificationsPage() {
               <Link
                 key={n.id}
                 href={href(n.type, n.parsedPayload)}
-                className={`block border-b border-line px-5 py-3.5 no-underline transition-colors last:border-b-0 hover:bg-sand ${
+                className={`block border-b border-border px-5 py-3.5 no-underline transition-colors last:border-b-0 hover:bg-muted ${
                   n.readAt === null ? "bg-clay/5" : ""
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className={`text-sm ${n.readAt === null ? "font-semibold text-charcoal-soft" : "font-normal text-charcoal-soft"}`}>
+                  <span className={`text-sm ${n.readAt === null ? "font-semibold text-foreground" : "font-normal text-muted-foreground"}`}>
                     {label(n.type, n.parsedPayload)}
                   </span>
-                  <span className="shrink-0 text-xs text-stone">{fmtDate(n.createdAt)}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{fmtDate(n.createdAt)}</span>
                 </div>
               </Link>
             ))}

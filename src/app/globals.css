@@ -194,6 +194,12 @@ p  { margin: 0 0 12px; color: var(--ink-700); }
   padding: 32px;
 }
 .cs-card + .cs-card { margin-top: 16px; }
+.dark .cs-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  color: var(--foreground);
+}
 
 /* Brand mark */
 .cs-brand {

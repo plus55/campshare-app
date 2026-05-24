@@ -54,12 +54,12 @@ export default async function AddonsPage({
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[720px]">
         <p className="mb-2 text-sm">
-          <Link href={`/dashboard/listings/${id}`} className="text-stone hover:text-charcoal">
+          <Link href={`/dashboard/listings/${id}`} className="text-muted-foreground hover:text-foreground">
             ← {listing.name}
           </Link>
         </p>
-        <h1 className="mb-1 font-serif text-3xl text-forest-deep">Add-ons</h1>
-        <p className="mb-6 text-stone">
+        <h1 className="mb-1 font-serif text-3xl text-forest-deep dark:text-cream">Add-ons</h1>
+        <p className="mb-6 text-muted-foreground">
           Choose which add-ons guests can request with this van. You set the price — we pass it through to you in full.
         </p>
         <AddonsManager

@@ -64,10 +64,10 @@ function fromListing(l: VanListing | null): FormState {
   };
 }
 
-const inputCls = "w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-charcoal placeholder:text-stone focus:border-forest-deep focus:outline-none";
-const labelCls = "text-sm font-medium text-charcoal";
+const inputCls = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-forest-deep focus:outline-none dark:bg-input/30";
+const labelCls = "text-sm font-medium text-foreground";
 const fieldCls = "flex flex-col gap-1";
-const hintCls = "text-xs text-stone";
+const hintCls = "text-xs text-muted-foreground";
 
 export default function ListingForm({ listing }: { listing: VanListing | null }) {
   const router = useRouter();
@@ -206,15 +206,15 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
             key={n}
             className={cn(
               "h-1.5 flex-1 rounded-full transition-colors",
-              n < step ? "bg-forest-deep" : n === step ? "bg-forest" : "bg-line",
+              n < step ? "bg-forest-deep" : n === step ? "bg-forest" : "bg-border",
             )}
           />
         ))}
       </div>
 
-      <div className="rounded-2xl border border-line bg-cream p-6">
+      <div className="rounded-2xl border border-border bg-card p-6">
         {error && (
-          <div className="mb-4 rounded-lg bg-rust-light px-3 py-2 text-sm text-rust">{error}</div>
+          <div className="mb-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
         )}
 
         {step === 1 && <StepVan form={form} update={update} island={island} onPickupBlur={geocodePickup} geocoding={geocoding} geocodedLabel={geocodedLabel} />}
@@ -295,11 +295,11 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
           <input type="checkbox" className="h-4 w-4 accent-forest-deep" checked={form.fixedToilet} onChange={(e) => update("fixedToilet", e.target.checked)} />
           Has a fixed toilet
         </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-charcoal">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
           <input type="checkbox" className="h-4 w-4 accent-forest-deep" checked={form.petFriendly} onChange={(e) => update("petFriendly", e.target.checked)} />
           Pets welcome
         </label>
@@ -313,7 +313,7 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
         {form.region && <p className={hintCls}>{island} Island</p>}
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className={labelCls}>Pickup location <span className="font-normal text-stone">(optional)</span></label>
+        <label className={labelCls}>Pickup location <span className="font-normal text-muted-foreground">(optional)</span></label>
         <input
           className={inputCls}
           placeholder="e.g. Christchurch Airport, Rolleston"
@@ -353,9 +353,9 @@ function StepPricing({ form, update }: StepProps) {
         </select>
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className="flex cursor-pointer items-start gap-2 text-sm text-charcoal">
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
           <input type="checkbox" className="mt-0.5 h-4 w-4 accent-forest-deep" checked={form.instantBook} onChange={(e) => update("instantBook", e.target.checked)} />
-          <span>Allow instant book <span className="text-stone">(no manual approval per booking)</span></span>
+          <span>Allow instant book <span className="text-muted-foreground">(no manual approval per booking)</span></span>
         </label>
         <p className={cn(hintCls, "mt-1")}>
           Instant book is offered to guests once you&apos;ve completed 3 trips with an average rating of 4.5★ or better and your identity is verified. Until then, bookings still come to you as requests.
@@ -389,7 +389,7 @@ function StepFeatures({ form, update, toggleFeature, island }: StepProps & { tog
               "rounded-full border px-3 py-1 text-sm transition-colors",
               form.features.includes(f)
                 ? "border-forest-deep bg-forest-deep text-cream"
-                : "border-line bg-white text-charcoal-soft hover:border-forest",
+                : "border-border bg-card text-muted-foreground hover:border-forest",
             )}
           >
             {f}
@@ -400,9 +400,9 @@ function StepFeatures({ form, update, toggleFeature, island }: StepProps & { tog
         <label className={labelCls}>House rules</label>
         <textarea className={cn(inputCls, "min-h-[100px] resize-y")} placeholder="e.g. No smoking. Please return with the same level of fuel." value={form.houseRules} onChange={(e) => update("houseRules", e.target.value)} />
       </div>
-      <hr className="my-5 border-line" />
-      <h3 className="mb-2 font-serif text-base text-charcoal">Review</h3>
-      <ul className="space-y-1 text-sm text-stone">
+      <hr className="my-5 border-border" />
+      <h3 className="mb-2 font-serif text-base text-foreground">Review</h3>
+      <ul className="space-y-1 text-sm text-muted-foreground">
         <li>{form.name} · {form.vanType} · {form.year} · sleeps {form.sleeps}</li>
         <li>{form.region} ({island})</li>
         <li>${form.nightlyRate}/night · min {form.minimumNights} nights{form.instantBook ? " · instant book" : ""}</li>

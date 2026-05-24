@@ -89,10 +89,10 @@ export default async function SavedPage({
   return (
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[1080px]">
-        <h1 className="mb-4 font-serif text-3xl text-forest-deep">Saved</h1>
+        <h1 className="mb-4 font-serif text-3xl text-forest-deep dark:text-cream">Saved</h1>
 
         {/* Tab strip */}
-        <div className="mb-6 flex gap-4 border-b border-line">
+        <div className="mb-6 flex gap-4 border-b border-border">
           {(["vans", "searches"] as Tab[]).map((t) => (
             <Link
               key={t}
@@ -100,8 +100,8 @@ export default async function SavedPage({
               className={cn(
                 "-mb-px pb-2.5 pt-1 text-sm font-medium transition-colors",
                 tab === t
-                  ? "border-b-2 border-forest-deep text-forest-deep"
-                  : "border-b-2 border-transparent text-stone hover:text-charcoal",
+                  ? "border-b-2 border-forest-deep text-forest-deep dark:text-cream dark:border-cream"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
               {t === "vans" ? `Vans (${listings.length})` : `Searches (${savedSearches.length})`}
@@ -112,8 +112,8 @@ export default async function SavedPage({
         {tab === "vans" ? (
           listings.length === 0 ? (
             <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
-              <p className="font-semibold text-charcoal">No saved vans yet</p>
-              <p className="max-w-[40ch] text-sm text-stone">Tap the heart on any listing to save it for later.</p>
+              <p className="font-semibold text-foreground">No saved vans yet</p>
+              <p className="max-w-[40ch] text-sm text-muted-foreground">Tap the heart on any listing to save it for later.</p>
               <Link href="/vans" className={cn(buttonVariants())}>Browse vans</Link>
             </div>
           ) : (

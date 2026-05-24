@@ -46,11 +46,11 @@ export default function ListingActions({ listing }: { listing: VanListing }) {
   const { status } = listing;
 
   return (
-    <div className="rounded-2xl border border-line bg-cream p-6">
-      <h3 className="mb-3 font-serif text-base text-charcoal">Listing actions</h3>
+    <div className="rounded-2xl border border-border bg-card p-6">
+      <h3 className="mb-3 font-serif text-base text-foreground">Listing actions</h3>
 
       {error && (
-        <p className="mb-3 rounded-lg bg-rust-light px-3 py-2 text-sm text-rust">{error}</p>
+        <p className="mb-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -98,7 +98,7 @@ export default function ListingActions({ listing }: { listing: VanListing }) {
       </div>
 
       {status === "pending_review" && (
-        <p className="mt-3 text-sm text-stone">
+        <p className="mt-3 text-sm text-muted-foreground">
           Your listing is being reviewed. You&apos;ll receive an email once a decision is made.
         </p>
       )}
