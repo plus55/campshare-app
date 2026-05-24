@@ -1,33 +1,21 @@
 import type { Badge } from "@/lib/badges";
 
-const COLORS: Record<Badge["kind"], { bg: string; fg: string; border: string }> = {
-  super_host:        { bg: "#fdf0eb", fg: "#a23b1f", border: "#f5c8b5" },
-  responds_reliably: { bg: "#e7f4ec", fg: "#1f7a3a", border: "#cae5d3" },
-  verified:          { bg: "#eef3fb", fg: "#2654a3", border: "#cfdcef" },
+const COLORS: Record<Badge["kind"], string> = {
+  super_host: "border-clay/25 bg-clay/10 text-clay-deep",
+  responds_reliably: "border-moss/20 bg-moss/10 text-moss",
+  verified: "border-forest/20 bg-forest/10 text-forest",
 };
 
 export default function HostBadges({ badges, size = "md" }: { badges: Badge[]; size?: "sm" | "md" }) {
   if (badges.length === 0) return null;
-  const fontSize = size === "sm" ? 11 : 12;
-  const padding = size === "sm" ? "2px 8px" : "4px 10px";
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <div className="flex flex-wrap gap-1.5">
       {badges.map((b) => {
-        const c = COLORS[b.kind];
         return (
           <span
             key={b.kind}
             title={b.description}
-            style={{
-              padding,
-              borderRadius: 999,
-              fontSize,
-              fontWeight: 600,
-              color: c.fg,
-              background: c.bg,
-              border: `1px solid ${c.border}`,
-              whiteSpace: "nowrap",
-            }}
+            className={`whitespace-nowrap rounded-full border font-semibold ${COLORS[b.kind]} ${size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs"}`}
           >
             {b.label}
           </span>

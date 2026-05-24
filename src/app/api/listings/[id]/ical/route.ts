@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
-import { buildIcal, syncIcalFeed } from "@/lib/ical";
+import { buildIcal, syncIcalFeed, validateIcalFeedUrl } from "@/lib/ical";
 import type { IcalEvent } from "@/lib/ical";
 
 function bad(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
-// Public — calendar apps subscribe to this without auth
+// Public: calendar apps subscribe to this without auth.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -45,7 +45,7 @@ export async function GET(
     ...bookingsResult.results.map((b) => ({
       uid: `booking-${b.id}@campshare.co.nz`,
       startMs: b.startDate,
-      endMs: b.endDate + 86_400_000, // iCal DTEND is exclusive
+      endMs: b.endDate + 86_400_000,
       summary: "Booked",
     })),
     ...blocksResult.results.map((b) => ({
@@ -56,7 +56,7 @@ export async function GET(
     })),
   ];
 
-  const body = buildIcal(`${listing.name} — CampShare`, events);
+  const body = buildIcal(`${listing.name} - CampShare`, events);
   const filename = listing.name.replace(/[^a-z0-9]/gi, "_") + ".ics";
 
   return new Response(body, {
@@ -68,7 +68,7 @@ export async function GET(
   });
 }
 
-// Set iCal import URL and trigger an immediate sync
+// Set iCal import URL and trigger an immediate sync.
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -77,7 +77,6 @@ export async function PUT(
   if (!session) return bad("Sign in required", 401);
 
   const { id } = await params;
-
   const listing = await db()
     .prepare("SELECT id FROM van_listing WHERE id = ? AND hostUserId = ?")
     .bind(id, session.user.id)
@@ -85,12 +84,21 @@ export async function PUT(
   if (!listing) return bad("Not found", 404);
 
   const body = (await req.json().catch(() => null)) as { url?: string } | null;
-  const url = body?.url?.trim();
-  if (!url) return bad("url is required");
+  const submittedUrl = body?.url?.trim();
+  if (!submittedUrl) return bad("url is required");
+
+  let url: string;
   try {
-    new URL(url);
+    url = validateIcalFeedUrl(submittedUrl);
   } catch {
-    return bad("Invalid URL");
+    return bad("A public HTTPS iCal feed URL is required.");
+  }
+
+  try {
+    await syncIcalFeed(id, url);
+  } catch (e) {
+    console.error("Initial iCal sync failed:", e);
+    return bad("Initial sync failed. Check that this is a valid iCal feed and try again.", 422);
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -99,17 +107,10 @@ export async function PUT(
     .bind(url, now, id)
     .run();
 
-  try {
-    await syncIcalFeed(id, url);
-  } catch (e) {
-    console.error("Initial iCal sync failed:", e);
-    return bad("Saved URL but initial sync failed — check the URL and try again.", 422);
-  }
-
   return NextResponse.json({ ok: true });
 }
 
-// Clear iCal import URL and remove all ical-sourced blocks
+// Clear iCal import URL and remove all iCal-sourced blocks.
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -118,7 +119,6 @@ export async function DELETE(
   if (!session) return bad("Sign in required", 401);
 
   const { id } = await params;
-
   const listing = await db()
     .prepare("SELECT id FROM van_listing WHERE id = ? AND hostUserId = ?")
     .bind(id, session.user.id)

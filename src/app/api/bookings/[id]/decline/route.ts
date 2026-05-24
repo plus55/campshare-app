@@ -36,23 +36,49 @@ export async function POST(
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   const reason = parsed.success ? (parsed.data.reason?.trim() || null) : null;
 
+  const nowSec = Math.floor(Date.now() / 1000);
+  try {
+    await db()
+      .prepare("INSERT INTO booking_transition_lock (bookingId, operation, createdAt) VALUES (?, 'decline', ?)")
+      .bind(id, nowSec)
+      .run();
+  } catch {
+    return bad("This booking is currently being processed. Please refresh and try again.", 409);
+  }
+
+  const current = await db()
+    .prepare("SELECT status FROM booking WHERE id = ?")
+    .bind(id)
+    .first<{ status: string }>();
+  if (current?.status !== "requested") {
+    await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id).run();
+    return bad("Booking is not in requested state");
+  }
+
   // Cancel the PaymentIntent to release the authorization hold
   if (booking.paymentIntentId) {
     try {
       const s = await stripe();
-      await s.paymentIntents.cancel(booking.paymentIntentId);
+      await s.paymentIntents.cancel(
+        booking.paymentIntentId,
+        {},
+        { idempotencyKey: `booking-decline-authorization-${id}` }
+      );
     } catch (e) {
       console.error("Failed to cancel PaymentIntent on decline", e);
+      await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id).run();
+      return bad("Could not release the payment authorization. Please try again.", 502);
     }
   }
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  await db()
-    .prepare(
-      `UPDATE booking SET status = 'declined', statusReason = ?, respondedAt = ?, updatedAt = ? WHERE id = ?`
-    )
-    .bind(reason, nowSec, nowSec, id)
-    .run();
+  await db().batch([
+    db()
+      .prepare(
+        `UPDATE booking SET status = 'declined', statusReason = ?, respondedAt = ?, updatedAt = ? WHERE id = ?`
+      )
+      .bind(reason, nowSec, nowSec, id),
+    db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id),
+  ]);
 
   const [guest, listing] = await Promise.all([
     db().prepare("SELECT email, name FROM user WHERE id = ?").bind(booking.guestUserId).first<{ email: string; name: string }>(),

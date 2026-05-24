@@ -62,7 +62,7 @@ export default async function VansPage({
     SELECT
       vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
       vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
-      vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
+      vl.minimumNights, NULL AS pickupLat, NULL AS pickupLng, NULL AS pickupLocationText,
       hp.firstName AS hostFirstName,
       u.image      AS hostImage,
       COALESCE(rv.avgRating, NULL) AS avgRating,
@@ -130,7 +130,7 @@ export default async function VansPage({
   };
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ height: "calc(100vh - var(--header-h))" }}>
+    <div className="flex h-[calc(100vh-var(--header-h))] flex-col overflow-hidden">
       <SearchFilters initial={initialFilters} isLoggedIn={!!session} />
       <div className="flex flex-1 overflow-hidden">
         {/* Listing grid */}
@@ -146,16 +146,16 @@ export default async function VansPage({
             ))}
           </div>
           {listings.length === 0 && (
-            <div className="cs-card mt-4 p-10 text-center">
+            <div className="surface-card mt-4 p-10 text-center">
               <p className="mb-2 font-semibold text-charcoal">No vans found</p>
               <p className="text-xs text-stone">Try removing some filters or check back later — more vans are being added.</p>
             </div>
           )}
         </div>
 
-        {/* Map (hidden on mobile via globals.css cs-search-map) */}
+        {/* Map (hidden on mobile via globals.css search-map-panel) */}
         <div
-          className="cs-search-map flex-[0_0_50%] relative border-l border-line"
+          className="search-map-panel flex-[0_0_50%] relative border-l border-line"
         >
           <MapViewClient listings={listings} />
         </div>

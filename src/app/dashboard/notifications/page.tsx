@@ -97,7 +97,7 @@ export default async function NotificationsPage() {
         <p className="mb-6 text-muted-foreground">Your last 50 notifications.</p>
 
         {items.length === 0 ? (
-          <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
+          <div className="surface-card flex flex-col items-center gap-3 py-12 text-center">
             <p className="font-semibold text-foreground">Nothing here yet</p>
             <p className="max-w-[36ch] text-sm text-muted-foreground">
               Booking updates, review prompts, and messages will appear here.
@@ -105,7 +105,7 @@ export default async function NotificationsPage() {
             <Link href="/vans" className="text-sm text-clay hover:text-clay-deep">Browse vans</Link>
           </div>
         ) : (
-          <div className="cs-card overflow-hidden p-0">
+          <div className="surface-card overflow-hidden p-0">
             {items.map((n, i) => (
               <Link
                 key={n.id}

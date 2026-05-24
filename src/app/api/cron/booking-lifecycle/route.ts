@@ -5,6 +5,7 @@ import { stripe } from "@/lib/stripe";
 import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail, sendSavedSearchAlertEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { syncIcalFeed } from "@/lib/ical";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking } from "@/lib/types";
 
 type CfEnv = { CRON_SECRET?: string };
@@ -15,15 +16,27 @@ export async function GET(req: Request) {
   const cfEnv = env as unknown as CfEnv;
   const secret = cfEnv.CRON_SECRET ?? process.env.CRON_SECRET;
 
-  if (secret) {
-    const provided = req.headers.get("x-cron-secret");
-    if (provided !== secret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    console.error("CRON_SECRET is not configured");
+    return NextResponse.json({ error: "Cron is not configured" }, { status: 503 });
+  }
+
+  const provided = req.headers.get("x-cron-secret");
+  if (provided !== secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const nowMs  = Date.now();
   const nowSec = Math.floor(nowMs / 1000);
+
+  const toExpire = await db()
+    .prepare("SELECT * FROM booking WHERE status = 'requested' AND expiresAt < ?")
+    .bind(nowSec)
+    .all<Booking>();
+  let expired = 0;
+  for (const booking of toExpire.results) {
+    if (await expireBookingRequest(booking, nowSec)) expired++;
+  }
 
   // Pass 1: accepted → in_progress when trip has started
   const toStart = await db()
@@ -57,6 +70,7 @@ export async function GET(req: Request) {
   const icalSynced = await runIcalSync();
 
   return NextResponse.json({
+    expired,
     started: toStart.results.length,
     completed: toComplete.results.length,
     alertsSent,
@@ -188,25 +202,41 @@ async function runIcalSync(): Promise<number> {
 }
 
 async function startTrip(booking: Booking, nowSec: number, nowMs: number): Promise<void> {
-  await db()
-    .prepare("UPDATE booking SET status = 'in_progress', startedAt = ?, updatedAt = ? WHERE id = ?")
+  try {
+    await db()
+      .prepare("INSERT INTO booking_transition_lock (bookingId, operation, createdAt) VALUES (?, 'start-trip', ?)")
+      .bind(booking.id, nowSec)
+      .run();
+  } catch {
+    return;
+  }
+
+  const started = await db()
+    .prepare("UPDATE booking SET status = 'in_progress', startedAt = ?, updatedAt = ? WHERE id = ? AND status = 'accepted'")
     .bind(nowSec, nowSec, booking.id)
     .run();
+  if (started.meta.changes === 0) {
+    await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(booking.id).run();
+    return;
+  }
 
   // Create deposit hold PI (manual capture, off_session)
   if (booking.customerStripeId && booking.depositPaymentMethodId) {
     const s = await stripe();
     try {
-      const depositPi = await s.paymentIntents.create({
-        amount: booking.depositCents,
-        currency: "nzd",
-        customer: booking.customerStripeId,
-        payment_method: booking.depositPaymentMethodId,
-        capture_method: "manual",
-        off_session: true,
-        confirm: true,
-        metadata: { bookingId: booking.id, type: "deposit" },
-      });
+      const depositPi = await s.paymentIntents.create(
+        {
+          amount: booking.depositCents,
+          currency: "nzd",
+          customer: booking.customerStripeId,
+          payment_method: booking.depositPaymentMethodId,
+          capture_method: "manual",
+          off_session: true,
+          confirm: true,
+          metadata: { bookingId: booking.id, type: "deposit" },
+        },
+        { idempotencyKey: `booking-deposit-${booking.id}` }
+      );
 
       await db()
         .prepare("UPDATE booking SET depositPaymentIntentId = ?, updatedAt = ? WHERE id = ?")
@@ -237,6 +267,8 @@ async function startTrip(booking: Booking, nowSec: number, nowMs: number): Promi
       console.error(`Failed to create deposit hold for booking ${booking.id}`, e);
     }
   }
+
+  await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(booking.id).run();
 }
 
 async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
@@ -245,9 +277,14 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
   // Release deposit hold
   if (booking.depositPaymentIntentId) {
     try {
-      await s.paymentIntents.cancel(booking.depositPaymentIntentId);
+      await s.paymentIntents.cancel(
+        booking.depositPaymentIntentId,
+        {},
+        { idempotencyKey: `booking-deposit-release-${booking.id}` }
+      );
     } catch (e) {
       console.error(`Failed to cancel deposit PI for booking ${booking.id}`, e);
+      return;
     }
   }
 
@@ -260,57 +297,68 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
       .first<{ stripeAccountId: string | null }>();
 
     if (hp?.stripeAccountId) {
-      const payoutId = crypto.randomUUID();
+      const payoutId = `booking-payout-${booking.id}`;
       await db()
         .prepare(
-          `INSERT INTO payout (id, bookingId, hostUserId, amountCents, status, createdAt, updatedAt)
+          `INSERT OR IGNORE INTO payout (id, bookingId, hostUserId, amountCents, status, createdAt, updatedAt)
            VALUES (?, ?, ?, ?, 'pending', ?, ?)`
         )
         .bind(payoutId, booking.id, booking.hostUserId, payoutAmount, nowSec, nowSec)
         .run();
 
-      try {
-        const transfer = await s.transfers.create({
-          amount: payoutAmount,
-          currency: "nzd",
-          destination: hp.stripeAccountId,
-          metadata: { bookingId: booking.id, payoutId },
-        });
+      const payout = await db()
+        .prepare("SELECT id, status FROM payout WHERE bookingId = ?")
+        .bind(booking.id)
+        .first<{ id: string; status: string }>();
 
-        await db()
-          .prepare("UPDATE payout SET stripeTransferId = ?, status = 'paid', updatedAt = ? WHERE id = ?")
-          .bind(transfer.id, nowSec, payoutId)
-          .run();
+      if (payout && payout.status !== "paid") {
+        try {
+          const transfer = await s.transfers.create(
+            {
+              amount: payoutAmount,
+              currency: "nzd",
+              destination: hp.stripeAccountId,
+              metadata: { bookingId: booking.id, payoutId: payout.id },
+            },
+            { idempotencyKey: `booking-payout-${booking.id}` }
+          );
 
-        const host = await db()
-          .prepare("SELECT email, name FROM user WHERE id = ?")
-          .bind(booking.hostUserId)
-          .first<{ email: string; name: string }>();
-        const listing = await db()
-          .prepare("SELECT name FROM van_listing WHERE id = ?")
-          .bind(booking.vanListingId)
-          .first<{ name: string }>();
+          await db()
+            .prepare("UPDATE payout SET stripeTransferId = ?, status = 'paid', updatedAt = ? WHERE id = ?")
+            .bind(transfer.id, nowSec, payout.id)
+            .run();
 
-        if (host) {
-          await sendPayoutSentEmail({
-            hostEmail: host.email,
-            hostName: host.name,
-            vanName: listing?.name ?? "",
-            bookingId: booking.id,
-            amountCents: payoutAmount,
-          }).catch((e) => console.error("Failed to send payout email", e));
-          await createNotification({
-            userId: booking.hostUserId,
-            type: "payout_sent",
-            payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
-          });
+          const host = await db()
+            .prepare("SELECT email, name FROM user WHERE id = ?")
+            .bind(booking.hostUserId)
+            .first<{ email: string; name: string }>();
+          const listing = await db()
+            .prepare("SELECT name FROM van_listing WHERE id = ?")
+            .bind(booking.vanListingId)
+            .first<{ name: string }>();
+
+          if (host) {
+            await sendPayoutSentEmail({
+              hostEmail: host.email,
+              hostName: host.name,
+              vanName: listing?.name ?? "",
+              bookingId: booking.id,
+              amountCents: payoutAmount,
+            }).catch((e) => console.error("Failed to send payout email", e));
+            await createNotification({
+              userId: booking.hostUserId,
+              type: "payout_sent",
+              payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
+            });
+          }
+        } catch (e) {
+          console.error(`Failed to create Stripe transfer for booking ${booking.id}`, e);
+          await db()
+            .prepare("UPDATE payout SET status = 'failed', updatedAt = ? WHERE id = ?")
+            .bind(nowSec, payout.id)
+            .run();
+          return;
         }
-      } catch (e) {
-        console.error(`Failed to create Stripe transfer for booking ${booking.id}`, e);
-        await db()
-          .prepare("UPDATE payout SET status = 'failed', updatedAt = ? WHERE id = ?")
-          .bind(nowSec, payoutId)
-          .run();
       }
     }
   }

@@ -57,17 +57,6 @@ export async function POST(req: Request) {
   if (listing.hostUserId === session.user.id) return bad("You cannot book your own listing");
   if (nights < listing.minimumNights) return bad(`Minimum stay is ${listing.minimumNights} night${listing.minimumNights !== 1 ? "s" : ""}`);
 
-  // Block check — either side can refuse the relationship
-  const block = await db()
-    .prepare(
-      `SELECT 1 FROM user_block
-       WHERE (blockerUserId = ? AND blockedUserId = ?)
-          OR (blockerUserId = ? AND blockedUserId = ?)`
-    )
-    .bind(session.user.id, listing.hostUserId, listing.hostUserId, session.user.id)
-    .first();
-  if (block) return bad("This booking is not available", 403);
-
   // KYC + age guard (defence in depth — also enforced on /api/bookings/payment-intent)
   const guestUser = await db()
     .prepare("SELECT kycStatus, dateOfBirth FROM user WHERE id = ?")
@@ -86,16 +75,6 @@ export async function POST(req: Request) {
     }
   }
 
-  const overlap = await db()
-    .prepare(
-      `SELECT COUNT(*) AS cnt FROM availability_block
-       WHERE vanListingId = ? AND startDate <= ? AND endDate >= ?`
-    )
-    .bind(listingId, endMs, startMs)
-    .first<{ cnt: number }>();
-
-  if ((overlap?.cnt ?? 0) > 0) return bad("Those dates are not available");
-
   // Verify the PaymentIntent is properly authorized
   const s = await stripe();
   const pi = await s.paymentIntents.retrieve(paymentIntentId);
@@ -104,14 +83,52 @@ export async function POST(req: Request) {
     return bad("Payment authorization not confirmed. Please complete payment before requesting.");
   }
 
-  // Verify PI belongs to this user
+  const customerStripeId = typeof pi.customer === "string" ? pi.customer : pi.customer?.id ?? null;
+  const paymentProfile = await db()
+    .prepare("SELECT stripeCustomerId FROM user_payment_profile WHERE userId = ?")
+    .bind(session.user.id)
+    .first<{ stripeCustomerId: string }>();
+  const uniqueAddonIds = Array.from(new Set(selectedAddonIds)).sort();
+  const authorizationBelongsToBooking =
+    !!paymentProfile &&
+    customerStripeId === paymentProfile.stripeCustomerId &&
+    pi.metadata.userId === session.user.id &&
+    pi.metadata.listingId === listingId &&
+    pi.metadata.hostUserId === listing.hostUserId &&
+    pi.metadata.startDate === startDate &&
+    pi.metadata.endDate === endDate &&
+    pi.metadata.guestCount === String(guestCount);
+  if (!authorizationBelongsToBooking) {
+    return bad("Payment authorization does not match this booking.");
+  }
+
+  async function releaseRejectedAuthorization(reason: string) {
+    await s.paymentIntents.cancel(
+      paymentIntentId,
+      {},
+      { idempotencyKey: `booking-rejected-${reason}-${paymentIntentId}` }
+    );
+  }
+
+  if (
+    uniqueAddonIds.length !== selectedAddonIds.length ||
+    (pi.metadata.addonIds ?? "") !== uniqueAddonIds.join(",")
+  ) {
+    try {
+      await releaseRejectedAuthorization("addons");
+    } catch (e) {
+      console.error("Failed to release invalid-selection authorization", e);
+      return bad("The selected add-ons changed and the payment authorization could not be released automatically. Please contact support.", 502);
+    }
+    return bad("Payment authorization does not match the selected add-ons. Please start the booking again.");
+  }
+
   const paymentMethod = pi.payment_method as string | null;
-  const customerStripeId = pi.customer as string | null;
 
   // Resolve selected add-ons to verify they're valid for this listing
   let addonTotalCents = 0;
   let resolvedAddons: Array<{ addonId: string; name: string; priceNZDCents: number }> = [];
-  if (selectedAddonIds.length > 0) {
+  if (uniqueAddonIds.length > 0) {
     const rows = await db()
       .prepare(
         `SELECT la.addonId, a.name, la.priceNZDCents
@@ -122,9 +139,18 @@ export async function POST(req: Request) {
       .bind(listingId)
       .all<{ addonId: string; name: string; priceNZDCents: number }>();
     const available = new Map(rows.results.map((r) => [r.addonId, r]));
-    resolvedAddons = selectedAddonIds
+    resolvedAddons = uniqueAddonIds
       .map((aid) => available.get(aid))
       .filter((r): r is { addonId: string; name: string; priceNZDCents: number } => !!r);
+    if (resolvedAddons.length !== uniqueAddonIds.length) {
+      try {
+        await releaseRejectedAuthorization("addons-unavailable");
+      } catch (e) {
+        console.error("Failed to release unavailable-add-on authorization", e);
+        return bad("An add-on is no longer available and the payment authorization could not be released automatically. Please contact support.", 502);
+      }
+      return bad("Invalid add-on selection");
+    }
     addonTotalCents = resolvedAddons.reduce((sum, r) => sum + r.priceNZDCents, 0);
   }
 
@@ -132,7 +158,52 @@ export async function POST(req: Request) {
 
   // Sanity-check PI amount matches expected total (including add-ons)
   if (pi.amount !== totals.totalCents) {
+    try {
+      await releaseRejectedAuthorization("amount");
+    } catch (e) {
+      console.error("Failed to release amount-mismatch authorization", e);
+      return bad("The booking price changed and the payment authorization could not be released automatically. Please contact support.", 502);
+    }
     return bad("Payment amount mismatch. Please start the booking again.");
+  }
+
+  const block = await db()
+    .prepare(
+      `SELECT 1 FROM user_block
+       WHERE (blockerUserId = ? AND blockedUserId = ?)
+          OR (blockerUserId = ? AND blockedUserId = ?)`
+    )
+    .bind(session.user.id, listing.hostUserId, listing.hostUserId, session.user.id)
+    .first();
+  if (block) {
+    try {
+      await releaseRejectedAuthorization("blocked");
+    } catch (e) {
+      console.error("Failed to release blocked-booking authorization", e);
+      return bad("This booking is unavailable and the payment authorization could not be released automatically. Please contact support.", 502);
+    }
+    return bad("This booking is not available", 403);
+  }
+
+  const overlap = await db()
+    .prepare(
+      `SELECT COUNT(*) AS cnt FROM availability_block
+       WHERE vanListingId = ? AND startDate <= ? AND endDate >= ?`
+    )
+    .bind(listingId, endMs, startMs)
+    .first<{ cnt: number }>();
+  if ((overlap?.cnt ?? 0) > 0) {
+    try {
+      await s.paymentIntents.cancel(
+        paymentIntentId,
+        {},
+        { idempotencyKey: `booking-unavailable-${paymentIntentId}` }
+      );
+    } catch (e) {
+      console.error("Failed to release unavailable booking authorization", e);
+      return bad("Those dates are unavailable and the payment authorization could not be released automatically. Please contact support.", 502);
+    }
+    return bad("Those dates are not available", 409);
   }
 
   // Instant-book is only offered if the host meets eligibility (KYC + 3 completed
@@ -147,8 +218,9 @@ export async function POST(req: Request) {
   // Atomicity: insert the booking row (+ addons, + availability block for IB)
   // BEFORE calling Stripe capture. If the worker dies mid-flight after capture,
   // we have a booking row to reconcile against. The booking starts in
-  // 'pending_capture' for IB; the finalise batch promotes it to 'accepted'.
-  const initialStatus = isInstantBook ? "pending_capture" : "requested";
+  // Instant booking reserves dates while capture is attempted, then promotes
+  // the requested booking to accepted only after Stripe confirms capture.
+  const initialStatus = "requested";
 
   const insertStmts = [
     db()
@@ -186,20 +258,46 @@ export async function POST(req: Request) {
     insertStmts.push(
       db()
         .prepare(
+          "INSERT INTO booking_transition_lock (bookingId, operation, createdAt) VALUES (?, 'accept', ?)"
+        )
+        .bind(bookingId, now),
+      db()
+        .prepare(
           `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
            VALUES (?, ?, ?, ?, 'booking', ?, ?)`
         )
         .bind(blockId, listingId, startMs, endMs, bookingId, now)
     );
   }
-  await db().batch(insertStmts);
+  try {
+    await db().batch(insertStmts);
+  } catch (err) {
+    if (isInstantBook) {
+      console.error("Instant-book reservation failed", err);
+      try {
+        await s.paymentIntents.cancel(
+          paymentIntentId,
+          {},
+          { idempotencyKey: `booking-unavailable-${bookingId}` }
+        );
+      } catch (cancelErr) {
+        console.error("PI cancel after unavailable instant-book dates failed", cancelErr);
+      }
+      return bad("Those dates are no longer available", 409);
+    }
+    throw err;
+  }
 
   // Instant-book: capture, then atomic finalise (or rollback / log).
   if (isInstantBook) {
     let captureResult;
     let captureThrew = false;
     try {
-      captureResult = await s.paymentIntents.capture(paymentIntentId);
+      captureResult = await s.paymentIntents.capture(
+        paymentIntentId,
+        {},
+        { idempotencyKey: `booking-capture-${bookingId}` }
+      );
     } catch (err: unknown) {
       captureThrew = true;
       console.error("Stripe capture threw", err);
@@ -210,23 +308,32 @@ export async function POST(req: Request) {
       try {
         await db().batch([
           db().prepare("DELETE FROM availability_block WHERE bookingId = ?").bind(bookingId),
+          db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(bookingId),
           db().prepare("DELETE FROM booking_addon WHERE bookingId = ?").bind(bookingId),
           db().prepare("DELETE FROM booking WHERE id = ?").bind(bookingId),
         ]);
       } catch (e) {
         console.error("Rollback after failed capture failed", e);
       }
-      try { await s.paymentIntents.cancel(paymentIntentId); } catch (e) { console.error("PI cancel after failed capture failed", e); }
+      try {
+        await s.paymentIntents.cancel(
+          paymentIntentId,
+          {},
+          { idempotencyKey: `booking-capture-failed-${bookingId}` }
+        );
+      } catch (e) { console.error("PI cancel after failed capture failed", e); }
       return NextResponse.json({ error: "Payment could not be processed — please try again" }, { status: 402 });
     }
 
     // Capture succeeded — promote to 'accepted'. If this fails, money is
-    // captured but the row is still 'pending_capture'. Log for the admin sweep.
+    // captured but the row is still reserved in requested state. Log for the admin sweep.
     try {
-      await db()
-        .prepare("UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?")
-        .bind(now, now, now, bookingId)
-        .run();
+      await db().batch([
+        db()
+          .prepare("UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?")
+          .bind(now, now, now, bookingId),
+        db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(bookingId),
+      ]);
     } catch (err) {
       try {
         await db()

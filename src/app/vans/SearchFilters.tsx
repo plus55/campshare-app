@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 const fieldCls = "flex flex-col gap-1";
 const fieldLabelCls = "text-[11px] font-medium text-muted-foreground";
 const selectCls =
-  "h-9 rounded-lg border border-input bg-transparent px-2.5 text-[13px] text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+  "h-9 rounded-lg border border-input bg-transparent px-2.5 text-[13px] text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 const checkboxLabelCls = "flex cursor-pointer items-center gap-2 text-[13px] text-foreground";
 
 export interface FilterValues {
@@ -100,53 +100,53 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
 
   return (
     <div className="flex flex-wrap items-end gap-2.5 border-b border-border bg-card px-4 py-3">
-      <div className={fieldCls} style={{ minWidth: 140 }}>
-        <Label className={fieldLabelCls}>Region</Label>
-        <select className={selectCls} value={f.region} onChange={(e) => handleSelect("region", e.target.value)}>
+      <div className={`${fieldCls} min-w-[140px]`}>
+        <Label htmlFor="search-region" className={fieldLabelCls}>Region</Label>
+        <select id="search-region" className={selectCls} value={f.region} onChange={(e) => handleSelect("region", e.target.value)}>
           <option value="">All regions</option>
           {NZ_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
 
-      <div className={fieldCls} style={{ minWidth: 130 }}>
-        <Label className={fieldLabelCls}>Van type</Label>
-        <select className={selectCls} value={f.vanType} onChange={(e) => handleSelect("vanType", e.target.value)}>
+      <div className={`${fieldCls} min-w-[130px]`}>
+        <Label htmlFor="search-van-type" className={fieldLabelCls}>Van type</Label>
+        <select id="search-van-type" className={selectCls} value={f.vanType} onChange={(e) => handleSelect("vanType", e.target.value)}>
           <option value="">All types</option>
           {VAN_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
       </div>
 
-      <div className={fieldCls} style={{ minWidth: 90 }}>
-        <Label className={fieldLabelCls}>Sleeps</Label>
-        <select className={selectCls} value={f.sleeps} onChange={(e) => handleSelect("sleeps", e.target.value)}>
+      <div className={`${fieldCls} min-w-[90px]`}>
+        <Label htmlFor="search-sleeps" className={fieldLabelCls}>Sleeps</Label>
+        <select id="search-sleeps" className={selectCls} value={f.sleeps} onChange={(e) => handleSelect("sleeps", e.target.value)}>
           <option value="">Any</option>
           {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}+</option>)}
         </select>
       </div>
 
-      <div className={fieldCls} style={{ minWidth: 90 }}>
-        <Label className={fieldLabelCls}>Min $</Label>
-        <Input type="number" min={0} className="h-9 text-[13px]" placeholder="0" value={f.minRate} onChange={(e) => update("minRate", e.target.value)} />
+      <div className={`${fieldCls} min-w-[90px]`}>
+        <Label htmlFor="search-min-rate" className={fieldLabelCls}>Min $</Label>
+        <Input id="search-min-rate" type="number" min={0} className="h-9 text-[13px]" placeholder="0" value={f.minRate} onChange={(e) => update("minRate", e.target.value)} />
       </div>
 
-      <div className={fieldCls} style={{ minWidth: 90 }}>
-        <Label className={fieldLabelCls}>Max $</Label>
-        <Input type="number" min={0} className="h-9 text-[13px]" placeholder="Any" value={f.maxRate} onChange={(e) => update("maxRate", e.target.value)} />
+      <div className={`${fieldCls} min-w-[90px]`}>
+        <Label htmlFor="search-max-rate" className={fieldLabelCls}>Max $</Label>
+        <Input id="search-max-rate" type="number" min={0} className="h-9 text-[13px]" placeholder="Any" value={f.maxRate} onChange={(e) => update("maxRate", e.target.value)} />
       </div>
 
-      <div className={fieldCls} style={{ minWidth: 130 }}>
-        <Label className={fieldLabelCls}>Check in</Label>
-        <Input type="date" className="h-9 text-[13px]" value={f.startDate} onChange={(e) => update("startDate", e.target.value)} />
+      <div className={`${fieldCls} min-w-[130px]`}>
+        <Label htmlFor="search-start-date" className={fieldLabelCls}>Check in</Label>
+        <Input id="search-start-date" type="date" className="h-9 text-[13px]" value={f.startDate} onChange={(e) => update("startDate", e.target.value)} />
       </div>
 
-      <div className={fieldCls} style={{ minWidth: 130 }}>
-        <Label className={fieldLabelCls}>Check out</Label>
-        <Input type="date" className="h-9 text-[13px]" value={f.endDate} onChange={(e) => update("endDate", e.target.value)} />
+      <div className={`${fieldCls} min-w-[130px]`}>
+        <Label htmlFor="search-end-date" className={fieldLabelCls}>Check out</Label>
+        <Input id="search-end-date" type="date" className="h-9 text-[13px]" value={f.endDate} onChange={(e) => update("endDate", e.target.value)} />
       </div>
 
-      <div className={fieldCls} style={{ minWidth: 130 }}>
-        <Label className={fieldLabelCls}>Sort by</Label>
-        <select className={selectCls} value={f.sort} onChange={(e) => handleSelect("sort", e.target.value)}>
+      <div className={`${fieldCls} min-w-[130px]`}>
+        <Label htmlFor="search-sort" className={fieldLabelCls}>Sort by</Label>
+        <select id="search-sort" className={selectCls} value={f.sort} onChange={(e) => handleSelect("sort", e.target.value)}>
           <option value="newest">Newest</option>
           <option value="rating">Top rated</option>
         </select>

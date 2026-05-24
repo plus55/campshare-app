@@ -78,5 +78,5 @@ export default function PickupMap({ lat, lng }: Props) {
     };
   }, [lat, lng]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: 260, borderRadius: "var(--radius)", overflow: "hidden" }} />;
+  return <div ref={containerRef} className="h-[260px] w-full overflow-hidden rounded-[var(--radius)]" />;
 }

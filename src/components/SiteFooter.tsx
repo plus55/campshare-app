@@ -13,7 +13,7 @@ export default function SiteFooter() {
           {/* Brand column */}
           <div>
             <div className="flex items-center gap-[0.6rem] mb-5">
-              <span className="brand-mark" style={{ width: 30, height: 30 }} aria-hidden="true" />
+              <span className="brand-mark size-[30px]" aria-hidden="true" />
               <strong className="font-serif text-[1.3rem] text-cream font-medium">CampShare</strong>
             </div>
             <p className="text-cream/60 max-w-[28ch] text-[0.9rem] leading-relaxed m-0">

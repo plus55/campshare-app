@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const selectCls =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 const errorCls = "rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
 
 interface Props {
@@ -65,36 +66,32 @@ export default function DisputeForm({ bookingId }: Props) {
         Raise a dispute
       </Button>
 
-      {open && (
-        <div
-          role="dialog" aria-modal="true"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
-        >
-          <div className="w-full max-w-[520px] rounded-2xl border border-border bg-card p-6 shadow-lg">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[520px] rounded-2xl border border-border bg-card p-6 shadow-lg">
             {done ? (
               <>
-                <h3 className="mb-2 font-serif text-lg text-forest-deep dark:text-cream">Dispute raised</h3>
-                <p className="mb-4 text-sm text-muted-foreground">CampShare admin will review and contact you within 2 business days.</p>
+                <DialogTitle className="mb-2 font-serif text-lg text-forest-deep">Dispute raised</DialogTitle>
+                <DialogDescription className="mb-4">CampShare admin will review and contact you within 2 business days.</DialogDescription>
                 <Button type="button" onClick={() => setOpen(false)}>Close</Button>
               </>
             ) : (
               <>
-                <h3 className="mb-1.5 font-serif text-lg text-forest-deep dark:text-cream">Raise a dispute</h3>
-                <p className="text-[13px] text-muted-foreground">
+                <DialogTitle className="mb-1.5 font-serif text-lg text-forest-deep">Raise a dispute</DialogTitle>
+                <DialogDescription className="text-[13px]">
                   Only available within 7 days of trip completion. Admin reviews the case and decides on the security deposit.
-                </p>
+                </DialogDescription>
 
                 <div className="mt-3 flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-foreground">Reason</label>
-                  <select className={selectCls} value={reason} onChange={(e) => setReason(e.target.value)}>
+                  <label htmlFor="dispute-reason" className="text-sm font-medium text-foreground">Reason</label>
+                  <select id="dispute-reason" className={selectCls} value={reason} onChange={(e) => setReason(e.target.value)}>
                     {REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
 
                 <div className="mt-3 flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-foreground">What happened?</label>
+                  <label htmlFor="dispute-details" className="text-sm font-medium text-foreground">What happened?</label>
                   <Textarea
+                    id="dispute-details"
                     className="min-h-[140px]"
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
@@ -104,7 +101,7 @@ export default function DisputeForm({ bookingId }: Props) {
                   />
                 </div>
 
-                {error && <p className={cn(errorCls, "mt-3")}>{error}</p>}
+                {error && <p className={cn(errorCls, "mt-3")} role="alert" aria-live="polite">{error}</p>}
 
                 <div className="mt-3 flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
@@ -114,9 +111,8 @@ export default function DisputeForm({ bookingId }: Props) {
                 </div>
               </>
             )}
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

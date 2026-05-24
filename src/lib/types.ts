@@ -68,7 +68,6 @@ export interface AvailabilityBlock {
 }
 
 export type BookingStatus =
-  | "pending_capture"
   | "requested"
   | "accepted"
   | "in_progress"

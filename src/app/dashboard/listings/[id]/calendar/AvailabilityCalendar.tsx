@@ -130,7 +130,7 @@ export default function AvailabilityCalendar({ listingId, initialBlocks, icalFee
 
   return (
     <>
-      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>}
+      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert" aria-live="polite">{error}</div>}
 
       {/* Calendar grid */}
       <div className="flex flex-col gap-8">
@@ -184,7 +184,7 @@ export default function AvailabilityCalendar({ listingId, initialBlocks, icalFee
           <span className="inline-block h-2.5 w-2.5 rounded-sm bg-clay" /> Blocked by you
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--sand-300)" }} /> External calendar
+          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-sand-warm" /> External calendar
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-sm bg-forest" /> Booked
@@ -201,7 +201,9 @@ export default function AvailabilityCalendar({ listingId, initialBlocks, icalFee
         Subscribe to this URL in Google Calendar, Apple Calendar, or any app that supports iCal to see your bookings and blocked dates.
       </p>
       <div className="flex items-center gap-2">
+        <label htmlFor="calendar-export-url" className="sr-only">Export calendar URL</label>
         <Input
+          id="calendar-export-url"
           readOnly
           className="h-9 flex-1 text-[13px]"
           value={exportUrl}
@@ -219,12 +221,14 @@ export default function AvailabilityCalendar({ listingId, initialBlocks, icalFee
         Paste an iCal feed URL (e.g. from Airbnb or another platform) to automatically block those dates here. Synced daily.
       </p>
       {importMsg && (
-        <div className={`mb-2.5 rounded-lg px-3.5 py-2.5 text-sm ${isError(importMsg) ? "bg-destructive/10 text-destructive" : "bg-moss/10 text-moss"}`}>
+        <div className={`mb-2.5 rounded-lg px-3.5 py-2.5 text-sm ${isError(importMsg) ? "bg-destructive/10 text-destructive" : "bg-moss/10 text-moss"}`} aria-live="polite">
           {importMsg}
         </div>
       )}
       <div className="flex gap-2">
+        <label htmlFor="calendar-import-url" className="sr-only">External calendar URL</label>
         <Input
+          id="calendar-import-url"
           type="url"
           className="h-9 flex-1 text-[13px]"
           placeholder="https://www.airbnb.com/calendar/ical/…"

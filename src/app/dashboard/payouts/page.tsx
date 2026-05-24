@@ -58,7 +58,7 @@ export default async function PayoutsPage({
     try {
       const s = await stripe();
       const account = await s.accounts.retrieve(hp.stripeAccountId);
-      if (account.charges_enabled) {
+      if (account.charges_enabled && account.payouts_enabled) {
         const nowSec = Math.floor(Date.now() / 1000);
         await database
           .prepare("UPDATE host_profile SET stripeOnboardingCompleted = 1, updatedAt = ? WHERE userId = ?")
@@ -124,7 +124,7 @@ export default async function PayoutsPage({
         </div>
 
         {paidPayouts.length > 0 && (
-          <div className="cs-card mb-6">
+          <div className="surface-card mb-6">
             <p className="mb-4 text-lg font-semibold text-foreground">Earnings — {periodLabel(period)}</p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
               <div>
@@ -151,11 +151,11 @@ export default async function PayoutsPage({
         )}
 
         {payouts.length === 0 ? (
-          <div className="cs-card">
+          <div className="surface-card">
             <p className="text-muted-foreground">No payouts in this period. Payouts are issued 24 hours after each trip ends.</p>
           </div>
         ) : (
-          <div className="cs-card">
+          <div className="surface-card">
             <p className="mb-3 text-xs text-muted-foreground">Click a row to see the per-booking breakdown.</p>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">

@@ -19,19 +19,10 @@ export default function SignupPage() {
   const [loading, setLoading] = useState<"email" | "google" | "magic" | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
-  async function verifyBot(): Promise<boolean> {
+  function verifyBot(): boolean {
     if (!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) return true;
     if (!turnstileToken) {
       setError("Please wait for the security check to complete.");
-      return false;
-    }
-    const res = await fetch("/api/verify-turnstile", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token: turnstileToken }),
-    });
-    if (!res.ok) {
-      setError("Security check failed. Please refresh and try again.");
       return false;
     }
     return true;
@@ -39,10 +30,13 @@ export default function SignupPage() {
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
-    if (!(await verifyBot())) return;
+    if (!verifyBot()) return;
     setLoading("email");
     setError(null);
-    const res = await signUp.email({ name, email, password });
+    const res = await signUp.email(
+      { name, email, password },
+      { headers: { "x-turnstile-token": turnstileToken ?? "" } }
+    );
     setLoading(null);
     if (res.error) {
       setError(res.error.message ?? "Unable to create account.");
@@ -62,10 +56,13 @@ export default function SignupPage() {
       setError("Enter your email to receive a magic link.");
       return;
     }
-    if (!(await verifyBot())) return;
+    if (!verifyBot()) return;
     setLoading("magic");
     setError(null);
-    const res = await signIn.magicLink({ email, callbackURL: "/dashboard" });
+    const res = await signIn.magicLink(
+      { email, callbackURL: "/dashboard" },
+      { headers: { "x-turnstile-token": turnstileToken ?? "" } }
+    );
     setLoading(null);
     if (res.error) {
       setError(res.error.message ?? "Couldn't send magic link.");

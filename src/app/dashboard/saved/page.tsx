@@ -38,7 +38,7 @@ export default async function SavedPage({
         `SELECT
           vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
           vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
-          vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
+          vl.minimumNights, NULL AS pickupLat, NULL AS pickupLng, NULL AS pickupLocationText,
           hp.firstName AS hostFirstName,
           u.image      AS hostImage,
           COALESCE(rv.avgRating, NULL) AS avgRating,
@@ -111,7 +111,7 @@ export default async function SavedPage({
 
         {tab === "vans" ? (
           listings.length === 0 ? (
-            <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
+            <div className="surface-card flex flex-col items-center gap-3 py-12 text-center">
               <p className="font-semibold text-foreground">No saved vans yet</p>
               <p className="max-w-[40ch] text-sm text-muted-foreground">Tap the heart on any listing to save it for later.</p>
               <Link href="/vans" className={cn(buttonVariants())}>Browse vans</Link>

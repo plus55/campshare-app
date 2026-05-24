@@ -16,6 +16,7 @@ import ShareButton from "./ShareButton";
 import WishlistHeart from "@/components/WishlistHeart";
 import HostBadges from "@/components/HostBadges";
 import { getBadgesForHost, isInstantBookEligible } from "@/lib/badges";
+import { REGION_COORDS } from "@/lib/constants";
 
 interface ListingWithHost extends VanListing {
   hostFirstName: string;
@@ -114,6 +115,7 @@ export default async function VanPage({
   try { features = JSON.parse(listing.features) as string[]; } catch { features = []; }
 
   const nightlyDollars = Math.round(listing.nightlyRate / 100);
+  const publicPickupCoords = REGION_COORDS[listing.region];
 
   const galleryPhotos = photosResult.results
     .map((p) => {
@@ -157,13 +159,13 @@ export default async function VanPage({
 
           {/* LEFT */}
           <div className="flex flex-col gap-4">
-            <div className="cs-card">
+            <div className="surface-card">
               <h2 className="mb-3 font-serif text-xl text-forest-deep">About this van</h2>
               <p className="m-0 whitespace-pre-wrap text-charcoal-soft">{listing.description}</p>
             </div>
 
             {features.length > 0 && (
-              <div className="cs-card">
+              <div className="surface-card">
                 <h2 className="mb-3 font-serif text-xl text-forest-deep">Features</h2>
                 <div className="flex flex-wrap gap-2">
                   {features.map((f) => (
@@ -176,33 +178,33 @@ export default async function VanPage({
             )}
 
             {listing.houseRules && (
-              <div className="cs-card">
+              <div className="surface-card">
                 <h2 className="mb-3 font-serif text-xl text-forest-deep">House rules</h2>
                 <p className="m-0 whitespace-pre-wrap text-stone">{listing.houseRules}</p>
               </div>
             )}
 
             {blocksResult.results.length > 0 && (
-              <div className="cs-card">
+              <div className="surface-card">
                 <h2 className="mb-3 font-serif text-xl text-forest-deep">Availability</h2>
                 <ReadOnlyCalendar blocks={blocksResult.results} />
               </div>
             )}
 
-            {listing.pickupLat && listing.pickupLng && (
-              <div className="cs-card">
+            {publicPickupCoords && (
+              <div className="surface-card">
                 <h2 className="mb-3 font-serif text-xl text-forest-deep">Pickup area</h2>
                 <p className="mb-3 text-xs text-stone">
-                  Exact pickup location shared after booking is confirmed.
+                  Approximate pickup region shown. Exact pickup location is shared after booking is confirmed.
                 </p>
-                <PickupMapClient lat={listing.pickupLat} lng={listing.pickupLng} />
+                <PickupMapClient lat={publicPickupCoords.lat} lng={publicPickupCoords.lng} />
               </div>
             )}
 
             <ListingReviews listingId={listing.id} />
             <SimilarListings region={listing.region} excludeId={listing.id} />
 
-            <div className="cs-card">
+            <div className="surface-card">
               <h2 className="mb-3 font-serif text-xl text-forest-deep">About the host</h2>
               <div className={cn("flex items-center gap-3", listing.hostBio ? "mb-3" : "")}>
                 {listing.hostImage ? (
@@ -235,7 +237,7 @@ export default async function VanPage({
 
           {/* RIGHT — sticky booking widget */}
           <div className="pdp-right">
-            <div className="cs-card" id="book-form">
+            <div className="surface-card" id="book-form">
               <div className="mb-4 flex items-baseline justify-between">
                 <p className="m-0 text-[22px] font-bold text-charcoal">
                   ${nightlyDollars}

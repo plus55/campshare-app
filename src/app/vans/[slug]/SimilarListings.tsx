@@ -16,7 +16,7 @@ export default async function SimilarListings({ region, excludeId }: Props) {
       `SELECT
         vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
         vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook, vl.hostUserId,
-        vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
+        vl.minimumNights, NULL AS pickupLat, NULL AS pickupLng, NULL AS pickupLocationText,
         hp.firstName AS hostFirstName,
         u.image      AS hostImage,
         COALESCE(rv.avgRating, NULL) AS avgRating,
@@ -68,7 +68,7 @@ export default async function SimilarListings({ region, excludeId }: Props) {
   }));
 
   return (
-    <div className="cs-card mt-4">
+    <div className="surface-card mt-4">
       <h2 className="mb-4 font-serif text-xl text-forest-deep">More vans in {region}</h2>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
         {enriched.map((l) => <ListingCard key={l.id} listing={l} />)}

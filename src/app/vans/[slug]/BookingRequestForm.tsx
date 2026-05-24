@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import AuthModal from "@/components/AuthModal";
@@ -167,7 +166,7 @@ function PaymentStep({
 
       <PaymentElement />
 
-      {error && <p className={errorCls}>{error}</p>}
+      {error && <p className={errorCls} role="alert" aria-live="polite">{error}</p>}
 
       <Button
         className="w-full"
@@ -221,7 +220,6 @@ export function BookingRequestForm(props: Props) {
 }
 
 function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, instantBook, listingAddons, isLoggedIn }: Props) {
-  const { resolvedTheme } = useTheme();
   const [step, setStep] = useState<"details" | "payment">("details");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate]     = useState("");
@@ -295,7 +293,7 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
         options={{
           clientSecret,
           appearance: {
-            theme: resolvedTheme === "dark" ? "night" : "stripe",
+            theme: "stripe",
             variables: { colorPrimary: "#c2613a", borderRadius: "8px" },
           },
         }}
@@ -328,34 +326,37 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
           subheading="Create an account or sign in to confirm your dates."
         />
       )}
-      {error && <p className={errorCls}>{error}</p>}
+      {error && <p className={errorCls} role="alert" aria-live="polite">{error}</p>}
 
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className={fieldLabelCls}>Check-in</span>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="booking-start-date" className={fieldLabelCls}>Check-in</label>
           <Input
+            id="booking-start-date"
             type="date"
             className="h-9"
             min={todayString()}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className={fieldLabelCls}>Check-out</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="booking-end-date" className={fieldLabelCls}>Check-out</label>
           <Input
+            id="booking-end-date"
             type="date"
             className="h-9"
             min={startDate || todayString()}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
-        </label>
+        </div>
       </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className={fieldLabelCls}>Guests</span>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="booking-guest-count" className={fieldLabelCls}>Guests</label>
         <Input
+          id="booking-guest-count"
           type="number"
           className="h-9"
           min={1}
@@ -363,7 +364,7 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
           value={guestCount}
           onChange={(e) => setGuestCount(Math.max(1, Number(e.target.value)))}
         />
-      </label>
+      </div>
 
       {listingAddons.length > 0 && (
         <div>
@@ -396,15 +397,16 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
         </div>
       )}
 
-      <label className="flex flex-col gap-1.5">
-        <span className={fieldLabelCls}>Message to host (optional)</span>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="booking-message" className={fieldLabelCls}>Message to host (optional)</label>
         <Textarea
+          id="booking-message"
           className="min-h-20"
           placeholder="Introduce yourself and share any details about your trip…"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
-      </label>
+      </div>
 
       {nights > 0 && nightlyRateCents > 0 && (
         <p className="text-sm text-muted-foreground">

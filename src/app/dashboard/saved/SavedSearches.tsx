@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 interface SavedSearch {
   id: string;
@@ -62,9 +62,7 @@ export function SavedSearches({ initial }: { initial: SavedSearch[] }) {
         <p className="mb-5 text-[13px] text-muted-foreground">
           Apply filters on Browse vans, then tap &ldquo;Save search&rdquo; to get email alerts when new matching vans are listed.
         </p>
-        <Button asChild>
-          <Link href="/vans">Browse vans</Link>
-        </Button>
+        <Link href="/vans" className={buttonVariants()}>Browse vans</Link>
       </div>
     );
   }
@@ -84,9 +82,7 @@ export function SavedSearches({ initial }: { initial: SavedSearch[] }) {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/vans?${filtersToQueryString(s.filters)}`}>Run</Link>
-            </Button>
+            <Link href={`/vans?${filtersToQueryString(s.filters)}`} className={buttonVariants({ variant: "outline", size: "sm" })}>Run</Link>
             <Button
               type="button"
               variant="outline"

@@ -45,7 +45,7 @@ const FAQS = [
 export default function HomepageFaq() {
   return (
     <section className="bg-cream py-[clamp(3rem,6vw,5rem)]">
-      <div className="wrap" style={{ maxWidth: 880 }}>
+      <div className="wrap max-w-[880px]">
         <h2 className="mb-[clamp(2rem,4vw,3rem)] text-center text-[clamp(1.8rem,3vw,2.4rem)]">
           Common questions
         </h2>

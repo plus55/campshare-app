@@ -205,7 +205,7 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-4">
 
             {/* Next booking card */}
-            <div className="cs-card">
+            <div className="surface-card">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="m-0 font-serif text-lg text-forest-deep dark:text-cream">Next booking</h2>
                 <Link href="/dashboard/bookings" className="text-sm text-clay hover:text-clay-deep">All bookings →</Link>
@@ -232,7 +232,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Listings card */}
-            <div className="cs-card">
+            <div className="surface-card">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="m-0 font-serif text-lg text-forest-deep dark:text-cream">Your listings</h2>
                 <Link href="/dashboard/listings/new" className={cn(buttonVariants({ size: "sm" }))}>+ New listing</Link>
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-4">
 
             {/* Payouts mini-card */}
-            <div className="cs-card px-6 py-5">
+            <div className="surface-card px-6 py-5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="m-0 flex items-center gap-1.5 font-serif text-base text-forest-deep dark:text-cream">
                   <Receipt size={15} className="text-muted-foreground" /> Payouts
@@ -304,7 +304,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Message templates */}
-            <div className="cs-card px-6 py-5">
+            <div className="surface-card px-6 py-5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="m-0 flex items-center gap-1.5 font-serif text-base text-forest-deep dark:text-cream">
                   <MessageSquare size={15} className="text-muted-foreground" /> Templates
@@ -319,7 +319,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Profile + account */}
-            <div className="cs-card px-6 py-5">
+            <div className="surface-card px-6 py-5">
               <div className="mb-3">
                 <p className="mb-0.5 text-sm font-semibold text-foreground">{profile.firstName} {profile.lastName}</p>
                 <p className="mb-1.5 text-xs text-muted-foreground">{session.user.email}</p>
@@ -332,7 +332,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Quick links */}
-            <div className="cs-card px-6 py-5">
+            <div className="surface-card px-6 py-5">
               <h2 className="mb-3 font-serif text-[15px] text-forest-deep dark:text-cream">More</h2>
               <div className="flex flex-col gap-1.5">
                 <Link href="/trips" className="flex items-center gap-1.5 py-1 text-sm text-muted-foreground hover:text-foreground">

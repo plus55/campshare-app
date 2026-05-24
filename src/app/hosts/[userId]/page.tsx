@@ -78,7 +78,7 @@ export default async function HostProfilePage({
         `SELECT
            vl.id, vl.slug, vl.name, vl.vanType, vl.region, vl.island,
            vl.nightlyRate, vl.sleeps, vl.petFriendly, vl.instantBook,
-           vl.minimumNights, vl.pickupLat, vl.pickupLng, vl.pickupLocationText,
+           vl.minimumNights, NULL AS pickupLat, NULL AS pickupLng, NULL AS pickupLocationText,
            hp2.firstName AS hostFirstName,
            u2.image      AS hostImage,
            COALESCE(rv.avgRating, NULL) AS avgRating,

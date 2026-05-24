@@ -60,8 +60,8 @@ export default function ReviewForm({
   return (
     <form onSubmit={onSubmit} className="grid gap-5 rounded-2xl border border-border bg-card p-6">
       <div>
-        <label className="mb-2 block text-sm font-medium text-foreground">Overall rating</label>
-        <div className="flex gap-1.5">
+        <p id="review-rating-label" className="mb-2 block text-sm font-medium text-foreground">Overall rating</p>
+        <div className="flex gap-1.5" role="group" aria-labelledby="review-rating-label">
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
@@ -103,7 +103,7 @@ export default function ReviewForm({
       </div>
 
       {error && (
-        <div className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>
+        <div className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert" aria-live="polite">{error}</div>
       )}
 
       <div className="flex justify-end">

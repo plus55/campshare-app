@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { BookingStatusBadge } from "@/components/BookingStatusBadge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking, BookingStatus } from "@/lib/types";
 
 interface TripRow extends Booking {
@@ -41,11 +42,9 @@ export default async function TripsPage() {
   const trips = result.results;
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const expiredIds = trips
-    .filter((t) => t.status === "requested" && t.expiresAt < nowSec)
-    .map((t) => t.id);
-  for (const id of expiredIds) {
-    await database.prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?").bind(nowSec, id).run();
+  const expiredIds: string[] = [];
+  for (const trip of trips.filter((t) => t.status === "requested" && t.expiresAt < nowSec)) {
+    if (await expireBookingRequest(trip, nowSec)) expiredIds.push(trip.id);
   }
   trips.forEach((t) => { if (expiredIds.includes(t.id)) t.status = "expired"; });
 
@@ -55,7 +54,7 @@ export default async function TripsPage() {
   function Section({ title, rows }: { title: string; rows: TripRow[] }) {
     if (rows.length === 0) return null;
     return (
-      <div className="cs-card mt-4">
+      <div className="surface-card mt-4">
         <h2 className="mb-4 font-serif text-lg text-forest-deep">{title}</h2>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -97,7 +96,7 @@ export default async function TripsPage() {
         </div>
 
         {trips.length === 0 ? (
-          <div className="cs-card mt-6 flex flex-col items-center gap-3 py-12 text-center">
+          <div className="surface-card mt-6 flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-stone">No trips yet.</p>
             <Link href="/vans" className={cn(buttonVariants())}>Find a van</Link>
           </div>

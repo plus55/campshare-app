@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title: "Privacy Policy — CampShare",
   description: "How CampShare collects, uses, and protects your personal information under the Privacy Act 2020 (NZ).",
 };

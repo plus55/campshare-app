@@ -8,6 +8,7 @@ import { MessageSendForm } from "@/components/MessageSendForm";
 import ReportButton from "@/components/ReportButton";
 import DisputeForm from "@/components/DisputeForm";
 import type { Booking, BookingMessage } from "@/lib/types";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 
 const DISPUTE_WINDOW_SEC = 7 * 24 * 3600;
 
@@ -60,8 +61,7 @@ export default async function DashboardBookingDetailPage({
   if (booking.status === "requested") {
     const nowSec = Math.floor(Date.now() / 1000);
     if (booking.expiresAt < nowSec) {
-      await database.prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?").bind(nowSec, id).run();
-      booking.status = "expired";
+      if (await expireBookingRequest(booking, nowSec)) booking.status = "expired";
     }
   }
 

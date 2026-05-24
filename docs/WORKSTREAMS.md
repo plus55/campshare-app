@@ -6,37 +6,33 @@ at task boundaries when ownership or blocked paths change.
 ## Codex
 
 - Branch: `codex/audit-remediation`
-- Proposed work: launch-critical application audit remediation, beginning with
-  booking/payment integrity and security blockers.
-- Avoid concurrent edits in:
-  - `src/app/api/bookings/**`
-  - `src/app/api/cron/**`
-  - `src/db/migrations/**`
-  - `src/lib/money.ts`
-  - `src/lib/cancellation.ts`
+- Completed checkpoint: `a51581c` secures Turnstile enforcement, public
+  location handling, map popup rendering, and iCal imports.
+- Completed checkpoint: booking/payment integrity guards, including overlap
+  protection, transition locking, cancellation failure behavior, date-change
+  restrictions, and payout idempotency.
+- Completed checkpoint: authorization ownership validation, expired-request
+  authorization release, authenticated cron execution, retryable Stripe
+  webhook processing, and consistent Stripe payout-readiness checks.
 
 ## Claude
 
 - Branch: `claude/current-work`
-- Work assignment: Full UI migration — Tailwind v4 + shadcn/ui, Refresh visual treatment,
-  dark mode, Storybook. See plan at `.claude/plans/snazzy-crunching-donut.md`.
-- Owned paths:
-  - `src/components/**` (all)
-  - `src/app/**` (UI pages only — excludes Codex-reserved API routes below)
-  - `src/app/globals.css`
-  - `src/lib/utils.ts`
-  - `tailwind.config.ts`
-  - `postcss.config.js`
-  - `public/**`
-  - `.storybook/**`
-- Avoid concurrent edits in (reserved for Codex):
-  - `src/app/api/bookings/**`
-  - `src/app/api/cron/**`
-  - `src/db/migrations/**`
-  - `src/lib/money.ts`
-  - `src/lib/cancellation.ts`
-- Before editing files listed under Codex ownership, coordinate here and rebase
-  from `main` after the relevant remediation merge.
+- Saved checkpoint: `6920e71` preserves the Tailwind/shadcn migration through
+  the Stage 6 and theme work completed before integration.
+- Known overlap with Codex correctness changes: trips, dashboard bookings, and
+  dashboard payouts pages were edited in both branches. Preserve Codex payment
+  behavior while resolving the UI migration.
+
+## Integration
+
+- Branch: `codex/ui-remediation`
+- Scope: reconcile the completed audit remediation with Claude's latest UI
+  checkpoint, complete light-theme launch cleanup, and retain correctness-side
+  behavior for booking, payment, location, Turnstile, iCal, webhook, and
+  payout flows.
+- Launch theme decision: light theme only; do not expose the incomplete theme
+  toggle in navigation.
 
 ## Decisions Pending
 

@@ -19,11 +19,12 @@ export default function HomeHero() {
           method="get"
           className="mx-auto grid max-w-[760px] grid-cols-1 items-center overflow-hidden rounded-2xl border border-line bg-cream p-2 shadow-[0_12px_40px_-16px_rgba(31,42,32,0.18)] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:rounded-full"
         >
-          <label className="flex flex-col border-b border-line px-4 py-2 text-left sm:rounded-l-full sm:border-b-0">
-            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone">
+          <div className="flex flex-col border-b border-line px-4 py-2 text-left sm:rounded-l-full sm:border-b-0">
+            <label htmlFor="hero-region" className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone">
               Region
-            </span>
+            </label>
             <select
+              id="hero-region"
               name="region"
               defaultValue=""
               className="w-full border-0 bg-transparent py-0.5 font-sans text-[0.95rem] text-forest-deep outline-none"
@@ -31,31 +32,33 @@ export default function HomeHero() {
               <option value="">Anywhere in NZ</option>
               {NZ_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
-          </label>
+          </div>
 
-          <label className="flex flex-col border-b border-line px-4 py-2 text-left sm:border-b-0 sm:border-l sm:border-l-line">
-            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone">
+          <div className="flex flex-col border-b border-line px-4 py-2 text-left sm:border-b-0 sm:border-l sm:border-l-line">
+            <label htmlFor="hero-start-date" className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone">
               Check in
-            </span>
+            </label>
             <input
+              id="hero-start-date"
               type="date"
               name="startDate"
               min={today}
               className="w-full border-0 bg-transparent py-0.5 font-sans text-[0.95rem] text-forest-deep outline-none"
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col border-b border-line px-4 py-2 text-left sm:border-b-0 sm:border-l sm:border-l-line">
-            <span className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone">
+          <div className="flex flex-col border-b border-line px-4 py-2 text-left sm:border-b-0 sm:border-l sm:border-l-line">
+            <label htmlFor="hero-end-date" className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-stone">
               Check out
-            </span>
+            </label>
             <input
+              id="hero-end-date"
               type="date"
               name="endDate"
               min={today}
               className="w-full border-0 bg-transparent py-0.5 font-sans text-[0.95rem] text-forest-deep outline-none"
             />
-          </label>
+          </div>
 
           <div className="px-1 pt-2 sm:pt-0">
             <button

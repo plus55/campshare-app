@@ -104,7 +104,7 @@ export default async function ReviewsDashboardPage() {
         </p>
 
         {pending.length === 0 ? (
-          <div className="cs-card flex flex-col items-center gap-3 py-12 text-center">
+          <div className="surface-card flex flex-col items-center gap-3 py-12 text-center">
             <p className="font-semibold text-foreground">No reviews waiting</p>
             <p className="max-w-[40ch] text-sm text-muted-foreground">
               We&apos;ll email you when a trip wraps up and is ready for review.
@@ -114,7 +114,7 @@ export default async function ReviewsDashboardPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {pending.map((t) => (
-              <div key={t.bookingId} className="cs-card flex items-center justify-between gap-4 p-4">
+              <div key={t.bookingId} className="surface-card flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
                   <div className="font-semibold text-foreground">{t.vanName}</div>
                   <div className="mt-1 text-xs text-muted-foreground">

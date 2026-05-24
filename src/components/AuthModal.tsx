@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Globe, LogIn, UserPlus } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const callbackURL = typeof window !== "undefined" ? window.location.href : "/dashboard";
 
@@ -35,15 +37,33 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
     setEmail("");
     setPassword("");
     setName("");
+    setTurnstileToken(null);
+  }
+
+  function verifyBot(): boolean {
+    if (!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) return true;
+    if (!turnstileToken) {
+      setError("Please wait for the security check to complete.");
+      return false;
+    }
+    return true;
   }
 
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
     if (!email) { setError("Please enter your email"); return; }
+    if (!verifyBot()) return;
     setLoading(true);
     setError(null);
     try {
-      await authClient.signIn.magicLink({ email, callbackURL });
+      const res = await authClient.signIn.magicLink(
+        { email, callbackURL },
+        { headers: { "x-turnstile-token": turnstileToken ?? "" } }
+      );
+      if (res.error) {
+        setError(res.error.message ?? "Couldn't send magic link");
+        return;
+      }
       setSent(true);
     } catch {
       setError("Couldn't send magic link — please try again");
@@ -55,13 +75,14 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !email || !password) { setError("Please fill in all fields"); return; }
+    if (!verifyBot()) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await authClient.signUp.email({
-        name, email, password,
-        callbackURL: "/verify-email?email=" + encodeURIComponent(email),
-      });
+      const res = await authClient.signUp.email(
+        { name, email, password, callbackURL: "/verify-email?email=" + encodeURIComponent(email) },
+        { headers: { "x-turnstile-token": turnstileToken ?? "" } }
+      );
       if (res.error) {
         setError(res.error.message ?? "Could not create account");
       } else {
@@ -117,7 +138,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
         </div>
 
         {error && (
-          <div className="bg-destructive/10 text-destructive rounded-[var(--radius)] text-[14px] px-[14px] py-[10px] mb-3">
+          <div className="bg-destructive/10 text-destructive rounded-[var(--radius)] text-[14px] px-[14px] py-[10px] mb-3" role="alert" aria-live="polite">
             {error}
           </div>
         )}
@@ -163,6 +184,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
                     className="border-border focus:border-clay"
                   />
                 </div>
+                <TurnstileWidget onToken={setTurnstileToken} />
                 <Button type="submit" className="w-full gap-[6px]" disabled={loading}>
                   <LogIn size={15} />
                   {loading ? "Sending…" : "Send magic link"}
@@ -211,6 +233,7 @@ export default function AuthModal({ open, onClose, heading, subheading }: Props)
                   className="border-border focus:border-clay"
                 />
               </div>
+              <TurnstileWidget onToken={setTurnstileToken} />
               <Button type="submit" className="w-full gap-[6px]" disabled={loading}>
                 <UserPlus size={15} />
                 {loading ? "Creating account…" : "Create account"}

@@ -43,7 +43,7 @@ export default function CategoryCards() {
             <Link
               key={c.href}
               href={c.href}
-              className="cs-card group block p-6 no-underline transition-transform hover:-translate-y-0.5"
+              className="surface-card group block p-6 no-underline transition-transform hover:-translate-y-0.5"
             >
               <div className="mb-4 flex size-11 items-center justify-center rounded-[var(--radius)] border border-line bg-sand text-clay transition-colors group-hover:border-clay/40 group-hover:bg-clay/8">
                 {c.icon}

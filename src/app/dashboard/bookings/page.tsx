@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { BookingStatusBadge } from "@/components/BookingStatusBadge";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking } from "@/lib/types";
 
 interface BookingRow extends Booking {
@@ -40,11 +41,9 @@ export default async function DashboardBookingsPage() {
 
   // Lazy expiry
   const nowSec = Math.floor(Date.now() / 1000);
-  const expiredIds = rows
-    .filter((r) => r.status === "requested" && r.expiresAt < nowSec)
-    .map((r) => r.id);
-  for (const id of expiredIds) {
-    await database.prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?").bind(nowSec, id).run();
+  const expiredIds: string[] = [];
+  for (const booking of rows.filter((r) => r.status === "requested" && r.expiresAt < nowSec)) {
+    if (await expireBookingRequest(booking, nowSec)) expiredIds.push(booking.id);
   }
   rows.forEach((r) => { if (expiredIds.includes(r.id)) r.status = "expired"; });
 
@@ -55,7 +54,7 @@ export default async function DashboardBookingsPage() {
   function Section({ title, items }: { title: string; items: BookingRow[] }) {
     if (items.length === 0) return null;
     return (
-      <div className="cs-card mt-4">
+      <div className="surface-card mt-4">
         <h2 className="mb-4 font-serif text-lg text-forest-deep dark:text-cream">{title}</h2>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -97,7 +96,7 @@ export default async function DashboardBookingsPage() {
         <p className="mb-0 text-muted-foreground">Requests and bookings across your listings.</p>
 
         {rows.length === 0 ? (
-          <div className="cs-card mt-6">
+          <div className="surface-card mt-6">
             <div className="flex flex-col items-center gap-2 py-10 text-center">
               <span className="text-[2rem]">📋</span>
               <h3 className="font-serif text-lg text-foreground">No bookings yet</h3>

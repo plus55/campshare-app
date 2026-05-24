@@ -46,24 +46,24 @@ export default function PhotoGalleryLightbox({ photos }: Props) {
   return (
     <>
       {/* Gallery */}
-      <div style={{ display: "grid", gridTemplateColumns: gridColumns, gap: 8, borderRadius: 12, overflow: "hidden", maxHeight: 480 }}>
+      <div className="grid max-h-[480px] gap-2 overflow-hidden rounded-xl" style={{ gridTemplateColumns: gridColumns }}>
         {/* Cover */}
         <button
           type="button"
           onClick={() => openAt(0)}
-          style={{ padding: 0, border: "none", cursor: "pointer", background: "transparent", display: "block", height: "100%" }}
+          className="block h-full cursor-pointer border-0 bg-transparent p-0"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={cover.url}
             alt={cover.alt}
-            style={{ width: "100%", height: "100%", maxHeight: 480, objectFit: "cover", display: "block" }}
+            className="block max-h-[480px] size-full object-cover"
           />
         </button>
 
         {/* Thumbnail column */}
         {thumbs.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {thumbs.map((p, i) => {
               const isLast = i === thumbs.length - 1;
               const showOverlay = isLast && hasMore;
@@ -72,21 +72,16 @@ export default function PhotoGalleryLightbox({ photos }: Props) {
                   key={i}
                   type="button"
                   onClick={() => openAt(i + 1)}
-                  style={{ padding: 0, border: "none", cursor: "pointer", background: "transparent", flex: 1, position: "relative", overflow: "hidden" }}
+                  className="relative flex-1 cursor-pointer overflow-hidden border-0 bg-transparent p-0"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={p.url}
                     alt={p.alt}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    className="block size-full object-cover"
                   />
                   {showOverlay && (
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      background: "rgba(0,0,0,0.48)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: "#fff", fontWeight: 600, fontSize: 15,
-                    }}>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-[15px] font-semibold text-white">
                       +{photos.length - 3} more
                     </div>
                   )}

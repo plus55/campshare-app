@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { photoUrl } from "@/lib/photos";
 import type { VanPhoto } from "@/lib/types";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface Props {
@@ -153,9 +153,9 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
 
   return (
     <>
-      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>}
+      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert" aria-live="polite">{error}</div>}
 
-      <div className="mb-4 grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
+      <div className="mb-4 grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
         {photos.map((photo, idx) => {
           const url = photoUrl(photo.r2Key);
           const isTouchDragging = touchDragIdx === idx;
@@ -194,11 +194,36 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
               <div className="p-2">
                 {idx === 0 && <p className="mb-1 text-[11px] text-muted-foreground">Cover</p>}
                 <Input
+                  aria-label={`Caption for photo ${idx + 1}`}
                   className="h-7 text-[12px]"
                   placeholder="Caption…"
                   defaultValue={photo.caption ?? ""}
                   onBlur={(e) => void updateCaption(photo.id, e.target.value)}
                 />
+                <div className="mt-1.5 flex gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[12px]"
+                    disabled={idx === 0}
+                    onClick={() => void movePhoto(idx, idx - 1)}
+                    aria-label={`Move photo ${idx + 1} earlier`}
+                  >
+                    Earlier
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[12px]"
+                    disabled={idx === photos.length - 1}
+                    onClick={() => void movePhoto(idx, idx + 1)}
+                    aria-label={`Move photo ${idx + 1} later`}
+                  >
+                    Later
+                  </Button>
+                </div>
                 <Button
                   type="button"
                   variant="destructive"
@@ -216,9 +241,9 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
 
       {photos.length < 10 && (
         <label className="inline-block cursor-pointer">
-          <Button type="button" variant="outline" asChild>
+          <span className={buttonVariants({ variant: "outline" })}>
             <span>{uploading ? "Uploading…" : "+ Add photos"}</span>
-          </Button>
+          </span>
           <input
             ref={fileRef}
             type="file"

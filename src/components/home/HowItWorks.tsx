@@ -32,7 +32,7 @@ export default function HowItWorks() {
           {STEPS.map((s) => (
             <div
               key={s.title}
-              className="cs-card flex flex-col items-center p-8 text-center"
+              className="surface-card flex flex-col items-center p-8 text-center"
             >
               <div className="mb-4 flex size-[52px] items-center justify-center rounded-full border-[1.5px] border-ochre bg-forest-deep text-cream">
                 {s.icon}

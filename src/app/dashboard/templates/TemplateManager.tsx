@@ -114,7 +114,7 @@ export function TemplateManager({ initial }: Props) {
 
   return (
     <div className="mt-4">
-      {error && <p className={errorCls}>{error}</p>}
+      {error && <p className={errorCls} role="alert" aria-live="polite">{error}</p>}
 
       {!showForm && (
         <Button type="button" onClick={startNew} disabled={atLimit}>
@@ -133,8 +133,9 @@ export function TemplateManager({ initial }: Props) {
             {editingId ? "Edit template" : "New template"}
           </h2>
           <div className={fieldCls}>
-            <label className={labelCls}>Title</label>
+            <label htmlFor="template-title" className={labelCls}>Title</label>
             <Input
+              id="template-title"
               type="text"
               value={title}
               maxLength={TEMPLATE_TITLE_MAX}
@@ -144,8 +145,9 @@ export function TemplateManager({ initial }: Props) {
             <span className="text-[11px] text-muted-foreground">{title.length}/{TEMPLATE_TITLE_MAX}</span>
           </div>
           <div className={`${fieldCls} mt-3`}>
-            <label className={labelCls}>Body</label>
+            <label htmlFor="template-body" className={labelCls}>Body</label>
             <Textarea
+              id="template-body"
               className="min-h-[140px]"
               value={body}
               maxLength={TEMPLATE_BODY_MAX}

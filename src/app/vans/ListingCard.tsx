@@ -57,7 +57,7 @@ export default function ListingCard({ listing }: { listing: SearchResult }) {
         className="absolute right-2.5 top-2.5 z-10"
       />
       <Link href={`/vans/${listing.slug}`} className="block no-underline">
-        <div className="cs-card cursor-pointer overflow-hidden p-0">
+        <div className="surface-card cursor-pointer overflow-hidden p-0">
           <div className="aspect-[4/3] overflow-hidden bg-sand">
             {imgUrl ? (
               <img

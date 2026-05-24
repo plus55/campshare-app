@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Fraunces, Outfit } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import SiteHeader from "@/components/SiteHeader";
@@ -53,15 +52,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn(fraunces.variable, outfit.variable)} suppressHydrationWarning>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
-          <TooltipProvider>
-            <SiteHeader />
-            {children}
-            <SiteFooter />
-            <CookieConsent />
-            <Toaster />
-          </TooltipProvider>
-        </ThemeProvider>
+        <TooltipProvider>
+          <SiteHeader />
+          {children}
+          <SiteFooter />
+          <CookieConsent />
+          <Toaster />
+        </TooltipProvider>
       </body>
     </html>
   );

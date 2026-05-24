@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { sendPaymentCapturedEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { expireBookingRequest } from "@/lib/booking-expiry";
 import type { Booking, HostProfile } from "@/lib/types";
 
 function bad(message: string, status = 400) {
@@ -30,17 +31,14 @@ export async function POST(
 
   const nowSec = Math.floor(Date.now() / 1000);
   if (booking.expiresAt < nowSec) {
-    await db()
-      .prepare("UPDATE booking SET status = 'expired', updatedAt = ? WHERE id = ?")
-      .bind(nowSec, id)
-      .run();
+    await expireBookingRequest(booking, nowSec);
     return bad("Booking request has expired");
   }
 
   const conflict = await db()
     .prepare(
       `SELECT COUNT(*) AS cnt FROM availability_block
-       WHERE vanListingId = ? AND reason = 'booking'
+       WHERE vanListingId = ?
          AND startDate <= ? AND endDate >= ?`
     )
     .bind(booking.vanListingId, booking.endDate, booking.startDate)
@@ -50,38 +48,63 @@ export async function POST(
     return bad("Those dates are no longer available — another booking was accepted first");
   }
 
-  // Capture payment
-  if (booking.paymentIntentId) {
-    const s = await stripe();
-    let captureResult;
-    try {
-      captureResult = await s.paymentIntents.capture(booking.paymentIntentId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Payment capture failed";
-      return NextResponse.json({ error: `Could not charge payment: ${msg}` }, { status: 402 });
-    }
-    if (captureResult.status !== "succeeded") {
-      return NextResponse.json({ error: "Payment capture did not succeed" }, { status: 402 });
-    }
-  }
-
-  // Atomic finalise: status + availability block in one batch. If this fails
-  // after Stripe capture, the captured PI is logged for reconciliation; the
-  // booking sits in 'requested' until the admin sweep retries.
+  // Reserve before capture. The trigger makes concurrent acceptance atomic,
+  // so only one request can proceed to move money.
   const blockId = crypto.randomUUID();
   try {
     await db().batch([
       db()
-        .prepare(
-          `UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ? WHERE id = ?`
-        )
-        .bind(nowSec, booking.paymentIntentId ? nowSec : null, nowSec, id),
+        .prepare("INSERT INTO booking_transition_lock (bookingId, operation, createdAt) VALUES (?, 'accept', ?)")
+        .bind(id, nowSec),
       db()
         .prepare(
           `INSERT INTO availability_block (id, vanListingId, startDate, endDate, reason, bookingId, createdAt)
            VALUES (?, ?, ?, ?, 'booking', ?, ?)`
         )
         .bind(blockId, booking.vanListingId, booking.startDate, booking.endDate, id, nowSec),
+    ]);
+  } catch {
+    return bad("Those dates are no longer available - another booking was accepted first", 409);
+  }
+
+  // Capture payment
+  if (booking.paymentIntentId) {
+    const s = await stripe();
+    let captureResult;
+    try {
+      captureResult = await s.paymentIntents.capture(
+        booking.paymentIntentId,
+        {},
+        { idempotencyKey: `booking-capture-${id}` }
+      );
+    } catch (err: unknown) {
+      await db().batch([
+        db().prepare("DELETE FROM availability_block WHERE id = ?").bind(blockId),
+        db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id),
+      ]);
+      const msg = err instanceof Error ? err.message : "Payment capture failed";
+      return NextResponse.json({ error: `Could not charge payment: ${msg}` }, { status: 402 });
+    }
+    if (captureResult.status !== "succeeded") {
+      await db().batch([
+        db().prepare("DELETE FROM availability_block WHERE id = ?").bind(blockId),
+        db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id),
+      ]);
+      return NextResponse.json({ error: "Payment capture did not succeed" }, { status: 402 });
+    }
+  }
+
+  // The reservation is already held. If promotion fails after capture, keep
+  // the block in place and log the captured payment for reconciliation.
+  try {
+    await db().batch([
+      db()
+        .prepare(
+          `UPDATE booking SET status = 'accepted', respondedAt = ?, paidAt = ?, updatedAt = ?
+           WHERE id = ? AND status = 'requested'`
+        )
+        .bind(nowSec, booking.paymentIntentId ? nowSec : null, nowSec, id),
+      db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id),
     ]);
   } catch (err) {
     if (booking.paymentIntentId) {

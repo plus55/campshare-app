@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 const selectCls =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 const fieldCls = "flex flex-col gap-1.5";
 const labelCls = "text-sm font-medium text-foreground";
 
@@ -77,8 +77,8 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className={fieldCls}>
-        <label className={labelCls}>Status</label>
-        <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as Status)}>
+        <label htmlFor="admin-dispute-status" className={labelCls}>Status</label>
+        <select id="admin-dispute-status" className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as Status)}>
           <option value="under_review">Under review (keep open, no resolution yet)</option>
           <option value="resolved_host">Resolved in favour of host</option>
           <option value="resolved_guest">Resolved in favour of guest</option>
@@ -90,8 +90,8 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
       {isResolution && (
         <>
           <div className={fieldCls}>
-            <label className={labelCls}>Deposit action</label>
-            <select className={selectCls} value={depositAction} onChange={(e) => setDepositAction(e.target.value as DepositAction)}>
+            <label htmlFor="admin-deposit-action" className={labelCls}>Deposit action</label>
+            <select id="admin-deposit-action" className={selectCls} value={depositAction} onChange={(e) => setDepositAction(e.target.value as DepositAction)}>
               <option value="">Choose…</option>
               <option value="released_to_host">Release ${(depositCents / 100).toFixed(0)} to host</option>
               <option value="returned_to_guest">Return ${(depositCents / 100).toFixed(0)} to guest</option>
@@ -100,8 +100,9 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
           </div>
           {depositAction === "split" && (
             <div className={fieldCls}>
-              <label className={labelCls}>Amount to host (NZD)</label>
+              <label htmlFor="admin-deposit-split" className={labelCls}>Amount to host (NZD)</label>
               <Input
+                id="admin-deposit-split"
                 type="number"
                 className="h-9"
                 min={0}
@@ -121,8 +122,9 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
       )}
 
       <div className={fieldCls}>
-        <label className={labelCls}>Admin note (shown to both parties)</label>
+        <label htmlFor="admin-dispute-note" className={labelCls}>Admin note (shown to both parties)</label>
         <Textarea
+          id="admin-dispute-note"
           className="min-h-[100px]"
           value={adminNote}
           onChange={(e) => setAdminNote(e.target.value)}
@@ -130,7 +132,7 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
         />
       </div>
 
-      {err && <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{err}</p>}
+      {err && <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert" aria-live="polite">{err}</p>}
 
       <div>
         <Button type="button" onClick={submit} disabled={busy}>

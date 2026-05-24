@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Moon, Sun, Menu, X } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Menu, X } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import NotificationBell from "./NotificationBell";
@@ -23,7 +22,6 @@ function isActive(href: string, pathname: string): boolean {
 export default function SiteNav({ user, unreadCount }: SiteNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
 
   const navLinks = user
     ? [
@@ -103,16 +101,6 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
             </Link>
           </>
         )}
-
-        {/* Theme toggle */}
-        <button
-          type="button"
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="hidden md:inline-flex items-center justify-center size-8 rounded-lg text-foreground hover:bg-muted transition-colors border-0 bg-transparent cursor-pointer"
-        >
-          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
 
         {/* Mobile hamburger */}
         <button

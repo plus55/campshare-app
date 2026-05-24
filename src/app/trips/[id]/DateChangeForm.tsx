@@ -89,8 +89,9 @@ export default function DateChangeForm({ bookingId, currentStartDate, currentEnd
       <p className="mb-3 font-semibold text-foreground">Request date change</p>
       <div className="mb-3 grid grid-cols-2 gap-3">
         <div className={fieldCls}>
-          <label className={labelCls}>New check-in</label>
+          <label htmlFor="date-change-start" className={labelCls}>New check-in</label>
           <Input
+            id="date-change-start"
             type="date"
             className="h-9"
             min={todayString()}
@@ -99,8 +100,9 @@ export default function DateChangeForm({ bookingId, currentStartDate, currentEnd
           />
         </div>
         <div className={fieldCls}>
-          <label className={labelCls}>New check-out</label>
+          <label htmlFor="date-change-end" className={labelCls}>New check-out</label>
           <Input
+            id="date-change-end"
             type="date"
             className="h-9"
             min={startDate || todayString()}
@@ -109,7 +111,7 @@ export default function DateChangeForm({ bookingId, currentStartDate, currentEnd
           />
         </div>
       </div>
-      {error && <p className="mb-2 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</p>}
+      {error && <p className="mb-2 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert" aria-live="polite">{error}</p>}
       <div className="flex gap-2">
         <Button type="button" size="sm" disabled={loading} onClick={submit}>
           {loading ? "Sending…" : "Send request"}

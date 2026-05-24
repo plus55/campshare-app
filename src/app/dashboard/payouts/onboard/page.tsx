@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function PayoutsOnboardPage() {
@@ -30,18 +31,24 @@ export default function PayoutsOnboardPage() {
 
   if (error) {
     return (
-      <div style={{ padding: "2rem", maxWidth: 480 }}>
-        <p style={{ color: "#dc2626", marginBottom: "1rem" }}>{error}</p>
-        <a href="/dashboard" style={{ color: "#2563eb", textDecoration: "underline" }}>
-          Back to dashboard
-        </a>
-      </div>
+      <main className="min-h-screen px-4 py-12">
+        <div className="mx-auto max-w-[480px] rounded-2xl border border-border bg-card p-6">
+          <p className="mb-4 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert">
+            {error}
+          </p>
+          <Link href="/dashboard" className="text-sm text-clay underline hover:text-clay-deep">
+            Back to dashboard
+          </Link>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 480 }}>
-      <p style={{ color: "#6b7280" }}>Setting up your payout account…</p>
-    </div>
+    <main className="min-h-screen px-4 py-12">
+      <div className="mx-auto max-w-[480px] rounded-2xl border border-border bg-card p-6">
+        <p className="text-sm text-muted-foreground" aria-live="polite">Setting up your payout account...</p>
+      </div>
+    </main>
   );
 }

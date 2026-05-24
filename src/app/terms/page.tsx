@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title: "Terms of Service — CampShare",
   description: "The terms that govern your use of CampShare — the peer-to-peer campervan marketplace for Aotearoa.",
 };

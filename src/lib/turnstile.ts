@@ -1,14 +1,16 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function verifyTurnstile(token: string | undefined): Promise<boolean> {
-  let secret: string | undefined;
+  let secret = process.env.TURNSTILE_SECRET_KEY;
   try {
     const { env } = getCloudflareContext();
-    secret = (env as unknown as Record<string, string | undefined>).TURNSTILE_SECRET_KEY;
+    secret =
+      (env as unknown as Record<string, string | undefined>).TURNSTILE_SECRET_KEY ??
+      secret;
   } catch {
-    return true;
+    // Local Next.js execution does not expose Cloudflare bindings.
   }
-  if (!secret) return true;
+  if (!secret) return process.env.NODE_ENV !== "production";
   if (!token) return false;
 
   const resp = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {

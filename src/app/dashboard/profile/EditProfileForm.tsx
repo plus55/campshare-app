@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 const selectCls =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 const fieldCls = "flex flex-col gap-1.5";
 const labelCls = "text-sm font-medium text-foreground";
 const errorCls = "mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
@@ -73,28 +73,28 @@ export default function EditProfileForm({ profile }: Props) {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
-      {error && <div className={errorCls}>{error}</div>}
-      {saved && <p className="mb-3 text-sm text-moss">Profile saved.</p>}
+      {error && <div className={errorCls} role="alert" aria-live="polite">{error}</div>}
+      {saved && <p className="mb-3 text-sm text-moss" aria-live="polite">Profile saved.</p>}
 
       <div className="grid grid-cols-2 gap-3">
         <div className={fieldCls}>
-          <label className={labelCls}>First name</label>
-          <Input value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
+          <label htmlFor="profile-first-name" className={labelCls}>First name</label>
+          <Input id="profile-first-name" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
         </div>
         <div className={fieldCls}>
-          <label className={labelCls}>Last name</label>
-          <Input value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
+          <label htmlFor="profile-last-name" className={labelCls}>Last name</label>
+          <Input id="profile-last-name" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
         </div>
       </div>
 
       <div className={`${fieldCls} mt-3`}>
-        <label className={labelCls}>Phone</label>
-        <Input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+        <label htmlFor="profile-phone" className={labelCls}>Phone</label>
+        <Input id="profile-phone" type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
       </div>
 
       <div className={`${fieldCls} mt-3`}>
-        <label className={labelCls}>Region</label>
-        <select className={selectCls} value={form.region} onChange={(e) => update("region", e.target.value)}>
+        <label htmlFor="profile-region" className={labelCls}>Region</label>
+        <select id="profile-region" className={selectCls} value={form.region} onChange={(e) => update("region", e.target.value)}>
           <option value="">Select a region…</option>
           {NZ_REGIONS.map((r) => (
             <option key={r} value={r}>{r}</option>
@@ -106,8 +106,9 @@ export default function EditProfileForm({ profile }: Props) {
       </div>
 
       <div className={`${fieldCls} mt-3`}>
-        <label className={labelCls}>Bio (optional)</label>
+        <label htmlFor="profile-bio" className={labelCls}>Bio (optional)</label>
         <Textarea
+          id="profile-bio"
           className="min-h-[100px]"
           placeholder="Tell travellers a little about yourself…"
           value={form.bio}

@@ -32,10 +32,10 @@ export default function ApproveRejectButtons({ applicationId }: { applicationId:
 
   return (
     <>
-      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>}
+      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert" aria-live="polite">{error}</div>}
       <div className="mb-4 flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">Note to applicant (optional, included in email)</label>
-        <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
+        <label htmlFor="application-note" className="text-sm font-medium text-foreground">Note to applicant (optional, included in email)</label>
+        <Textarea id="application-note" value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
       <div className="flex gap-3">
         <Button type="button" onClick={() => send("approve")} disabled={busy !== null}>

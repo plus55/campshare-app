@@ -64,7 +64,7 @@ function fromListing(l: VanListing | null): FormState {
   };
 }
 
-const inputCls = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-forest-deep focus:outline-none dark:bg-input/30";
+const inputCls = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-forest-deep focus:outline-none";
 const labelCls = "text-sm font-medium text-foreground";
 const fieldCls = "flex flex-col gap-1";
 const hintCls = "text-xs text-muted-foreground";
@@ -137,15 +137,6 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
         setError("Please wait for the security check to complete.");
         return;
       }
-      const vRes = await fetch("/api/verify-turnstile", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: turnstileToken }),
-      });
-      if (!vRes.ok) {
-        setError("Security check failed. Please refresh and try again.");
-        return;
-      }
     }
 
     setSaving(true);
@@ -175,7 +166,10 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
       isNew ? "/api/listings" : `/api/listings/${listing!.id}`,
       {
         method: isNew ? "POST" : "PATCH",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(isNew ? { "x-turnstile-token": turnstileToken ?? "" } : {}),
+        },
         body: JSON.stringify(payload),
       }
     );
@@ -214,7 +208,7 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
 
       <div className="rounded-2xl border border-border bg-card p-6">
         {error && (
-          <div className="mb-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
+          <div className="mb-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert" aria-live="polite">{error}</div>
         )}
 
         {step === 1 && <StepVan form={form} update={update} island={island} onPickupBlur={geocodePickup} geocoding={geocoding} geocodedLabel={geocodedLabel} />}
@@ -270,28 +264,28 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
     <>
       <h2 className="mb-4 font-serif text-xl text-forest-deep">Your van</h2>
       <div className={fieldCls}>
-        <label className={labelCls}>Van name</label>
-        <input className={inputCls} placeholder="e.g. Pip the Toyota Hiace" value={form.name} onChange={(e) => update("name", e.target.value)} />
+        <label htmlFor="listing-name" className={labelCls}>Van name</label>
+        <input id="listing-name" className={inputCls} placeholder="e.g. Pip the Toyota Hiace" value={form.name} onChange={(e) => update("name", e.target.value)} />
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className={labelCls}>Type</label>
-        <select className={inputCls} value={form.vanType} onChange={(e) => update("vanType", e.target.value)}>
+        <label htmlFor="listing-type" className={labelCls}>Type</label>
+        <select id="listing-type" className={inputCls} value={form.vanType} onChange={(e) => update("vanType", e.target.value)}>
           <option value="">Select a type…</option>
           {VAN_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3">
         <div className={fieldCls}>
-          <label className={labelCls}>Year</label>
-          <input type="number" className={inputCls} value={form.year} onChange={(e) => update("year", e.target.value)} />
+          <label htmlFor="listing-year" className={labelCls}>Year</label>
+          <input id="listing-year" type="number" className={inputCls} value={form.year} onChange={(e) => update("year", e.target.value)} />
         </div>
         <div className={fieldCls}>
-          <label className={labelCls}>Sleeps</label>
-          <input type="number" min={1} className={inputCls} value={form.sleeps} onChange={(e) => update("sleeps", e.target.value)} />
+          <label htmlFor="listing-sleeps" className={labelCls}>Sleeps</label>
+          <input id="listing-sleeps" type="number" min={1} className={inputCls} value={form.sleeps} onChange={(e) => update("sleeps", e.target.value)} />
         </div>
         <div className={fieldCls}>
-          <label className={labelCls}>Seats</label>
-          <input type="number" min={1} className={inputCls} value={form.seats} onChange={(e) => update("seats", e.target.value)} />
+          <label htmlFor="listing-seats" className={labelCls}>Seats</label>
+          <input id="listing-seats" type="number" min={1} className={inputCls} value={form.seats} onChange={(e) => update("seats", e.target.value)} />
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -305,16 +299,17 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
         </label>
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className={labelCls}>Region</label>
-        <select className={inputCls} value={form.region} onChange={(e) => update("region", e.target.value)}>
+        <label htmlFor="listing-region" className={labelCls}>Region</label>
+        <select id="listing-region" className={inputCls} value={form.region} onChange={(e) => update("region", e.target.value)}>
           <option value="">Select a region…</option>
           {NZ_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
         {form.region && <p className={hintCls}>{island} Island</p>}
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className={labelCls}>Pickup location <span className="font-normal text-muted-foreground">(optional)</span></label>
+        <label htmlFor="listing-pickup" className={labelCls}>Pickup location <span className="font-normal text-muted-foreground">(optional)</span></label>
         <input
+          id="listing-pickup"
           className={inputCls}
           placeholder="e.g. Christchurch Airport, Rolleston"
           value={form.pickupLocationText}
@@ -330,8 +325,8 @@ function StepVan({ form, update, island, onPickupBlur, geocoding, geocodedLabel 
         </p>
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className={labelCls}>Description</label>
-        <textarea className={cn(inputCls, "min-h-[120px] resize-y")} placeholder="What makes your van a great trip?" value={form.description} onChange={(e) => update("description", e.target.value)} />
+        <label htmlFor="listing-description" className={labelCls}>Description</label>
+        <textarea id="listing-description" className={cn(inputCls, "min-h-[120px] resize-y")} placeholder="What makes your van a great trip?" value={form.description} onChange={(e) => update("description", e.target.value)} />
       </div>
     </>
   );
@@ -342,13 +337,13 @@ function StepPricing({ form, update }: StepProps) {
     <>
       <h2 className="mb-4 font-serif text-xl text-forest-deep">Pricing</h2>
       <div className={fieldCls}>
-        <label className={labelCls}>Nightly rate (NZD)</label>
-        <input type="number" min={1} className={inputCls} value={form.nightlyRate} onChange={(e) => update("nightlyRate", e.target.value)} />
+        <label htmlFor="listing-rate" className={labelCls}>Nightly rate (NZD)</label>
+        <input id="listing-rate" type="number" min={1} className={inputCls} value={form.nightlyRate} onChange={(e) => update("nightlyRate", e.target.value)} />
         <p className={hintCls}>Enter dollars, e.g. 150 for $150/night.</p>
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className={labelCls}>Minimum nights</label>
-        <select className={inputCls} value={form.minimumNights} onChange={(e) => update("minimumNights", e.target.value)}>
+        <label htmlFor="listing-minimum-nights" className={labelCls}>Minimum nights</label>
+        <select id="listing-minimum-nights" className={inputCls} value={form.minimumNights} onChange={(e) => update("minimumNights", e.target.value)}>
           {MINIMUM_NIGHTS.map((n) => <option key={n} value={n}>{n} {n === 1 ? "night" : "nights"}</option>)}
         </select>
       </div>
@@ -362,8 +357,8 @@ function StepPricing({ form, update }: StepProps) {
         </p>
       </div>
       <div className={cn(fieldCls, "mt-3")}>
-        <label className={labelCls}>Minimum driver age</label>
-        <select className={inputCls} value={form.minDriverAge} onChange={(e) => update("minDriverAge", e.target.value)}>
+        <label htmlFor="listing-driver-age" className={labelCls}>Minimum driver age</label>
+        <select id="listing-driver-age" className={inputCls} value={form.minDriverAge} onChange={(e) => update("minDriverAge", e.target.value)}>
           <option value="18">18+ (no extra restriction)</option>
           <option value="21">21+</option>
           <option value="25">25+</option>
@@ -397,8 +392,8 @@ function StepFeatures({ form, update, toggleFeature, island }: StepProps & { tog
         ))}
       </div>
       <div className={fieldCls}>
-        <label className={labelCls}>House rules</label>
-        <textarea className={cn(inputCls, "min-h-[100px] resize-y")} placeholder="e.g. No smoking. Please return with the same level of fuel." value={form.houseRules} onChange={(e) => update("houseRules", e.target.value)} />
+        <label htmlFor="listing-house-rules" className={labelCls}>House rules</label>
+        <textarea id="listing-house-rules" className={cn(inputCls, "min-h-[100px] resize-y")} placeholder="e.g. No smoking. Please return with the same level of fuel." value={form.houseRules} onChange={(e) => update("houseRules", e.target.value)} />
       </div>
       <hr className="my-5 border-border" />
       <h3 className="mb-2 font-serif text-base text-foreground">Review</h3>

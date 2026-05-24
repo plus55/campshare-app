@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
 const selectCls =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 const errorCls = "mt-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
 
 interface Props {
@@ -69,35 +70,30 @@ export default function ReportButton({ reportedUserId, reportedName, bookingId, 
         </button>
       )}
 
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
-        >
-          <div className="w-full max-w-[480px] rounded-2xl border border-border bg-card p-6 shadow-lg">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[480px] rounded-2xl border border-border bg-card p-6 shadow-lg">
             {done ? (
               <>
-                <h3 className="mb-2 font-serif text-lg text-forest-deep dark:text-cream">Report submitted</h3>
-                <p className="mb-4 text-sm text-muted-foreground">Thanks for letting us know. Our team will review and follow up if action is needed.</p>
+                <DialogTitle className="mb-2 font-serif text-lg text-forest-deep">Report submitted</DialogTitle>
+                <DialogDescription className="mb-4">Thanks for letting us know. Our team will review and follow up if action is needed.</DialogDescription>
                 <Button type="button" onClick={() => setOpen(false)}>Close</Button>
               </>
             ) : (
               <>
-                <h3 className="mb-1.5 font-serif text-lg text-forest-deep dark:text-cream">Report {reportedName}</h3>
-                <p className="text-[13px] text-muted-foreground">Only CampShare admins see reports. The reported user is not notified.</p>
+                <DialogTitle className="mb-1.5 font-serif text-lg text-forest-deep">Report {reportedName}</DialogTitle>
+                <DialogDescription className="text-[13px]">Only CampShare admins see reports. The reported user is not notified.</DialogDescription>
 
                 <div className="mt-3 flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-foreground">Reason</label>
-                  <select className={selectCls} value={reason} onChange={(e) => setReason(e.target.value)}>
+                  <label htmlFor="report-reason" className="text-sm font-medium text-foreground">Reason</label>
+                  <select id="report-reason" className={selectCls} value={reason} onChange={(e) => setReason(e.target.value)}>
                     {REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
 
                 <div className="mt-3 flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-foreground">Details (optional)</label>
+                  <label htmlFor="report-details" className="text-sm font-medium text-foreground">Details (optional)</label>
                   <Textarea
+                    id="report-details"
                     className="min-h-[100px]"
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
@@ -106,7 +102,7 @@ export default function ReportButton({ reportedUserId, reportedName, bookingId, 
                   />
                 </div>
 
-                {error && <p className={errorCls}>{error}</p>}
+                {error && <p className={errorCls} role="alert" aria-live="polite">{error}</p>}
 
                 <div className="mt-3 flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
@@ -116,9 +112,8 @@ export default function ReportButton({ reportedUserId, reportedName, bookingId, 
                 </div>
               </>
             )}
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
