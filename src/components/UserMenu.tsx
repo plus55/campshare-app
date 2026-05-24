@@ -6,6 +6,7 @@ import { signOut } from "@/lib/auth-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -44,24 +45,24 @@ export default function UserMenu({ name, email }: { name: string; email: string 
         align="end"
         className="w-56 bg-card border-border shadow-[0_18px_50px_-12px_rgba(31,42,32,0.18)]"
       >
-        <DropdownMenuLabel className="font-normal pb-2">
-          <div className="font-serif text-forest-deep dark:text-cream text-[0.95rem]">{name}</div>
-          {email && email !== name && (
-            <div className="text-[0.78rem] text-muted-foreground truncate">{email}</div>
-          )}
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="mb-1 border-b border-border pb-2 font-normal">
+            <div className="font-serif text-forest-deep dark:text-cream text-[0.95rem]">{name}</div>
+            {email && email !== name && (
+              <div className="text-[0.78rem] text-muted-foreground truncate">{email}</div>
+            )}
+          </DropdownMenuLabel>
 
-        <DropdownMenuSeparator className="bg-border" />
-
-        {menuItems.map(({ href, label }) => (
-          <DropdownMenuItem
-            key={href}
-            render={<Link href={href} />}
-            className="text-muted-foreground hover:text-foreground cursor-pointer"
-          >
-            {label}
-          </DropdownMenuItem>
-        ))}
+          {menuItems.map(({ href, label }) => (
+            <DropdownMenuItem
+              key={href}
+              render={<Link href={href} />}
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
 
         <DropdownMenuSeparator className="bg-border" />
 
