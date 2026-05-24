@@ -7,6 +7,13 @@ import {
   TEMPLATE_TITLE_MAX,
 } from "@/lib/constants";
 import type { MessageTemplate } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+const fieldCls = "flex flex-col gap-1.5";
+const labelCls = "text-sm font-medium text-foreground";
+const errorCls = "rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
 
 interface Props {
   initial: MessageTemplate[];
@@ -50,18 +57,9 @@ export function TemplateManager({ initial }: Props) {
   async function save() {
     const t = title.trim();
     const b = body.trim();
-    if (!t || !b) {
-      setError("Title and body are required.");
-      return;
-    }
-    if (t.length > TEMPLATE_TITLE_MAX) {
-      setError(`Title must be ${TEMPLATE_TITLE_MAX} characters or fewer.`);
-      return;
-    }
-    if (b.length > TEMPLATE_BODY_MAX) {
-      setError(`Body must be ${TEMPLATE_BODY_MAX} characters or fewer.`);
-      return;
-    }
+    if (!t || !b) { setError("Title and body are required."); return; }
+    if (t.length > TEMPLATE_TITLE_MAX) { setError(`Title must be ${TEMPLATE_TITLE_MAX} characters or fewer.`); return; }
+    if (b.length > TEMPLATE_BODY_MAX) { setError(`Body must be ${TEMPLATE_BODY_MAX} characters or fewer.`); return; }
 
     setBusy(true);
     setError(null);
@@ -115,112 +113,76 @@ export function TemplateManager({ initial }: Props) {
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
-      {error && <p className="cs-error">{error}</p>}
+    <div className="mt-4">
+      {error && <p className={errorCls}>{error}</p>}
 
       {!showForm && (
-        <button
-          type="button"
-          className="cs-btn cs-btn-primary"
-          onClick={startNew}
-          disabled={atLimit}
-        >
+        <Button type="button" onClick={startNew} disabled={atLimit}>
           + New template
-        </button>
+        </Button>
       )}
       {atLimit && !showForm && (
-        <p className="cs-muted cs-small" style={{ marginTop: 8 }}>
+        <p className="mt-2 text-[12px] text-muted-foreground">
           You&rsquo;ve reached the {MAX_TEMPLATES_PER_HOST}-template limit. Delete one to add another.
         </p>
       )}
 
       {showForm && (
-        <div className="cs-card" style={{ marginTop: 8 }}>
-          <h2 style={{ margin: "0 0 12px", fontSize: 18 }}>
+        <div className="mt-3 rounded-2xl border border-border bg-card p-5">
+          <h2 className="mb-4 font-serif text-lg text-forest-deep dark:text-cream">
             {editingId ? "Edit template" : "New template"}
           </h2>
-          <label className="cs-small" style={{ display: "block", marginBottom: 12 }}>
-            Title
-            <input
-              className="cs-input"
+          <div className={fieldCls}>
+            <label className={labelCls}>Title</label>
+            <Input
               type="text"
               value={title}
               maxLength={TEMPLATE_TITLE_MAX}
               placeholder="e.g. Pickup directions"
               onChange={(e) => setTitle(e.target.value)}
-              style={{ marginTop: 4 }}
             />
-            <span className="cs-muted" style={{ fontSize: 11 }}>
-              {title.length}/{TEMPLATE_TITLE_MAX}
-            </span>
-          </label>
-          <label className="cs-small" style={{ display: "block", marginBottom: 12 }}>
-            Body
-            <textarea
-              className="cs-textarea"
+            <span className="text-[11px] text-muted-foreground">{title.length}/{TEMPLATE_TITLE_MAX}</span>
+          </div>
+          <div className={`${fieldCls} mt-3`}>
+            <label className={labelCls}>Body</label>
+            <Textarea
+              className="min-h-[140px]"
               value={body}
               maxLength={TEMPLATE_BODY_MAX}
               placeholder="The full message that gets pasted into the chat…"
               onChange={(e) => setBody(e.target.value)}
-              style={{ marginTop: 4, minHeight: 140 }}
             />
-            <span className="cs-muted" style={{ fontSize: 11 }}>
-              {body.length}/{TEMPLATE_BODY_MAX}
-            </span>
-          </label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              type="button"
-              className="cs-btn cs-btn-primary"
-              onClick={save}
-              disabled={busy}
-            >
+            <span className="text-[11px] text-muted-foreground">{body.length}/{TEMPLATE_BODY_MAX}</span>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button type="button" onClick={save} disabled={busy}>
               {busy ? "Saving…" : "Save template"}
-            </button>
-            <button
-              type="button"
-              className="cs-btn cs-btn-ghost"
-              onClick={cancel}
-              disabled={busy}
-            >
+            </Button>
+            <Button type="button" variant="outline" onClick={cancel} disabled={busy}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
+      <div className="mt-4 grid gap-3">
         {templates.length === 0 && !showForm && (
-          <p className="cs-muted cs-small">No templates yet.</p>
+          <p className="text-[13px] text-muted-foreground">No templates yet.</p>
         )}
         {templates.map((t) => (
-          <div key={t.id} className="cs-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>{t.title}</p>
-                <p className="cs-small" style={{ margin: "6px 0 0", whiteSpace: "pre-wrap" }}>
-                  {t.body}
-                </p>
+          <div key={t.id} className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground">{t.title}</p>
+                <p className="mt-1.5 whitespace-pre-wrap text-[13px] text-muted-foreground">{t.body}</p>
               </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button
-                  type="button"
-                  className="cs-btn cs-btn-ghost"
-                  style={{ fontSize: 13, padding: "6px 12px" }}
-                  onClick={() => startEdit(t)}
-                  disabled={busy}
-                >
+              <div className="flex shrink-0 gap-1.5">
+                <Button type="button" variant="outline" size="sm" onClick={() => startEdit(t)} disabled={busy}>
                   Edit
-                </button>
-                <button
-                  type="button"
-                  className="cs-btn cs-btn-ghost"
-                  style={{ fontSize: 13, padding: "6px 12px" }}
-                  onClick={() => remove(t.id)}
-                  disabled={busy}
-                >
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => remove(t.id)} disabled={busy}>
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
           </div>

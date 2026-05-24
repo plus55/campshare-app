@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 interface SavedSearch {
   id: string;
@@ -56,44 +57,45 @@ export function SavedSearches({ initial }: { initial: SavedSearch[] }) {
 
   if (searches.length === 0) {
     return (
-      <div className="cs-card" style={{ textAlign: "center", padding: 48 }}>
-        <p style={{ fontWeight: 600, marginBottom: 8 }}>No saved searches yet</p>
-        <p className="cs-muted cs-small" style={{ marginBottom: 20 }}>
+      <div className="rounded-2xl border border-border bg-card px-6 py-12 text-center">
+        <p className="mb-2 font-semibold text-foreground">No saved searches yet</p>
+        <p className="mb-5 text-[13px] text-muted-foreground">
           Apply filters on Browse vans, then tap &ldquo;Save search&rdquo; to get email alerts when new matching vans are listed.
         </p>
-        <Link href="/vans" className="cs-btn cs-btn-primary">Browse vans</Link>
+        <Button asChild>
+          <Link href="/vans">Browse vans</Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div className="grid gap-3">
       {searches.map((s) => (
-        <div key={s.id} className="cs-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <p style={{ margin: 0, fontWeight: 600 }}>{describeFilters(s.filters)}</p>
-            <p className="cs-muted cs-small" style={{ margin: "4px 0 0" }}>
+        <div
+          key={s.id}
+          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-4"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-foreground">{describeFilters(s.filters)}</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">
               Saved {fmtRelative(s.createdAt)}
               {s.lastAlertedAt !== null && ` · Last alert ${fmtRelative(s.lastAlertedAt)}`}
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Link
-              href={`/vans?${filtersToQueryString(s.filters)}`}
-              className="cs-btn cs-btn-ghost"
-              style={{ fontSize: 13, padding: "6px 14px" }}
-            >
-              Run
-            </Link>
-            <button
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/vans?${filtersToQueryString(s.filters)}`}>Run</Link>
+            </Button>
+            <Button
               type="button"
-              className="cs-btn cs-btn-ghost"
-              style={{ fontSize: 13, padding: "6px 14px" }}
+              variant="outline"
+              size="sm"
               onClick={() => handleDelete(s.id)}
               disabled={deletingId === s.id}
             >
               {deletingId === s.id ? "Deleting…" : "Delete"}
-            </button>
+            </Button>
           </div>
         </div>
       ))}

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReviewRole } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const MIN_CHARS = 20;
 
@@ -56,10 +58,10 @@ export default function ReviewForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="cs-card" style={{ padding: 24, display: "grid", gap: 20 }}>
+    <form onSubmit={onSubmit} className="grid gap-5 rounded-2xl border border-border bg-card p-6">
       <div>
-        <label className="cs-label" style={{ display: "block", marginBottom: 8 }}>Overall rating</label>
-        <div style={{ display: "flex", gap: 6 }}>
+        <label className="mb-2 block text-sm font-medium text-foreground">Overall rating</label>
+        <div className="flex gap-1.5">
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
@@ -69,64 +71,45 @@ export default function ReviewForm({
               onClick={() => setRating(n)}
               aria-label={`${n} star${n > 1 ? "s" : ""}`}
               aria-pressed={rating === n}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 32,
-                lineHeight: 1,
-                padding: 4,
-                color: n <= display ? "var(--ochre)" : "var(--line)",
-                transition: "color 80ms",
-              }}
+              className="cursor-pointer border-none bg-transparent p-1 text-[32px] leading-none transition-colors"
+              style={{ color: n <= display ? "var(--ochre)" : "var(--border)" }}
             >
               ★
             </button>
           ))}
           {rating > 0 && (
-            <span className="cs-muted cs-small" style={{ alignSelf: "center", marginLeft: 8 }}>
-              {rating} / 5
-            </span>
+            <span className="self-center ml-2 text-[12px] text-muted-foreground">{rating} / 5</span>
           )}
         </div>
       </div>
 
       <div>
-        <label htmlFor="review-text" className="cs-label" style={{ display: "block", marginBottom: 8 }}>
+        <label htmlFor="review-text" className="mb-2 block text-sm font-medium text-foreground">
           Your review
         </label>
-        <textarea
+        <Textarea
           id="review-text"
-          className="cs-input"
+          className="min-h-[140px] resize-y"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
-          rows={6}
           maxLength={4000}
-          style={{ width: "100%", resize: "vertical", minHeight: 140 }}
         />
-        <div className="cs-small cs-muted" style={{ marginTop: 6, textAlign: "right" }}>
-          {text.trim().length < MIN_CHARS
+        <div className="mt-1.5 text-right text-[12px] text-muted-foreground">
+          {tooShort
             ? `${MIN_CHARS - text.trim().length} more character${MIN_CHARS - text.trim().length === 1 ? "" : "s"} needed`
             : `${text.trim().length} characters`}
         </div>
       </div>
 
       {error && (
-        <div className="cs-alert cs-alert-error" style={{ padding: 12, borderRadius: 8, background: "#fbe9e4", color: "#7a2614" }}>
-          {error}
-        </div>
+        <div className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-        <button
-          type="submit"
-          className="cs-btn cs-btn-primary"
-          disabled={disabled}
-          style={{ opacity: disabled ? 0.55 : 1 }}
-        >
+      <div className="flex justify-end">
+        <Button type="submit" disabled={disabled}>
           {submitting ? "Submitting…" : "Submit review"}
-        </button>
+        </Button>
       </div>
     </form>
   );

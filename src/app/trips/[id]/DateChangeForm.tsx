@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   bookingId: string;
@@ -21,6 +23,9 @@ function fmtNzd(cents: number): string {
   return `$${Math.abs(cents / 100).toFixed(0)}`;
 }
 
+const fieldCls = "flex flex-col gap-1.5";
+const labelCls = "text-sm font-medium text-foreground";
+
 export default function DateChangeForm({ bookingId, currentStartDate, currentEndDate }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -33,24 +38,24 @@ export default function DateChangeForm({ bookingId, currentStartDate, currentEnd
 
   if (!open) {
     return (
-      <button className="cs-btn cs-btn-ghost cs-small" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
         Request date change
-      </button>
+      </Button>
     );
   }
 
   if (submitted && priceDiff !== null) {
     return (
-      <div className="cs-card" style={{ marginTop: 16, background: "#f0fdf4" }}>
-        <p style={{ margin: 0, fontWeight: 600 }}>Date change request sent</p>
-        <p className="cs-muted cs-small" style={{ margin: "4px 0 0" }}>
+      <div className="mt-4 rounded-2xl border border-border bg-card p-5">
+        <p className="font-semibold text-foreground">Date change request sent</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">
           The host will respond shortly.
           {priceDiff > 0 && ` A price difference of ${fmtNzd(priceDiff)} may apply.`}
           {priceDiff < 0 && ` A refund of ${fmtNzd(priceDiff)} will be issued if accepted.`}
         </p>
-        <button className="cs-btn cs-btn-ghost cs-small" style={{ marginTop: 12 }} onClick={() => router.refresh()}>
+        <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => router.refresh()}>
           Refresh
-        </button>
+        </Button>
       </div>
     );
   }
@@ -80,40 +85,40 @@ export default function DateChangeForm({ bookingId, currentStartDate, currentEnd
   }
 
   return (
-    <div className="cs-card" style={{ marginTop: 16 }}>
-      <p style={{ margin: "0 0 12px", fontWeight: 600 }}>Request date change</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-        <label className="cs-field" style={{ margin: 0 }}>
-          <span className="cs-label">New check-in</span>
-          <input
+    <div className="mt-4 rounded-2xl border border-border bg-card p-5">
+      <p className="mb-3 font-semibold text-foreground">Request date change</p>
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className={fieldCls}>
+          <label className={labelCls}>New check-in</label>
+          <Input
             type="date"
-            className="cs-input"
+            className="h-9"
             min={todayString()}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
-        </label>
-        <label className="cs-field" style={{ margin: 0 }}>
-          <span className="cs-label">New check-out</span>
-          <input
+        </div>
+        <div className={fieldCls}>
+          <label className={labelCls}>New check-out</label>
+          <Input
             type="date"
-            className="cs-input"
+            className="h-9"
             min={startDate || todayString()}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
-        </label>
+        </div>
       </div>
-      {error && <p className="cs-error" style={{ margin: "0 0 8px" }}>{error}</p>}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button className="cs-btn cs-btn-primary cs-small" disabled={loading} onClick={submit}>
+      {error && <p className="mb-2 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</p>}
+      <div className="flex gap-2">
+        <Button type="button" size="sm" disabled={loading} onClick={submit}>
           {loading ? "Sending…" : "Send request"}
-        </button>
-        <button className="cs-btn cs-btn-ghost cs-small" onClick={() => setOpen(false)}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
           Cancel
-        </button>
+        </Button>
       </div>
-      <p className="cs-muted cs-small" style={{ margin: "8px 0 0" }}>
+      <p className="mt-2 text-[12px] text-muted-foreground">
         The host must approve the change. A price adjustment may apply.
       </p>
     </div>

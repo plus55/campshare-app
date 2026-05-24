@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function ReportActions({ reportId }: { reportId: string }) {
   const router = useRouter();
@@ -32,19 +34,18 @@ export default function ReportActions({ reportId }: { reportId: string }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <textarea
-        className="cs-textarea"
+    <div className="flex flex-col gap-2">
+      <Textarea
+        className="min-h-[60px]"
         placeholder="Admin note (optional)"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        style={{ minHeight: 60 }}
       />
-      {err && <p className="cs-error" style={{ margin: 0 }}>{err}</p>}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button type="button" className="cs-btn cs-btn-ghost cs-small" onClick={() => act("dismissed")} disabled={busy}>Dismiss</button>
-        <button type="button" className="cs-btn cs-btn-ghost cs-small" onClick={() => act("reviewed")} disabled={busy}>Mark reviewed</button>
-        <button type="button" className="cs-btn cs-btn-primary cs-small" onClick={() => act("actioned")} disabled={busy}>Mark actioned</button>
+      {err && <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{err}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => act("dismissed")} disabled={busy}>Dismiss</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => act("reviewed")} disabled={busy}>Mark reviewed</Button>
+        <Button type="button" size="sm" onClick={() => act("actioned")} disabled={busy}>Mark actioned</Button>
       </div>
     </div>
   );

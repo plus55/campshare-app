@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { photoUrl } from "@/lib/photos";
 import type { VanPhoto } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   listingId: string;
@@ -27,15 +29,10 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
 
     for (const file of Array.from(files)) {
       try {
-        // 1. Get a signed PUT URL from the Worker
         const signRes = await fetch("/api/photos/sign", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            vanListingId: listingId,
-            contentType: file.type,
-            sizeBytes: file.size,
-          }),
+          body: JSON.stringify({ vanListingId: listingId, contentType: file.type, sizeBytes: file.size }),
         });
         if (!signRes.ok) {
           const j = await signRes.json().catch(() => ({})) as { error?: string };
@@ -43,23 +40,13 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
         }
         const { signedUrl, r2Key } = await signRes.json() as { signedUrl: string; r2Key: string };
 
-        // 2. PUT directly to R2
-        const putRes = await fetch(signedUrl, {
-          method: "PUT",
-          headers: { "content-type": file.type },
-          body: file,
-        });
+        const putRes = await fetch(signedUrl, { method: "PUT", headers: { "content-type": file.type }, body: file });
         if (!putRes.ok) throw new Error("Upload to storage failed.");
 
-        // 3. Persist the photo metadata
         const metaRes = await fetch("/api/photos", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            vanListingId: listingId,
-            r2Key,
-            position: photos.length,
-          }),
+          body: JSON.stringify({ vanListingId: listingId, r2Key, position: photos.length }),
         });
         if (!metaRes.ok) {
           const j = await metaRes.json().catch(() => ({})) as { error?: string };
@@ -92,7 +79,6 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
     setPhotos((prev) => prev.map((p) => p.id === photoId ? { ...p, caption } : p));
   }
 
-  // Drag-to-reorder — desktop uses HTML5 DnD, touch uses pointer events with long-press
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [touchDragIdx, setTouchDragIdx] = useState<number | null>(null);
   const [touchOverIdx, setTouchOverIdx] = useState<number | null>(null);
@@ -112,14 +98,10 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
       const res = await fetch("/api/photos/reorder", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          vanListingId: listingId,
-          orderedIds: withPositions.map((p) => p.id),
-        }),
+        body: JSON.stringify({ vanListingId: listingId, orderedIds: withPositions.map((p) => p.id) }),
       });
       if (!res.ok) throw new Error("Reorder failed");
     } catch {
-      // Roll back optimistic update
       if (previousPhotosRef.current) setPhotos(previousPhotosRef.current);
       setError("Couldn't save new order.");
     }
@@ -146,10 +128,7 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType !== "touch") return;
-    if (touchDragIdx === null) {
-      cancelLongPress();
-      return;
-    }
+    if (touchDragIdx === null) { cancelLongPress(); return; }
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const tile = el?.closest("[data-photo-idx]") as HTMLElement | null;
     if (tile) {
@@ -161,9 +140,7 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType !== "touch") return;
     cancelLongPress();
-    if (touchDragIdx !== null && touchOverIdx !== null) {
-      void movePhoto(touchDragIdx, touchOverIdx);
-    }
+    if (touchDragIdx !== null && touchOverIdx !== null) void movePhoto(touchDragIdx, touchOverIdx);
     setTouchDragIdx(null);
     setTouchOverIdx(null);
   }
@@ -176,16 +153,9 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
 
   return (
     <>
-      {error && <div className="cs-error">{error}</div>}
+      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
+      <div className="mb-4 grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
         {photos.map((photo, idx) => {
           const url = photoUrl(photo.r2Key);
           const isTouchDragging = touchDragIdx === idx;
@@ -197,51 +167,47 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
               draggable
               onDragStart={() => setDragIdx(idx)}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={() => {
-                if (dragIdx !== null) void movePhoto(dragIdx, idx);
-                setDragIdx(null);
-              }}
+              onDrop={() => { if (dragIdx !== null) void movePhoto(dragIdx, idx); setDragIdx(null); }}
               onPointerDown={(e) => onPointerDown(e, idx)}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerCancel}
+              className="overflow-hidden rounded-lg border transition-[transform,border-color]"
               style={{
-                border: isTouchOver ? "2px solid var(--clay)" : "1px solid var(--sand-200)",
-                borderRadius: 8,
-                overflow: "hidden",
+                borderColor: isTouchOver ? "var(--clay)" : undefined,
+                borderWidth: isTouchOver ? 2 : 1,
                 cursor: "grab",
                 opacity: dragIdx === idx || isTouchDragging ? 0.5 : 1,
                 transform: isTouchDragging ? "scale(1.03)" : "none",
-                transition: "transform 120ms ease, border-color 80ms ease",
+                transitionDuration: "120ms",
                 touchAction: touchDragIdx !== null ? "none" : "auto",
               }}
             >
-              {url && (
+              {url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={url} alt={photo.caption ?? ""} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover" }} />
-              )}
-              {!url && (
-                <div style={{ width: "100%", aspectRatio: "4/3", background: "var(--sand-100)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span className="cs-muted cs-small">photo</span>
+                <img src={url} alt={photo.caption ?? ""} className="aspect-[4/3] w-full object-cover" />
+              ) : (
+                <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted">
+                  <span className="text-[12px] text-muted-foreground">photo</span>
                 </div>
               )}
-              <div style={{ padding: 8 }}>
-                {idx === 0 && <p className="cs-small cs-muted" style={{ margin: "0 0 4px" }}>Cover</p>}
-                <input
-                  className="cs-input"
-                  style={{ fontSize: 12, padding: "4px 6px" }}
+              <div className="p-2">
+                {idx === 0 && <p className="mb-1 text-[11px] text-muted-foreground">Cover</p>}
+                <Input
+                  className="h-7 text-[12px]"
                   placeholder="Caption…"
                   defaultValue={photo.caption ?? ""}
                   onBlur={(e) => void updateCaption(photo.id, e.target.value)}
                 />
-                <button
+                <Button
                   type="button"
-                  className="cs-btn cs-btn-danger"
-                  style={{ marginTop: 6, fontSize: 12, padding: "4px 8px" }}
+                  variant="destructive"
+                  size="sm"
+                  className="mt-1.5 h-7 text-[12px]"
                   onClick={() => void deletePhoto(photo.id)}
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             </div>
           );
@@ -249,20 +215,18 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
       </div>
 
       {photos.length < 10 && (
-        <label style={{ display: "inline-block", cursor: "pointer" }}>
-          <span className="cs-btn cs-btn-ghost">
-            {uploading ? "Uploading…" : "+ Add photos"}
-          </span>
+        <label className="inline-block cursor-pointer">
+          <Button type="button" variant="outline" asChild>
+            <span>{uploading ? "Uploading…" : "+ Add photos"}</span>
+          </Button>
           <input
             ref={fileRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
-            style={{ display: "none" }}
+            className="hidden"
             disabled={uploading}
-            onChange={(e) => {
-              if (e.target.files?.length) void upload(e.target.files);
-            }}
+            onChange={(e) => { if (e.target.files?.length) void upload(e.target.files); }}
           />
         </label>
       )}

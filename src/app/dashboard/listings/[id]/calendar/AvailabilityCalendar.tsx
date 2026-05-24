@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { AvailabilityBlock } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   listingId: string;
@@ -24,33 +26,21 @@ function monthDays(year: number, month: number): Date[] {
   return days;
 }
 
-function findBlock(
-  ts: number,
-  blocks: AvailabilityBlock[]
-): AvailabilityBlock | null {
+function findBlock(ts: number, blocks: AvailabilityBlock[]): AvailabilityBlock | null {
   for (const b of blocks) {
     if (ts >= b.startDate && ts <= b.endDate) return b;
   }
   return null;
 }
 
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-export default function AvailabilityCalendar({
-  listingId,
-  initialBlocks,
-  icalFeedUrl,
-  exportUrl,
-}: Props) {
+export default function AvailabilityCalendar({ listingId, initialBlocks, icalFeedUrl, exportUrl }: Props) {
   const [blocks, setBlocks] = useState<AvailabilityBlock[]>(initialBlocks);
   const [selecting, setSelecting] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // iCal import state
   const [importUrl, setImportUrl] = useState(icalFeedUrl ?? "");
   const [importSaving, setImportSaving] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
@@ -67,15 +57,11 @@ export default function AvailabilityCalendar({
     const hit = findBlock(startTs, blocks);
 
     if (hit) {
-      // Prevent deletion of ical-imported blocks
       if (hit.icalUid) {
         setError("This date is blocked by an imported calendar and cannot be removed manually.");
         return;
       }
-      const res = await fetch(
-        `/api/listings/${listingId}/availability/${hit.id}`,
-        { method: "DELETE" }
-      );
+      const res = await fetch(`/api/listings/${listingId}/availability/${hit.id}`, { method: "DELETE" });
       if (res.ok) setBlocks((prev) => prev.filter((b) => b.id !== hit.id));
       else setError("Couldn't remove block.");
     } else {
@@ -89,16 +75,7 @@ export default function AvailabilityCalendar({
         const now = Math.floor(Date.now() / 1000);
         setBlocks((prev) => [
           ...prev,
-          {
-            id,
-            vanListingId: listingId,
-            startDate: startTs,
-            endDate: endTs,
-            reason: "host-blocked",
-            bookingId: null,
-            icalUid: null,
-            createdAt: now,
-          },
+          { id, vanListingId: listingId, startDate: startTs, endDate: endTs, reason: "host-blocked", bookingId: null, icalUid: null, createdAt: now },
         ]);
       } else {
         setError("Couldn't save block.");
@@ -107,15 +84,10 @@ export default function AvailabilityCalendar({
     setSelecting(null);
   }
 
-  function handleCellMouseDown(ts: number) {
-    setSelecting(ts);
-  }
-
+  function handleCellMouseDown(ts: number) { setSelecting(ts); }
   function handleCellMouseUp(ts: number) {
     if (selecting === null) return;
-    const start = Math.min(selecting, ts);
-    const end = Math.max(selecting, ts);
-    void toggleRange(start, end);
+    void toggleRange(Math.min(selecting, ts), Math.max(selecting, ts));
   }
 
   async function handleImportSave() {
@@ -131,14 +103,8 @@ export default function AvailabilityCalendar({
     if (res.ok) {
       setActiveIcalUrl(url);
       setImportMsg("Calendar synced successfully.");
-      // Reload blocks so ical-sourced ones appear
-      const blocksRes = await fetch(
-        `/api/listings/${listingId}/availability`
-      );
-      if (blocksRes.ok) {
-        const data = (await blocksRes.json()) as AvailabilityBlock[];
-        setBlocks(data);
-      }
+      const blocksRes = await fetch(`/api/listings/${listingId}/availability`);
+      if (blocksRes.ok) setBlocks((await blocksRes.json()) as AvailabilityBlock[]);
     } else {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       setImportMsg(body.error ?? "Sync failed.");
@@ -148,9 +114,7 @@ export default function AvailabilityCalendar({
   async function handleImportRemove() {
     setImportSaving(true);
     setImportMsg(null);
-    const res = await fetch(`/api/listings/${listingId}/ical`, {
-      method: "DELETE",
-    });
+    const res = await fetch(`/api/listings/${listingId}/ical`, { method: "DELETE" });
     setImportSaving(false);
     if (res.ok) {
       setActiveIcalUrl(null);
@@ -162,89 +126,48 @@ export default function AvailabilityCalendar({
     }
   }
 
+  const isError = (msg: string) => msg.includes("fail") || msg.includes("ould");
+
   return (
     <>
-      {error && <div className="cs-error">{error}</div>}
+      {error && <div className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</div>}
 
       {/* Calendar grid */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+      <div className="flex flex-col gap-8">
         {months.map(({ year, month }) => {
           const days = monthDays(year, month);
           const firstDow = days[0].getDay();
-
           return (
             <div key={`${year}-${month}`}>
-              <p style={{ fontWeight: 600, marginBottom: 8 }}>
-                {MONTHS[month]} {year}
-              </p>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(7, 1fr)",
-                  gap: 2,
-                }}
-              >
+              <p className="mb-2 font-semibold text-foreground">{MONTHS[month]} {year}</p>
+              <div className="grid grid-cols-7 gap-0.5">
                 {DAYS.map((d) => (
-                  <div
-                    key={d}
-                    style={{
-                      textAlign: "center",
-                      fontSize: 11,
-                      color: "var(--clay)",
-                      paddingBottom: 4,
-                    }}
-                  >
-                    {d}
-                  </div>
+                  <div key={d} className="pb-1 text-center text-[11px] text-muted-foreground">{d}</div>
                 ))}
-                {Array.from({ length: firstDow }).map((_, i) => (
-                  <div key={`pad-${i}`} />
-                ))}
+                {Array.from({ length: firstDow }).map((_, i) => <div key={`pad-${i}`} />)}
                 {days.map((day) => {
-                  const ts = nzMidnight(
-                    day.getFullYear(),
-                    day.getMonth(),
-                    day.getDate()
-                  );
+                  const ts = nzMidnight(day.getFullYear(), day.getMonth(), day.getDate());
                   const block = findBlock(ts, blocks);
                   const isIcal = !!block?.icalUid;
                   const isBooked = block?.reason === "booking";
-                  const isPast =
-                    day < today &&
-                    day.toDateString() !== today.toDateString();
+                  const isPast = day < today && day.toDateString() !== today.toDateString();
 
-                  let bg = "var(--sand-100)";
-                  let color = "inherit";
-                  if (isPast) { bg = "transparent"; color = "var(--sand-300)"; }
-                  else if (isBooked) { bg = "var(--forest)"; color = "#fff"; }
-                  else if (isIcal) { bg = "var(--sand-300)"; color = "var(--clay)"; }
-                  else if (block) { bg = "var(--clay)"; color = "#fff8ef"; }
+                  let cellStyle: React.CSSProperties = { background: "var(--sand-100)" };
+                  if (isPast)    cellStyle = { background: "transparent", color: "var(--sand-300)" };
+                  else if (isBooked) cellStyle = { background: "var(--forest)", color: "#fff" };
+                  else if (isIcal)   cellStyle = { background: "var(--sand-300)", color: "var(--clay)" };
+                  else if (block)    cellStyle = { background: "var(--clay)", color: "#fff8ef" };
 
                   return (
                     <button
                       key={ts}
                       type="button"
                       disabled={isPast || isBooked}
-                      title={
-                        isBooked
-                          ? "Booking"
-                          : isIcal
-                          ? "External calendar block"
-                          : undefined
-                      }
+                      title={isBooked ? "Booking" : isIcal ? "External calendar block" : undefined}
                       onMouseDown={() => handleCellMouseDown(ts)}
                       onMouseUp={() => handleCellMouseUp(ts)}
-                      style={{
-                        padding: "6px 2px",
-                        textAlign: "center",
-                        fontSize: 13,
-                        border: "1px solid var(--sand-200)",
-                        borderRadius: 4,
-                        background: bg,
-                        color,
-                        cursor: isPast || isBooked ? "default" : "pointer",
-                        userSelect: "none",
-                      }}
+                      className="rounded border border-border py-1.5 text-center text-[13px] select-none transition-opacity disabled:cursor-default"
+                      style={{ ...cellStyle, cursor: isPast || isBooked ? "default" : "pointer" }}
                     >
                       {day.getDate()}
                     </button>
@@ -256,120 +179,75 @@ export default function AvailabilityCalendar({
         })}
       </div>
 
-      <div
-        className="cs-small cs-muted"
-        style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}
-      >
-        <span>
-          <span
-            style={{
-              display: "inline-block",
-              width: 10,
-              height: 10,
-              background: "var(--clay)",
-              borderRadius: 2,
-              marginRight: 4,
-            }}
-          />
-          Blocked by you
+      <div className="mt-3 flex flex-wrap gap-4 text-[12px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-clay" /> Blocked by you
         </span>
-        <span>
-          <span
-            style={{
-              display: "inline-block",
-              width: 10,
-              height: 10,
-              background: "var(--sand-300)",
-              borderRadius: 2,
-              marginRight: 4,
-            }}
-          />
-          External calendar
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--sand-300)" }} /> External calendar
         </span>
-        <span>
-          <span
-            style={{
-              display: "inline-block",
-              width: 10,
-              height: 10,
-              background: "var(--forest)",
-              borderRadius: 2,
-              marginRight: 4,
-            }}
-          />
-          Booked
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-forest" /> Booked
         </span>
       </div>
-      <p className="cs-muted cs-small" style={{ marginTop: 4 }}>
+      <p className="mt-1 text-[12px] text-muted-foreground">
         Click a date to block / unblock. Click and drag to select a range.
       </p>
 
       {/* iCal export */}
-      <hr style={{ border: "none", borderTop: "1px solid var(--sand-200)", margin: "28px 0 20px" }} />
-      <h3>Export calendar</h3>
-      <p className="cs-muted cs-small">
-        Subscribe to this URL in Google Calendar, Apple Calendar, or any app
-        that supports iCal to see your bookings and blocked dates.
+      <hr className="my-7 border-border" />
+      <h3 className="mb-1.5 font-serif text-base text-forest-deep dark:text-cream">Export calendar</h3>
+      <p className="mb-2.5 text-[13px] text-muted-foreground">
+        Subscribe to this URL in Google Calendar, Apple Calendar, or any app that supports iCal to see your bookings and blocked dates.
       </p>
-      <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-        <input
+      <div className="flex items-center gap-2">
+        <Input
           readOnly
-          className="cs-input"
+          className="h-9 flex-1 text-[13px]"
           value={exportUrl}
           onFocus={(e) => e.currentTarget.select()}
-          style={{ flex: 1, fontSize: 13 }}
         />
-        <button
-          type="button"
-          className="cs-btn cs-btn-ghost"
-          onClick={() => void navigator.clipboard.writeText(exportUrl)}
-        >
+        <Button type="button" variant="outline" onClick={() => void navigator.clipboard.writeText(exportUrl)}>
           Copy
-        </button>
+        </Button>
       </div>
 
       {/* iCal import */}
-      <hr style={{ border: "none", borderTop: "1px solid var(--sand-200)", margin: "28px 0 20px" }} />
-      <h3>Import external calendar</h3>
-      <p className="cs-muted cs-small">
-        Paste an iCal feed URL (e.g. from Airbnb or another platform) to
-        automatically block those dates here. Synced daily.
+      <hr className="my-7 border-border" />
+      <h3 className="mb-1.5 font-serif text-base text-forest-deep dark:text-cream">Import external calendar</h3>
+      <p className="mb-2.5 text-[13px] text-muted-foreground">
+        Paste an iCal feed URL (e.g. from Airbnb or another platform) to automatically block those dates here. Synced daily.
       </p>
       {importMsg && (
-        <div
-          className={importMsg.includes("fail") || importMsg.includes("ould") ? "cs-error" : "cs-success"}
-          style={{ marginTop: 10 }}
-        >
+        <div className={`mb-2.5 rounded-lg px-3.5 py-2.5 text-sm ${isError(importMsg) ? "bg-destructive/10 text-destructive" : "bg-moss/10 text-moss"}`}>
           {importMsg}
         </div>
       )}
-      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <input
+      <div className="flex gap-2">
+        <Input
           type="url"
-          className="cs-input"
+          className="h-9 flex-1 text-[13px]"
           placeholder="https://www.airbnb.com/calendar/ical/…"
           value={importUrl}
           onChange={(e) => setImportUrl(e.target.value)}
           disabled={importSaving}
-          style={{ flex: 1, fontSize: 13 }}
         />
-        <button
+        <Button
           type="button"
-          className="cs-btn cs-btn-primary"
           disabled={importSaving || !importUrl.trim()}
           onClick={() => void handleImportSave()}
         >
           {importSaving ? "Syncing…" : activeIcalUrl ? "Re-sync" : "Connect"}
-        </button>
+        </Button>
         {activeIcalUrl && (
-          <button
+          <Button
             type="button"
-            className="cs-btn cs-btn-ghost"
+            variant="outline"
             disabled={importSaving}
             onClick={() => void handleImportRemove()}
           >
             Remove
-          </button>
+          </Button>
         )}
       </div>
     </>

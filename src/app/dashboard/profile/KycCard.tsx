@@ -1,10 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   kycStatus: "unverified" | "pending" | "verified" | "failed";
 }
+
+const badgeConfig = {
+  unverified: { label: "Not verified",          cls: "text-muted-foreground bg-muted" },
+  pending:    { label: "Verification pending",   cls: "text-ochre bg-ochre/10" },
+  verified:   { label: "Verified",               cls: "text-moss bg-moss/10" },
+  failed:     { label: "Verification failed",    cls: "text-destructive bg-destructive/10" },
+};
 
 export default function KycCard({ kycStatus }: Props) {
   const [loading, setLoading] = useState(false);
@@ -28,47 +36,28 @@ export default function KycCard({ kycStatus }: Props) {
     }
   }
 
-  const badge = {
-    unverified: { label: "Not verified", color: "var(--ink-400)", bg: "var(--sand-100)" },
-    pending:    { label: "Verification pending", color: "var(--ochre)", bg: "#fff4dc" },
-    verified:   { label: "Verified", color: "#1f7a3a", bg: "#e7f4ec" },
-    failed:     { label: "Verification failed", color: "#a23b1f", bg: "#fbe6e0" },
-  }[kycStatus];
+  const badge = badgeConfig[kycStatus];
 
   return (
-    <div className="cs-card" style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+    <div className="mb-4 rounded-2xl border border-border bg-card p-6">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 style={{ margin: 0 }}>Identity verification</h2>
-          <p className="cs-muted cs-small" style={{ margin: "4px 0 0" }}>
+          <h2 className="mb-1 text-base font-semibold text-foreground">Identity verification</h2>
+          <p className="text-[13px] text-muted-foreground">
             Required before your first booking. Driver&apos;s licence + selfie. Handled by Stripe Identity.
           </p>
         </div>
-        <span
-          style={{
-            padding: "4px 10px",
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 600,
-            color: badge.color,
-            background: badge.bg,
-            whiteSpace: "nowrap",
-          }}
-        >
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ${badge.cls}`}>
           {badge.label}
         </span>
       </div>
 
-      {error && <p className="cs-error" style={{ marginTop: 12 }}>{error}</p>}
+      {error && (
+        <p className="mt-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</p>
+      )}
 
       {kycStatus !== "verified" && (
-        <button
-          type="button"
-          className="cs-btn cs-btn-primary"
-          onClick={start}
-          disabled={loading}
-          style={{ marginTop: 12 }}
-        >
+        <Button type="button" className="mt-4" onClick={start} disabled={loading}>
           {loading
             ? "Starting…"
             : kycStatus === "pending"
@@ -76,7 +65,7 @@ export default function KycCard({ kycStatus }: Props) {
               : kycStatus === "failed"
                 ? "Try again"
                 : "Verify my identity"}
-        </button>
+        </Button>
       )}
     </div>
   );

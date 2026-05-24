@@ -46,6 +46,14 @@ function fmtCreatedAt(unixSec: number) {
   return fmtDate(unixSec * 1000);
 }
 
+const statusBadge: Record<string, string> = {
+  paid:    "rounded-full px-2 py-0.5 text-[11px] font-semibold bg-moss/10 text-moss",
+  failed:  "rounded-full px-2 py-0.5 text-[11px] font-semibold bg-destructive/10 text-destructive",
+};
+function getStatusCls(status: string) {
+  return statusBadge[status] ?? "rounded-full px-2 py-0.5 text-[11px] font-semibold bg-ochre/10 text-ochre";
+}
+
 export function PayoutRow({ payout }: { payout: PayoutRowData }) {
   const [open, setOpen] = useState(false);
   const hostFeeCents = Math.round(payout.subtotalCents * HOST_FEE_PCT / 100);
@@ -53,62 +61,64 @@ export function PayoutRow({ payout }: { payout: PayoutRowData }) {
 
   return (
     <>
-      <tr onClick={() => setOpen(!open)} style={{ cursor: "pointer" }} aria-expanded={open}>
-        <td>
-          <span style={{ display: "inline-block", width: 16, color: "var(--stone)" }}>
+      <tr
+        onClick={() => setOpen(!open)}
+        className="cursor-pointer hover:bg-muted/40"
+        aria-expanded={open}
+      >
+        <td className="py-2 pr-4">
+          <span className="mr-1.5 inline-block w-4 text-muted-foreground">
             {open ? "▾" : "▸"}
           </span>
           {payout.vanName}
         </td>
-        <td>{fmtNzdRound(payout.subtotalCents)}</td>
-        <td>{payout.addonTotalCents > 0 ? fmtNzdRound(payout.addonTotalCents) : "—"}</td>
-        <td className="cs-muted cs-small">{fmtNzdRound(platformFeeCents)}</td>
-        <td style={{ fontWeight: 600 }}>{fmtNzdRound(payout.amountCents)}</td>
-        <td>
-          <span className={`cs-pill ${payout.status === "paid" ? "cs-pill-published" : payout.status === "failed" ? "cs-pill-archived" : "cs-pill-pending"}`}>
-            {payout.status}
-          </span>
+        <td className="py-2 pr-4">{fmtNzdRound(payout.subtotalCents)}</td>
+        <td className="py-2 pr-4">{payout.addonTotalCents > 0 ? fmtNzdRound(payout.addonTotalCents) : "—"}</td>
+        <td className="py-2 pr-4 text-[13px] text-muted-foreground">{fmtNzdRound(platformFeeCents)}</td>
+        <td className="py-2 pr-4 font-semibold">{fmtNzdRound(payout.amountCents)}</td>
+        <td className="py-2 pr-4">
+          <span className={getStatusCls(payout.status)}>{payout.status}</span>
         </td>
-        <td className="cs-muted cs-small">{fmtCreatedAt(payout.createdAt)}</td>
+        <td className="py-2 text-[13px] text-muted-foreground">{fmtCreatedAt(payout.createdAt)}</td>
       </tr>
       {open && (
-        <tr style={{ background: "var(--cream)" }}>
-          <td colSpan={7} style={{ padding: "16px 24px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <tr className="bg-muted/30">
+          <td colSpan={7} className="px-6 py-4">
+            <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="cs-label cs-small" style={{ margin: "0 0 8px" }}>Booking</p>
-                <p style={{ margin: 0 }}>
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Booking</p>
+                <p className="text-sm text-foreground">
                   {fmtDateShort(payout.startDate)} → {fmtDateShort(payout.endDate)} · {payout.nights} {payout.nights === 1 ? "night" : "nights"}
                 </p>
-                <p className="cs-muted cs-small" style={{ margin: "4px 0 0" }}>
+                <p className="mt-1 text-[12px] text-muted-foreground">
                   Booking ID: {payout.bookingId.slice(0, 8)}
                 </p>
               </div>
               <div>
-                <p className="cs-label cs-small" style={{ margin: "0 0 8px" }}>Your payout breakdown</p>
-                <table style={{ width: "100%", fontSize: 14 }}>
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Your payout breakdown</p>
+                <table className="w-full text-sm">
                   <tbody>
                     <tr>
-                      <td style={{ padding: "2px 0" }}>Nightly subtotal</td>
-                      <td style={{ padding: "2px 0", textAlign: "right" }}>{fmtNzd(payout.subtotalCents)}</td>
+                      <td className="py-0.5 text-foreground">Nightly subtotal</td>
+                      <td className="py-0.5 text-right text-foreground">{fmtNzd(payout.subtotalCents)}</td>
                     </tr>
                     <tr>
-                      <td style={{ padding: "2px 0", color: "var(--stone)" }}>Host fee ({HOST_FEE_PCT}%)</td>
-                      <td style={{ padding: "2px 0", textAlign: "right", color: "var(--stone)" }}>−{fmtNzd(hostFeeCents)}</td>
+                      <td className="py-0.5 text-muted-foreground">Host fee ({HOST_FEE_PCT}%)</td>
+                      <td className="py-0.5 text-right text-muted-foreground">−{fmtNzd(hostFeeCents)}</td>
                     </tr>
                     {payout.addonTotalCents > 0 && (
                       <tr>
-                        <td style={{ padding: "2px 0" }}>Add-ons (no fee)</td>
-                        <td style={{ padding: "2px 0", textAlign: "right" }}>+{fmtNzd(payout.addonTotalCents)}</td>
+                        <td className="py-0.5 text-foreground">Add-ons (no fee)</td>
+                        <td className="py-0.5 text-right text-foreground">+{fmtNzd(payout.addonTotalCents)}</td>
                       </tr>
                     )}
-                    <tr style={{ borderTop: "1px solid var(--line)" }}>
-                      <td style={{ padding: "6px 0 0", fontWeight: 600 }}>Net payout</td>
-                      <td style={{ padding: "6px 0 0", textAlign: "right", fontWeight: 600 }}>{fmtNzd(payout.amountCents)}</td>
+                    <tr className="border-t border-border">
+                      <td className="pt-1.5 font-semibold text-foreground">Net payout</td>
+                      <td className="pt-1.5 text-right font-semibold text-foreground">{fmtNzd(payout.amountCents)}</td>
                     </tr>
                   </tbody>
                 </table>
-                <p className="cs-muted cs-small" style={{ margin: "12px 0 0" }}>
+                <p className="mt-3 text-[12px] text-muted-foreground">
                   Guest also paid {fmtNzd(payout.serviceFeeCents)} service fee + {fmtNzd(payout.gstOnFeeCents)} GST (collected by CampShare).
                 </p>
               </div>

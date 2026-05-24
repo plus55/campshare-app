@@ -27,7 +27,7 @@ function StarRating({ rating }: { rating: number }) {
   return (
     <span aria-label={`${rating} out of 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} style={{ color: n <= Math.round(rating) ? "var(--ochre)" : "var(--line)" }}>★</span>
+        <span key={n} className={n <= Math.round(rating) ? "text-ochre" : "text-border"}>★</span>
       ))}
     </span>
   );
@@ -39,31 +39,33 @@ export default function ReceivedReviewsSection({ reviews }: { reviews: ReceivedR
   if (reviews.length === 0) return null;
 
   return (
-    <div style={{ marginTop: 40 }}>
-      <h2 style={{ marginBottom: 4 }}>Reviews received</h2>
-      <p className="cs-muted" style={{ marginBottom: 16 }}>Guest reviews of your listings. You can respond publicly to each one.</p>
-      <div style={{ display: "grid", gap: 12 }}>
+    <div className="mt-10">
+      <h2 className="mb-1 font-serif text-xl text-forest-deep dark:text-cream">Reviews received</h2>
+      <p className="mb-4 text-sm text-muted-foreground">Guest reviews of your listings. You can respond publicly to each one.</p>
+      <div className="grid gap-3">
         {reviews.map((r) => (
-          <div key={r.id} className="cs-card" style={{ padding: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 6 }}>
+          <div key={r.id} className="rounded-2xl border border-border bg-card p-4">
+            <div className="mb-1.5 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <span style={{ fontWeight: 600 }}>{r.authorName}</span>
-                <span className="cs-muted cs-small" style={{ marginLeft: 8 }}>on <em>{r.vanName}</em></span>
+                <span className="font-semibold text-foreground">{r.authorName}</span>
+                <span className="ml-2 text-[12px] text-muted-foreground">on <em>{r.vanName}</em></span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="flex items-center gap-2">
                 <StarRating rating={r.rating} />
-                <span className="cs-muted cs-small">{relDate(r.createdAt)}</span>
+                <span className="text-[12px] text-muted-foreground">{relDate(r.createdAt)}</span>
               </div>
             </div>
-            <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--charcoal-soft)", lineHeight: 1.55 }}>{r.text}</p>
+            <p className="mb-2.5 text-sm leading-relaxed text-foreground">{r.text}</p>
 
             {r.hostResponse ? (
-              <div style={{ padding: "10px 14px", background: "var(--sand)", borderRadius: 8, borderLeft: "3px solid var(--clay)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--clay)", marginBottom: 4 }}>
+              <div className="rounded-lg border-l-[3px] border-clay bg-secondary px-3.5 py-2.5">
+                <div className="mb-1 text-[12px] font-semibold text-clay">
                   Your response
-                  {r.hostRespondedAt && <span style={{ fontWeight: 400, color: "var(--stone)", marginLeft: 6 }}>{relDate(r.hostRespondedAt)}</span>}
+                  {r.hostRespondedAt && (
+                    <span className="ml-1.5 font-normal text-muted-foreground">{relDate(r.hostRespondedAt)}</span>
+                  )}
                 </div>
-                <p style={{ margin: 0, fontSize: 13, color: "var(--charcoal-soft)", lineHeight: 1.5 }}>{r.hostResponse}</p>
+                <p className="m-0 text-[13px] leading-relaxed text-foreground">{r.hostResponse}</p>
               </div>
             ) : (
               <HostResponseForm reviewId={r.id} onSuccess={() => router.refresh()} />

@@ -4,6 +4,15 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { NZ_REGIONS, NORTH_ISLAND_REGIONS } from "@/lib/constants";
 import type { HostProfile } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+const selectCls =
+  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+const fieldCls = "flex flex-col gap-1.5";
+const labelCls = "text-sm font-medium text-foreground";
+const errorCls = "mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
 
 interface Props {
   profile: HostProfile | null;
@@ -63,58 +72,57 @@ export default function EditProfileForm({ profile }: Props) {
   }
 
   return (
-    <div className="cs-card">
-      {error && <div className="cs-error">{error}</div>}
-      {saved && <p style={{ color: "green", marginBottom: 12 }}>Profile saved.</p>}
+    <div className="rounded-2xl border border-border bg-card p-6">
+      {error && <div className={errorCls}>{error}</div>}
+      {saved && <p className="mb-3 text-sm text-moss">Profile saved.</p>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div className="cs-field">
-          <label className="cs-label">First name</label>
-          <input className="cs-input" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
+      <div className="grid grid-cols-2 gap-3">
+        <div className={fieldCls}>
+          <label className={labelCls}>First name</label>
+          <Input value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
         </div>
-        <div className="cs-field">
-          <label className="cs-label">Last name</label>
-          <input className="cs-input" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
+        <div className={fieldCls}>
+          <label className={labelCls}>Last name</label>
+          <Input value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
         </div>
       </div>
 
-      <div className="cs-field">
-        <label className="cs-label">Phone</label>
-        <input type="tel" className="cs-input" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+      <div className={`${fieldCls} mt-3`}>
+        <label className={labelCls}>Phone</label>
+        <Input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
       </div>
 
-      <div className="cs-field">
-        <label className="cs-label">Region</label>
-        <select className="cs-select" value={form.region} onChange={(e) => update("region", e.target.value)}>
+      <div className={`${fieldCls} mt-3`}>
+        <label className={labelCls}>Region</label>
+        <select className={selectCls} value={form.region} onChange={(e) => update("region", e.target.value)}>
           <option value="">Select a region…</option>
           {NZ_REGIONS.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
         </select>
         {form.region && (
-          <p className="cs-muted cs-small" style={{ marginTop: 6 }}>{island} Island</p>
+          <p className="mt-1 text-[12px] text-muted-foreground">{island} Island</p>
         )}
       </div>
 
-      <div className="cs-field">
-        <label className="cs-label">Bio (optional)</label>
-        <textarea
-          className="cs-textarea"
+      <div className={`${fieldCls} mt-3`}>
+        <label className={labelCls}>Bio (optional)</label>
+        <Textarea
+          className="min-h-[100px]"
           placeholder="Tell travellers a little about yourself…"
           value={form.bio}
           onChange={(e) => update("bio", e.target.value)}
         />
       </div>
 
-      <button
+      <Button
         type="button"
-        className="cs-btn cs-btn-primary"
+        className="mt-4"
         onClick={save}
         disabled={saving || !canSave}
-        style={{ marginTop: 8 }}
       >
         {saving ? "Saving…" : "Save profile"}
-      </button>
+      </Button>
     </div>
   );
 }

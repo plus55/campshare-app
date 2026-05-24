@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function HostResponseForm({
   reviewId,
@@ -42,47 +44,36 @@ export default function HostResponseForm({
 
   if (!open) {
     return (
-      <button type="button" className="cs-btn cs-btn-outline cs-btn-sm" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
         Respond publicly
-      </button>
+      </Button>
     );
   }
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <textarea
+    <div className="mt-2.5">
+      <Textarea
+        className="min-h-[80px]"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Write your public response… (min. 10 characters)"
-        rows={3}
         maxLength={1000}
-        style={{
-          width: "100%", boxSizing: "border-box",
-          padding: "10px 12px", borderRadius: 8,
-          border: "1.5px solid var(--line)", background: "var(--cream)",
-          fontFamily: "inherit", fontSize: 14, resize: "vertical",
-          lineHeight: 1.5,
-        }}
       />
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-        <button
-          type="button"
-          className="cs-btn cs-btn-primary cs-btn-sm"
-          onClick={submit}
-          disabled={loading}
-        >
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button type="button" size="sm" onClick={submit} disabled={loading}>
           {loading ? "Posting…" : "Post response"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="cs-btn cs-btn-outline cs-btn-sm"
+          variant="outline"
+          size="sm"
           onClick={() => { setOpen(false); setText(""); setError(null); }}
           disabled={loading}
         >
           Cancel
-        </button>
-        {error && <span style={{ color: "var(--clay)", fontSize: 13 }}>{error}</span>}
-        <span className="cs-muted cs-small" style={{ marginLeft: "auto" }}>{text.length}/1000</span>
+        </Button>
+        {error && <span className="text-[13px] text-destructive">{error}</span>}
+        <span className="ml-auto text-[12px] text-muted-foreground">{text.length}/1000</span>
       </div>
     </div>
   );
