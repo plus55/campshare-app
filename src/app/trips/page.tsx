@@ -19,8 +19,8 @@ function fmtDate(ms: number) {
   });
 }
 
-const ACTIVE: BookingStatus[] = ["requested", "accepted"];
-const PAST:   BookingStatus[] = ["declined", "cancelled_by_guest", "cancelled_by_host", "expired"];
+const ACTIVE: BookingStatus[] = ["requested", "accepted", "in_progress"];
+const PAST:   BookingStatus[] = ["completed", "declined", "cancelled_by_guest", "cancelled_by_host", "expired"];
 
 export default async function TripsPage() {
   const session = await requireSession();
@@ -61,7 +61,7 @@ export default async function TripsPage() {
             <thead>
               <tr>
                 {["Status", "Van", "Dates", "Total", ""].map((h) => (
-                  <th key={h} className="border-b border-line pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-stone">{h}</th>
+                  <th key={h} scope="col" className="border-b border-line pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-stone">{h}</th>
                 ))}
               </tr>
             </thead>

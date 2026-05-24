@@ -162,7 +162,7 @@ export default async function PayoutsPage({
                 <thead>
                   <tr>
                     {["Van", "Nightly hire", "Add-ons", "Platform fee", "Your payout", "Status", "Date"].map((h) => (
-                      <th key={h} className="border-b border-border pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">{h}</th>
+                      <th key={h} scope="col" className="border-b border-border pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">{h}</th>
                     ))}
                   </tr>
                 </thead>

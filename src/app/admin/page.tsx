@@ -58,7 +58,7 @@ export default async function AdminPage() {
             <thead>
               <tr>
                 {["Van", "Type", "Host", "Location", "Rate", "Submitted", ""].map((h) => (
-                  <th key={h} className="border-b border-line px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wide text-stone">{h}</th>
+                  <th key={h} scope="col" className="border-b border-line px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wide text-stone">{h}</th>
                 ))}
               </tr>
             </thead>

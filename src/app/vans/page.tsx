@@ -133,8 +133,8 @@ export default async function VansPage({
     <div className="flex h-[calc(100vh-var(--header-h))] flex-col overflow-hidden">
       <SearchFilters initial={initialFilters} isLoggedIn={!!session} />
       <div className="flex flex-1 overflow-hidden">
-        {/* Listing grid */}
-        <div className="flex-[0_0_50%] overflow-y-auto p-4">
+        {/* Listing grid — flex-1 so it fills full width on mobile when map is hidden */}
+        <div className="flex-1 min-w-0 overflow-y-auto p-4">
           <p className="mb-3 text-xs text-stone">
             {listings.length === 0
               ? "No vans match your filters."

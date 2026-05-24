@@ -49,7 +49,9 @@ export function BookingActions({ bookingId, status, viewerRole }: Props) {
       return (
         <div className="flex flex-col gap-2">
           {error && <p className={errorCls}>{error}</p>}
+          <label htmlFor="decline-reason" className="sr-only">Reason for declining (optional)</label>
           <Textarea
+            id="decline-reason"
             className="min-h-20"
             placeholder="Optional: reason for declining (sent to guest)"
             value={declineReason}

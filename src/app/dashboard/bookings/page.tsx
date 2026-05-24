@@ -61,7 +61,7 @@ export default async function DashboardBookingsPage() {
             <thead>
               <tr>
                 {["Status", "Van", "Guest", "Dates", "Total", ""].map((h) => (
-                  <th key={h} className="border-b border-border pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">
+                  <th key={h} scope="col" className="border-b border-border pb-2 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">
                     {h}
                   </th>
                 ))}

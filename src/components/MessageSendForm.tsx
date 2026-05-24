@@ -78,7 +78,9 @@ export function MessageSendForm({ bookingId, showTemplates = false }: Props) {
   return (
     <div className="mt-4">
       {error && <p className={errorCls}>{error}</p>}
+      <label htmlFor="message-body" className="sr-only">Message</label>
       <Textarea
+        id="message-body"
         className="min-h-20"
         placeholder="Write a message…"
         value={body}

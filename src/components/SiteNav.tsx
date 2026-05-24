@@ -108,6 +108,7 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
           className="md:hidden flex items-center justify-center p-[0.4rem] bg-transparent border-0 cursor-pointer text-foreground"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
+          aria-controls="mobile-nav-menu"
           onClick={() => setMobileOpen((v) => !v)}
         >
           {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -116,7 +117,7 @@ export default function SiteNav({ user, unreadCount }: SiteNavProps) {
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div className="absolute top-full left-0 right-0 flex flex-col bg-background border-b border-border px-[var(--gutter)] py-4 gap-1 z-50 md:hidden shadow-md">
+        <div id="mobile-nav-menu" className="absolute top-full left-0 right-0 flex flex-col bg-background border-b border-border px-[var(--gutter)] py-4 gap-1 z-50 md:hidden shadow-md">
           {navLinks.map(({ href, label }) => {
             const active = isActive(href, pathname);
             return (
