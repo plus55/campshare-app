@@ -153,9 +153,6 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
-a { color: var(--clay-500); text-decoration: none; }
-a:hover { color: var(--clay-600); }
-
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-weight: 500;
@@ -815,6 +812,13 @@ p  { margin: 0 0 12px; color: var(--ink-700); }
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  a {
+    color: var(--clay-500);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--clay-600);
   }
   body {
     @apply bg-background text-foreground;

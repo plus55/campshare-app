@@ -9,6 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { fmtNzd } from "@/lib/money";
 
 export interface ListingAddon {
   addonId: string;
@@ -54,10 +55,6 @@ function todayString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function fmtNzd(cents: number): string {
-  return `$${(cents / 100).toFixed(0)}`;
-}
-
 // ── Inner payment step (must be inside <Elements>) ────────────────────────
 interface PaymentStepProps {
   listingId: string;
@@ -90,25 +87,23 @@ function PaymentStep({
     setLoading(true);
     setError(null);
 
-    const { error: confirmError, paymentIntent } = await stripeHook.confirmPayment({
-      elements,
-      redirect: "if_required",
-      confirmParams: { return_url: window.location.href },
-    });
-
-    if (confirmError) {
-      setError(confirmError.message ?? "Payment failed — please try again");
-      setLoading(false);
-      return;
-    }
-
-    if (paymentIntent?.status !== "requires_capture") {
-      setError("Payment authorization incomplete. Please try again.");
-      setLoading(false);
-      return;
-    }
-
     try {
+      const { error: confirmError, paymentIntent } = await stripeHook.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: { return_url: window.location.href },
+      });
+
+      if (confirmError) {
+        setError(confirmError.message ?? "Payment failed - please try again");
+        return;
+      }
+
+      if (paymentIntent?.status !== "requires_capture") {
+        setError("Payment authorization incomplete. Please try again.");
+        return;
+      }
+
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -278,6 +273,8 @@ function BookingRequestFormInner({ listingId, nightlyRateCents, minimumNights, i
         setPaymentIntentId(data.paymentIntentId);
         setTotals(data.totals);
         setStep("payment");
+      } else {
+        setError("Could not prepare payment. Please try again.");
       }
     } catch {
       setError("Network error — please try again");

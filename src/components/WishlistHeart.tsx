@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import AuthModal from "@/components/AuthModal";
 
 interface Props {
@@ -39,9 +40,11 @@ export default function WishlistHeart({ vanListingId, initialSaved, className }:
       }
       if (!res.ok) {
         setSaved(saved);
+        toast.error("Could not update saved vans. Please try again.");
       }
     } catch {
       setSaved(saved);
+      toast.error("Could not update saved vans. Please try again.");
     } finally {
       setBusy(false);
     }

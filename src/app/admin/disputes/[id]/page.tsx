@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import DisputeActions from "./DisputeActions";
+import { fmtNzd } from "@/lib/money";
 
 interface DisputeDetail {
   id: string;
@@ -115,9 +116,9 @@ export default async function AdminDisputeDetailPage({
             {[
               { label: "Guest", value: d.guestName },
               { label: "Host", value: d.hostName },
-              { label: "Total paid", value: `$${(d.bookingTotalCents / 100).toFixed(0)}` },
-              { label: "Deposit hold", value: `$${(d.bookingDepositCents / 100).toFixed(0)}` },
-              { label: "Host payout", value: d.bookingHostPayoutCents != null ? `$${(d.bookingHostPayoutCents / 100).toFixed(0)}` : "—" },
+              { label: "Total paid", value: fmtNzd(d.bookingTotalCents) },
+              { label: "Deposit hold", value: fmtNzd(d.bookingDepositCents) },
+              { label: "Host payout", value: d.bookingHostPayoutCents != null ? fmtNzd(d.bookingHostPayoutCents) : "—" },
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className={dl}>{label}</p>
@@ -158,7 +159,7 @@ export default async function AdminDisputeDetailPage({
               <p className="mt-2 text-xs text-stone">
                 Deposit action: <strong className="text-charcoal">{d.depositAction}</strong>
                 {d.depositAction === "split" && d.depositSplitToHostCents != null
-                  ? ` — $${(d.depositSplitToHostCents / 100).toFixed(0)} to host, rest to guest`
+                  ? ` — ${fmtNzd(d.depositSplitToHostCents)} to host, rest to guest`
                   : ""}
               </p>
             )}

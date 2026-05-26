@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import ModerationButtons from "@/components/ModerationButtons";
 import type { VanListing } from "@/lib/types";
+import { fmtNzd } from "@/lib/money";
 
 interface Row extends VanListing {
   hostFirstName: string;
@@ -101,7 +102,7 @@ export default async function AdminListingDetailPage({
         </Section>
 
         <Section title="Pricing">
-          <Field label="Nightly rate" value={`$${Math.round(row.nightlyRate / 100)} NZD`} />
+          <Field label="Nightly rate" value={`${fmtNzd(row.nightlyRate)} NZD`} />
           <Field label="Minimum nights" value={String(row.minimumNights)} />
           <Field label="Instant book" value={row.instantBook ? "Yes" : "No"} />
         </Section>

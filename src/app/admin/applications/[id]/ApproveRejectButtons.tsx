@@ -14,20 +14,23 @@ export default function ApproveRejectButtons({ applicationId }: { applicationId:
   async function send(decision: "approve" | "reject") {
     setBusy(decision);
     setError(null);
-
-    const res = await fetch(`/api/admin/applications/${applicationId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ decision, note: note || null }),
-    });
-
-    setBusy(null);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string };
-      setError(body.error ?? "Couldn't update application.");
-      return;
+    try {
+      const res = await fetch(`/api/admin/applications/${applicationId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ decision, note: note || null }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(body.error ?? "Couldn't update application.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setBusy(null);
     }
-    router.refresh();
   }
 
   return (

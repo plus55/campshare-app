@@ -50,10 +50,10 @@ export default function TermsPage() {
         <p>All payments are processed by Stripe. Funds are held by Stripe until the booking begins, then released to the Host after the rental period starts, subject to our cancellation policy. CampShare charges a service fee deducted from the total.</p>
 
         <h2>4. Cancellations and refunds</h2>
-        <p>Cancellation policies are set at the listing level (flexible, moderate, or strict). Guest service fees are non-refundable once a booking is confirmed. Host cancellations may result in penalties. Full policy details are shown at checkout.</p>
+        <p>A single standard cancellation policy applies: Guests receive a 100% refund more than 7 days before the trip, 50% between 2 and 7 days, and no refund within 2 days. Host cancellations refund the Guest in full. Full details are in our <Link href="/policies" className="text-clay hover:text-clay-deep">booking policies</Link> and shown at checkout.</p>
 
         <h2>5. Insurance and liability</h2>
-        <p>Hosts are responsible for ensuring their vehicle has appropriate insurance cover for peer-to-peer rental. CampShare does not provide insurance. Guests assume liability for damage beyond fair wear and tear during the rental period.</p>
+        <p>CampShare uses a host-carries-cover model: Hosts must hold insurance that permits renting the vehicle for payment, verified by CampShare before a listing goes live. CampShare does not provide insurance. A NZ$500 security deposit applies to every booking; Guests assume liability for damage beyond fair wear and tear. See our <Link href="/policies" className="text-clay hover:text-clay-deep">booking policies</Link>.</p>
 
         <h2>6. Prohibited conduct</h2>
         <p>You must not use CampShare for unlawful purposes, submit false information, circumvent payments outside the platform, or harass other users.</p>

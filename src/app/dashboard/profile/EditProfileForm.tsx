@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { NZ_REGIONS, NORTH_ISLAND_REGIONS } from "@/lib/constants";
 import type { HostProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface FormState {
 
 export default function EditProfileForm({ profile }: Props) {
   const router = useRouter();
+  const isCreating = profile === null;
   const [form, setForm] = useState<FormState>({
     firstName: profile?.firstName ?? "",
     lastName: profile?.lastName ?? "",
@@ -54,21 +56,29 @@ export default function EditProfileForm({ profile }: Props) {
   async function save() {
     setSaving(true);
     setError(null);
-
-    const res = await fetch("/api/profile", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    setSaving(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string };
-      setError(body.error ?? "Couldn't save profile.");
-      return;
+    try {
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(body.error ?? "Couldn't save profile.");
+        return;
+      }
+      setSaved(true);
+      toast.success(isCreating ? "Profile saved. Your account is ready." : "Profile saved.");
+      if (isCreating) {
+        router.push("/dashboard");
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setError("Network error. Profile was not saved.");
+    } finally {
+      setSaving(false);
     }
-    setSaved(true);
-    router.refresh();
   }
 
   return (

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { REGION_COORDS } from "@/lib/constants";
+import { fmtNzd } from "@/lib/money";
 import type { SearchResult } from "./ListingCard";
 
 export default function MapView({ listings }: { listings: SearchResult[] }) {
@@ -40,8 +41,8 @@ export default function MapView({ listings }: { listings: SearchResult[] }) {
       if (!coords) return;
 
       const el = document.createElement("div");
-      const price = Math.round(listing.nightlyRate / 100);
-      el.textContent = `$${price}`;
+      const price = fmtNzd(listing.nightlyRate);
+      el.textContent = price;
       el.style.cssText = [
         "background: white",
         "border: 1.5px solid var(--clay, #8B5E3C)",
@@ -73,7 +74,7 @@ export default function MapView({ listings }: { listings: SearchResult[] }) {
 
       const rate = document.createElement("span");
       rate.style.fontWeight = "600";
-      rate.textContent = `$${price}/night`;
+      rate.textContent = `${price}/night`;
       popupContent.appendChild(rate);
       popupContent.appendChild(document.createElement("br"));
 

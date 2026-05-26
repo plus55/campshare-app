@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { fmtNzd as formatNzd } from "@/lib/money";
 
 interface Props {
   bookingId: string;
@@ -20,7 +21,7 @@ function todayString(): string {
 }
 
 function fmtNzd(cents: number): string {
-  return `$${Math.abs(cents / 100).toFixed(0)}`;
+  return formatNzd(Math.abs(cents));
 }
 
 const fieldCls = "flex flex-col gap-1.5";

@@ -12,10 +12,12 @@ export default function ReviewForm({
   bookingId,
   role,
   vanName,
+  returnHref,
 }: {
   bookingId: string;
   role: ReviewRole;
   vanName: string;
+  returnHref: string;
 }) {
   const router = useRouter();
   const [rating, setRating] = useState<number>(0);
@@ -49,7 +51,7 @@ export default function ReviewForm({
         setSubmitting(false);
         return;
       }
-      router.push(`/trips/${bookingId}?reviewed=1`);
+      router.push(returnHref);
       router.refresh();
     } catch {
       setError("Network error. Please try again.");

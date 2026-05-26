@@ -50,7 +50,7 @@ export default function ListingActions({ listing }: { listing: VanListing }) {
       <h3 className="mb-3 font-serif text-base text-foreground">Listing actions</h3>
 
       {error && (
-        <p className="mb-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
+        <p role="alert" aria-live="polite" className="mb-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <div className="flex flex-wrap gap-2">

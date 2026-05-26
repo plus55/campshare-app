@@ -52,7 +52,9 @@ export default function HostResponseForm({
 
   return (
     <div className="mt-2.5">
+      <label htmlFor={`host-response-${reviewId}`} className="sr-only">Public response</label>
       <Textarea
+        id={`host-response-${reviewId}`}
         className="min-h-[80px]"
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -72,7 +74,7 @@ export default function HostResponseForm({
         >
           Cancel
         </Button>
-        {error && <span className="text-[13px] text-destructive">{error}</span>}
+        {error && <span role="alert" aria-live="polite" className="text-[13px] text-destructive">{error}</span>}
         <span className="ml-auto text-[12px] text-muted-foreground">{text.length}/1000</span>
       </div>
     </div>

@@ -6,12 +6,9 @@ import { StripeDashboardButton } from "@/components/StripeDashboardButton";
 import { PayoutRow, type PayoutRowData } from "./PayoutRow";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { fmtNzd } from "@/lib/money";
 
 type Period = "month" | "3m" | "12m" | "all";
-
-function fmtNzd(cents: number) {
-  return `$${(cents / 100).toFixed(0)}`;
-}
 
 function periodLabel(p: Period) {
   return p === "month" ? "This month" :

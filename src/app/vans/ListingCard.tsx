@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { photoUrl } from "@/lib/photos";
 import WishlistHeart from "@/components/WishlistHeart";
+import { fmtNzd } from "@/lib/money";
 
 export interface SearchResult {
   id: string;
@@ -45,7 +46,7 @@ function HostAvatar({ image, firstName }: { image: string | null; firstName: str
 }
 
 export default function ListingCard({ listing }: { listing: SearchResult }) {
-  const priceNzd = Math.round(listing.nightlyRate / 100);
+  const priceNzd = fmtNzd(listing.nightlyRate);
   const imgUrl = listing.coverPhotoKey ? photoUrl(listing.coverPhotoKey) : null;
   const hostName = listing.hostFirstName ?? "Host";
 
@@ -78,7 +79,7 @@ export default function ListingCard({ listing }: { listing: SearchResult }) {
                 <span className="truncate text-xs text-stone">{hostName}</span>
               </div>
               <div className="shrink-0 text-[15px] font-bold text-charcoal">
-                ${priceNzd}<span className="text-xs font-normal text-stone">/night</span>
+                {priceNzd}<span className="text-xs font-normal text-stone">/night</span>
               </div>
             </div>
             <div className="text-[15px] font-semibold leading-snug text-charcoal">{listing.name}</div>

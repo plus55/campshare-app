@@ -26,7 +26,8 @@ export default function LoginPage() {
       setError(res.error.message ?? "Unable to sign in.");
       return;
     }
-    router.push("/dashboard");
+    router.replace("/dashboard");
+    router.refresh();
   }
 
   async function handleGoogle() {

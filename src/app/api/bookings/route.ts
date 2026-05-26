@@ -411,7 +411,7 @@ export async function POST(req: Request) {
     await createNotification({
       userId: session.user.id,
       type: "booking_accepted",
-      payload: { bookingId, vanName: listing.name },
+      payload: { bookingId, vanName: listing.name, recipientRole: "guest" },
     });
     await createNotification({
       userId: listing.hostUserId,

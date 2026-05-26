@@ -5,12 +5,16 @@ export type NotificationType =
   | "booking_accepted"
   | "booking_declined"
   | "booking_cancelled"
+  | "date_change_requested"
+  | "date_change_accepted"
+  | "date_change_declined"
   | "review_prompt"
   | "review_received"
   | "host_response"
   | "message"
   | "payout_sent"
-  | "deposit_released";
+  | "deposit_released"
+  | "damage_claim_resolved";
 
 export interface NotificationEntry {
   userId: string;

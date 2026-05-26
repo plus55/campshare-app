@@ -5,7 +5,9 @@ import { BookingStatusBadge } from "@/components/BookingStatusBadge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { expireBookingRequest } from "@/lib/booking-expiry";
-import type { Booking, BookingStatus } from "@/lib/types";
+import { isActiveBooking } from "@/lib/booking-status";
+import { fmtNzd } from "@/lib/money";
+import type { Booking } from "@/lib/types";
 
 interface TripRow extends Booking {
   vanName: string;
@@ -18,9 +20,6 @@ function fmtDate(ms: number) {
     day: "numeric", month: "short", year: "numeric", timeZone: "Pacific/Auckland",
   });
 }
-
-const ACTIVE: BookingStatus[] = ["requested", "accepted", "in_progress"];
-const PAST:   BookingStatus[] = ["completed", "declined", "cancelled_by_guest", "cancelled_by_host", "expired"];
 
 export default async function TripsPage() {
   const session = await requireSession();
@@ -48,8 +47,8 @@ export default async function TripsPage() {
   }
   trips.forEach((t) => { if (expiredIds.includes(t.id)) t.status = "expired"; });
 
-  const active = trips.filter((t) => ACTIVE.includes(t.status));
-  const past   = trips.filter((t) => PAST.includes(t.status));
+  const active = trips.filter((t) => isActiveBooking(t.status));
+  const past = trips.filter((t) => !isActiveBooking(t.status));
 
   function Section({ title, rows }: { title: string; rows: TripRow[] }) {
     if (rows.length === 0) return null;
@@ -71,9 +70,11 @@ export default async function TripsPage() {
                   <td className="py-2.5 pr-3"><BookingStatusBadge status={t.status} /></td>
                   <td className="py-2.5 pr-3 text-xs text-charcoal-soft">{t.vanName}</td>
                   <td className="py-2.5 pr-3 text-xs text-stone">{fmtDate(t.startDate)} → {fmtDate(t.endDate)}</td>
-                  <td className="py-2.5 pr-3 text-xs text-charcoal-soft">${(t.totalCents / 100).toFixed(0)}</td>
-                  <td className="py-2.5">
-                    <Link href={`/trips/${t.id}`} className="text-xs text-clay hover:text-clay-deep">View →</Link>
+                  <td className="py-2.5 pr-3 text-xs text-charcoal-soft">{fmtNzd(t.totalCents)}</td>
+                  <td className="py-2.5 text-right">
+                    <Link href={`/trips/${t.id}`} className={cn(buttonVariants({ variant: "outline", size: "xs" }))}>
+                      Details
+                    </Link>
                   </td>
                 </tr>
               ))}

@@ -2,6 +2,9 @@ export type VanListingStatus = "draft" | "pending_review" | "published" | "pause
 export type Island = "North" | "South";
 export type AvailabilityBlockReason = "booking" | "host-blocked" | "maintenance" | "ical";
 
+export type InsuranceStatus = "none" | "pending" | "verified" | "rejected" | "expired";
+export type InsuranceCoverType = "p2p_rental" | "commercial_fleet" | "self_attested";
+
 export interface HostProfile {
   userId: string;
   firstName: string;
@@ -12,6 +15,16 @@ export interface HostProfile {
   bio: string | null;
   verifiedIdentity: number;
   stripeAccountId: string | null;
+  stripeOnboardingCompleted: number;
+  insuranceStatus: InsuranceStatus;
+  insuranceProvider: string | null;
+  insurancePolicyNumber: string | null;
+  insuranceCoverType: InsuranceCoverType | null;
+  insuranceDocR2Key: string | null;
+  insuranceExpiryDate: number | null;
+  insuranceAttestedAt: number | null;
+  insuranceVerifiedAt: number | null;
+  insuranceAdminNote: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -183,6 +196,19 @@ export interface PaymentEvent {
   status: "pending" | "processed" | "failed";
   processedAt: number | null;
   createdAt: number;
+}
+
+export interface DepositClaim {
+  id: string;
+  disputeId: string;
+  bookingId: string;
+  hostUserId: string;
+  amountCents: number;
+  chargePaymentIntentId: string | null;
+  stripeTransferId: string | null;
+  status: "pending" | "charged" | "transferred" | "failed";
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface PaymentReconciliation {

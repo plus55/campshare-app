@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { sendBookingMessageEmail } from "@/lib/email";
+import { canMessageOnBooking } from "@/lib/booking-status";
+import { createNotification } from "@/lib/notifications";
 import type { Booking, BookingMessage } from "@/lib/types";
 
 const schema = z.object({
@@ -71,8 +73,7 @@ export async function POST(
   const isHost  = booking.hostUserId  === session.user.id;
   if (!isGuest && !isHost) return bad("Forbidden", 403);
 
-  const active = ["requested", "accepted"].includes(booking.status);
-  if (!active) return bad("Cannot message on a closed booking");
+  if (!canMessageOnBooking(booking.status)) return bad("Cannot message on a closed booking");
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error.issues[0]?.message ?? "Invalid payload");
@@ -80,32 +81,47 @@ export async function POST(
   const msgId = crypto.randomUUID();
   const nowSec = Math.floor(Date.now() / 1000);
 
-  await db()
-    .prepare(
-      "INSERT INTO booking_message (id, bookingId, senderUserId, body, createdAt) VALUES (?, ?, ?, ?, ?)"
-    )
-    .bind(msgId, id, session.user.id, parsed.data.body, nowSec)
-    .run();
+  try {
+    await db()
+      .prepare(
+        "INSERT INTO booking_message (id, bookingId, senderUserId, body, createdAt) VALUES (?, ?, ?, ?, ?)"
+      )
+      .bind(msgId, id, session.user.id, parsed.data.body, nowSec)
+      .run();
+  } catch (error) {
+    console.error("Failed to save booking message", { bookingId: id, error });
+    return bad("Could not save message. Please try again.", 500);
+  }
 
-  // Rate-limit email: skip if sender sent a message to same recipient in last 5 min
   const recipientId = isGuest ? booking.hostUserId : booking.guestUserId;
-  const fiveMinAgo = nowSec - 300;
-  const recentMsg = await db()
-    .prepare(
-      `SELECT COUNT(*) AS cnt FROM booking_message
-       WHERE bookingId = ? AND senderUserId = ? AND createdAt >= ?`
-    )
-    .bind(id, session.user.id, fiveMinAgo)
-    .first<{ cnt: number }>();
+  await createNotification({
+    userId: recipientId,
+    type: "message",
+    payload: {
+      bookingId: id,
+      vanName: booking.vanName,
+      recipientRole: isGuest ? "host" : "guest",
+    },
+  });
 
-  if ((recentMsg?.cnt ?? 0) <= 1) {
-    const recipient = await db()
-      .prepare("SELECT email, name FROM user WHERE id = ?")
-      .bind(recipientId)
-      .first<{ email: string; name: string }>();
+  try {
+    // Notification delivery must never make a stored message appear unsuccessful.
+    const fiveMinAgo = nowSec - 300;
+    const recentMsg = await db()
+      .prepare(
+        `SELECT COUNT(*) AS cnt FROM booking_message
+         WHERE bookingId = ? AND senderUserId = ? AND createdAt >= ?`
+      )
+      .bind(id, session.user.id, fiveMinAgo)
+      .first<{ cnt: number }>();
 
-    if (recipient) {
-      try {
+    if ((recentMsg?.cnt ?? 0) <= 1) {
+      const recipient = await db()
+        .prepare("SELECT email, name FROM user WHERE id = ?")
+        .bind(recipientId)
+        .first<{ email: string; name: string }>();
+
+      if (recipient) {
         await sendBookingMessageEmail({
           recipientEmail: recipient.email,
           recipientName: recipient.name,
@@ -115,10 +131,10 @@ export async function POST(
           messagePreview: parsed.data.body,
           viewerRole: isGuest ? "host" : "guest",
         });
-      } catch (e) {
-        console.error("Failed to send message notification email", e);
       }
     }
+  } catch (error) {
+    console.error("Failed to send message notification email", error);
   }
 
   return NextResponse.json({ id: msgId }, { status: 201 });

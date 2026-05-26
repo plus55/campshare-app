@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
+import { notificationHref, notificationLabel } from "@/lib/notification-display";
 
 export const metadata: Metadata = {
   title: "Notifications — CampShare",
@@ -13,46 +14,6 @@ interface NotifRow {
   payload: string;
   readAt: number | null;
   createdAt: number;
-}
-
-function label(type: string, payload: Record<string, unknown>): string {
-  const van = (payload.vanName as string) ?? "your van";
-  switch (type) {
-    case "booking_requested":  return `New booking request for ${van}`;
-    case "booking_accepted":   return `Your booking for ${van} was accepted`;
-    case "booking_declined":   return `Booking request for ${van} was declined`;
-    case "booking_cancelled":  return `Booking for ${van} was cancelled`;
-    case "review_prompt":      return `Time to review your trip in ${van}`;
-    case "review_received":    return `New review for ${van}`;
-    case "host_response":      return `Your host replied to your review for ${van}`;
-    case "message":            return `New message about ${van}`;
-    case "payout_sent":        return `Payout sent for ${van}`;
-    case "deposit_released":   return `Deposit released for ${van}`;
-    default:                   return "Notification";
-  }
-}
-
-function href(type: string, payload: Record<string, unknown>): string {
-  const bookingId = payload.bookingId as string | undefined;
-  switch (type) {
-    case "booking_requested":
-    case "booking_accepted":
-    case "booking_declined":
-    case "booking_cancelled":
-    case "message":
-      return bookingId ? `/dashboard/bookings/${bookingId}` : "/dashboard/bookings";
-    case "review_prompt":
-      return bookingId ? `/trips/${bookingId}/review` : "/dashboard/reviews";
-    case "review_received":
-    case "host_response":
-      return "/dashboard/reviews";
-    case "payout_sent":
-      return "/dashboard/payouts";
-    case "deposit_released":
-      return bookingId ? `/trips/${bookingId}` : "/trips";
-    default:
-      return "/dashboard";
-  }
 }
 
 function fmtDate(sec: number): string {
@@ -109,14 +70,14 @@ export default async function NotificationsPage() {
             {items.map((n, i) => (
               <Link
                 key={n.id}
-                href={href(n.type, n.parsedPayload)}
+                href={notificationHref(n.type, n.parsedPayload)}
                 className={`block border-b border-border px-5 py-3.5 no-underline transition-colors last:border-b-0 hover:bg-muted ${
                   n.readAt === null ? "bg-clay/5" : ""
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className={`text-sm ${n.readAt === null ? "font-semibold text-foreground" : "font-normal text-muted-foreground"}`}>
-                    {label(n.type, n.parsedPayload)}
+                    {notificationLabel(n.type, n.parsedPayload)}
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">{fmtDate(n.createdAt)}</span>
                 </div>

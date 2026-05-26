@@ -53,7 +53,7 @@ export default function KycCard({ kycStatus }: Props) {
       </div>
 
       {error && (
-        <p className="mt-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</p>
+        <p role="alert" aria-live="polite" className="mt-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</p>
       )}
 
       {kycStatus !== "verified" && (

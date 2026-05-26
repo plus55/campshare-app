@@ -87,8 +87,8 @@ export async function POST(
 
   await createNotification({
     userId: booking.hostUserId,
-    type: "booking_requested",
-    payload: { bookingId: id, dateChangeId: dcId, vanName: "", action: "date_change_requested" },
+    type: "date_change_requested",
+    payload: { bookingId: id, dateChangeId: dcId, vanName: "" },
   });
 
   return NextResponse.json({ id: dcId, priceDiffCents }, { status: 201 });
@@ -144,8 +144,8 @@ export async function PATCH(
       .run();
     await createNotification({
       userId: booking.guestUserId,
-      type: "booking_requested",
-      payload: { bookingId: id, action: "date_change_declined" },
+      type: "date_change_declined",
+      payload: { bookingId: id, vanName: "" },
     });
     return NextResponse.json({ ok: true });
   }
@@ -209,8 +209,8 @@ export async function PATCH(
 
   await createNotification({
     userId: booking.guestUserId,
-    type: "booking_accepted",
-    payload: { bookingId: id, action: "date_change_accepted" },
+    type: "date_change_accepted",
+    payload: { bookingId: id, vanName: "" },
   });
   return NextResponse.json({ ok: true });
 }

@@ -98,7 +98,7 @@ function ReportRowCard({ r }: { r: ReportRow }) {
           </p>
           {r.bookingId && (
             <p className="mb-1 text-sm text-stone">
-              Booking: <Link href={`/admin/bookings/${r.bookingId}`} className="text-clay hover:text-clay-deep">{r.bookingId.slice(0, 8)}…</Link>
+              Booking: <span className="font-mono text-charcoal-soft">{r.bookingId.slice(0, 8)}…</span>
             </p>
           )}
           {r.details && (

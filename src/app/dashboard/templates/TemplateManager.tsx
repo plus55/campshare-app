@@ -103,12 +103,18 @@ export function TemplateManager({ initial }: Props) {
   async function remove(id: string) {
     if (!confirm("Delete this template?")) return;
     setBusy(true);
-    const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
-    setBusy(false);
-    if (res.ok) {
-      setTemplates((prev) => prev.filter((t) => t.id !== id));
-    } else {
-      setError("Couldn't delete template.");
+    setError(null);
+    try {
+      const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
+      } else {
+        setError("Couldn't delete template.");
+      }
+    } catch {
+      setError("Network error. Template was not deleted.");
+    } finally {
+      setBusy(false);
     }
   }
 

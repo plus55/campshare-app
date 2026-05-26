@@ -44,15 +44,25 @@ function fmtRelative(unixSec: number): string {
 export function SavedSearches({ initial }: { initial: SavedSearch[] }) {
   const [searches, setSearches] = useState<SavedSearch[]>(initial);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this saved search?")) return;
     setDeletingId(id);
-    const res = await fetch(`/api/saved-searches?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setSearches((prev) => prev.filter((s) => s.id !== id));
+    setError(null);
+    try {
+      const res = await fetch(`/api/saved-searches?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSearches((prev) => prev.filter((s) => s.id !== id));
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(body.error ?? "Could not delete saved search.");
+      }
+    } catch {
+      setError("Could not delete saved search. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
-    setDeletingId(null);
   }
 
   if (searches.length === 0) {
@@ -68,7 +78,9 @@ export function SavedSearches({ initial }: { initial: SavedSearch[] }) {
   }
 
   return (
-    <div className="grid gap-3">
+    <>
+      {error && <p role="alert" aria-live="polite" className="mb-3 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</p>}
+      <div className="grid gap-3">
       {searches.map((s) => (
         <div
           key={s.id}
@@ -95,6 +107,7 @@ export function SavedSearches({ initial }: { initial: SavedSearch[] }) {
           </div>
         </div>
       ))}
-    </div>
+      </div>
+    </>
   );
 }

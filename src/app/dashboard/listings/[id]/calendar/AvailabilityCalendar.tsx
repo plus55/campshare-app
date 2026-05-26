@@ -55,33 +55,37 @@ export default function AvailabilityCalendar({ listingId, initialBlocks, icalFee
   async function toggleRange(startTs: number, endTs: number) {
     setError(null);
     const hit = findBlock(startTs, blocks);
-
-    if (hit) {
-      if (hit.icalUid) {
-        setError("This date is blocked by an imported calendar and cannot be removed manually.");
-        return;
-      }
-      const res = await fetch(`/api/listings/${listingId}/availability/${hit.id}`, { method: "DELETE" });
-      if (res.ok) setBlocks((prev) => prev.filter((b) => b.id !== hit.id));
-      else setError("Couldn't remove block.");
-    } else {
-      const res = await fetch(`/api/listings/${listingId}/availability`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ startDate: startTs, endDate: endTs, reason: "host-blocked" }),
-      });
-      if (res.ok) {
-        const { id } = (await res.json()) as { id: string };
-        const now = Math.floor(Date.now() / 1000);
-        setBlocks((prev) => [
-          ...prev,
-          { id, vanListingId: listingId, startDate: startTs, endDate: endTs, reason: "host-blocked", bookingId: null, icalUid: null, createdAt: now },
-        ]);
+    try {
+      if (hit) {
+        if (hit.icalUid) {
+          setError("This date is blocked by an imported calendar and cannot be removed manually.");
+          return;
+        }
+        const res = await fetch(`/api/listings/${listingId}/availability/${hit.id}`, { method: "DELETE" });
+        if (res.ok) setBlocks((prev) => prev.filter((b) => b.id !== hit.id));
+        else setError("Couldn't remove block.");
       } else {
-        setError("Couldn't save block.");
+        const res = await fetch(`/api/listings/${listingId}/availability`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ startDate: startTs, endDate: endTs, reason: "host-blocked" }),
+        });
+        if (res.ok) {
+          const { id } = (await res.json()) as { id: string };
+          const now = Math.floor(Date.now() / 1000);
+          setBlocks((prev) => [
+            ...prev,
+            { id, vanListingId: listingId, startDate: startTs, endDate: endTs, reason: "host-blocked", bookingId: null, icalUid: null, createdAt: now },
+          ]);
+        } else {
+          setError("Couldn't save block.");
+        }
       }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSelecting(null);
     }
-    setSelecting(null);
   }
 
   function handleCellMouseDown(ts: number) { setSelecting(ts); }
@@ -94,35 +98,45 @@ export default function AvailabilityCalendar({ listingId, initialBlocks, icalFee
     setImportSaving(true);
     setImportMsg(null);
     const url = importUrl.trim();
-    const res = await fetch(`/api/listings/${listingId}/ical`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    setImportSaving(false);
-    if (res.ok) {
-      setActiveIcalUrl(url);
-      setImportMsg("Calendar synced successfully.");
-      const blocksRes = await fetch(`/api/listings/${listingId}/availability`);
-      if (blocksRes.ok) setBlocks((await blocksRes.json()) as AvailabilityBlock[]);
-    } else {
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
-      setImportMsg(body.error ?? "Sync failed.");
+    try {
+      const res = await fetch(`/api/listings/${listingId}/ical`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (res.ok) {
+        setActiveIcalUrl(url);
+        setImportMsg("Calendar synced successfully.");
+        const blocksRes = await fetch(`/api/listings/${listingId}/availability`);
+        if (blocksRes.ok) setBlocks((await blocksRes.json()) as AvailabilityBlock[]);
+      } else {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setImportMsg(body.error ?? "Sync failed.");
+      }
+    } catch {
+      setImportMsg("Network error. Calendar was not synced.");
+    } finally {
+      setImportSaving(false);
     }
   }
 
   async function handleImportRemove() {
     setImportSaving(true);
     setImportMsg(null);
-    const res = await fetch(`/api/listings/${listingId}/ical`, { method: "DELETE" });
-    setImportSaving(false);
-    if (res.ok) {
-      setActiveIcalUrl(null);
-      setImportUrl("");
-      setImportMsg("Calendar disconnected.");
-      setBlocks((prev) => prev.filter((b) => b.icalUid === null));
-    } else {
-      setImportMsg("Couldn't remove calendar.");
+    try {
+      const res = await fetch(`/api/listings/${listingId}/ical`, { method: "DELETE" });
+      if (res.ok) {
+        setActiveIcalUrl(null);
+        setImportUrl("");
+        setImportMsg("Calendar disconnected.");
+        setBlocks((prev) => prev.filter((b) => b.icalUid === null));
+      } else {
+        setImportMsg("Couldn't remove calendar.");
+      }
+    } catch {
+      setImportMsg("Network error. Calendar was not disconnected.");
+    } finally {
+      setImportSaving(false);
     }
   }
 
@@ -166,7 +180,13 @@ export default function AvailabilityCalendar({ listingId, initialBlocks, icalFee
                       title={isBooked ? "Booking" : isIcal ? "External calendar block" : undefined}
                       onMouseDown={() => handleCellMouseDown(ts)}
                       onMouseUp={() => handleCellMouseUp(ts)}
-                      className="rounded border border-border py-1.5 text-center text-[13px] select-none transition-opacity disabled:cursor-default"
+                      onKeyDown={(e) => {
+                        if (!e.repeat && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault();
+                          void toggleRange(ts, ts);
+                        }
+                      }}
+                      className="rounded border border-border py-1.5 text-center text-[13px] select-none transition-opacity focus-visible:outline-2 focus-visible:outline-clay focus-visible:outline-offset-2 disabled:cursor-default"
                       style={{ ...cellStyle, cursor: isPast || isBooked ? "default" : "pointer" }}
                     >
                       {day.getDate()}

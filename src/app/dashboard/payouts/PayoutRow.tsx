@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fmtNzd } from "@/lib/money";
 
 export interface PayoutRowData {
   id: string;
@@ -19,14 +20,6 @@ export interface PayoutRowData {
 }
 
 const HOST_FEE_PCT = 5;
-
-function fmtNzd(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function fmtNzdRound(cents: number) {
-  return `$${(cents / 100).toFixed(0)}`;
-}
 
 function fmtDate(ms: number) {
   return new Date(ms).toLocaleDateString("en-NZ", {
@@ -72,10 +65,10 @@ export function PayoutRow({ payout }: { payout: PayoutRowData }) {
           </span>
           {payout.vanName}
         </td>
-        <td className="py-2 pr-4">{fmtNzdRound(payout.subtotalCents)}</td>
-        <td className="py-2 pr-4">{payout.addonTotalCents > 0 ? fmtNzdRound(payout.addonTotalCents) : "—"}</td>
-        <td className="py-2 pr-4 text-[13px] text-muted-foreground">{fmtNzdRound(platformFeeCents)}</td>
-        <td className="py-2 pr-4 font-semibold">{fmtNzdRound(payout.amountCents)}</td>
+        <td className="py-2 pr-4">{fmtNzd(payout.subtotalCents)}</td>
+        <td className="py-2 pr-4">{payout.addonTotalCents > 0 ? fmtNzd(payout.addonTotalCents) : "—"}</td>
+        <td className="py-2 pr-4 text-[13px] text-muted-foreground">{fmtNzd(platformFeeCents)}</td>
+        <td className="py-2 pr-4 font-semibold">{fmtNzd(payout.amountCents)}</td>
         <td className="py-2 pr-4">
           <span className={getStatusCls(payout.status)}>{payout.status}</span>
         </td>

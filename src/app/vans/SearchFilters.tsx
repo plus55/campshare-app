@@ -31,6 +31,7 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
   const [f, setF] = useState<FilterValues>(initial);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function update<K extends keyof FilterValues>(key: K, value: FilterValues[K]) {
     setF((prev) => ({ ...prev, [key]: value }));
@@ -72,6 +73,7 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
 
   async function saveSearch() {
     setSaving(true);
+    setSaveError(null);
     try {
       const filters: Record<string, string> = {};
       if (f.region) filters.region = f.region;
@@ -92,7 +94,12 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
       if (res.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2400);
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? "Could not save this search.");
       }
+    } catch {
+      setSaveError("Could not save this search. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -188,6 +195,9 @@ export default function SearchFilters({ initial, isLoggedIn = false }: { initial
         >
           {saved ? "Saved ✓" : saving ? "Saving…" : "Save search"}
         </Button>
+      )}
+      {hasFilters && isLoggedIn && saveError && (
+        <p role="alert" aria-live="polite" className="text-xs text-destructive">{saveError}</p>
       )}
     </div>
   );

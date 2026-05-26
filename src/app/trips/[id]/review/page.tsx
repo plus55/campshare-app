@@ -42,13 +42,15 @@ export default async function LeaveReviewPage({
   }
 
   const role: ReviewRole = isGuest ? "guest" : "host";
+  const returnHref = isGuest ? `/trips/${id}?reviewed=1` : "/dashboard/reviews";
+  const backHref = isGuest ? `/trips/${id}` : "/dashboard/reviews";
   const existing = await database
     .prepare("SELECT id FROM review WHERE bookingId = ? AND role = ?")
     .bind(id, role)
     .first<{ id: string }>();
 
   if (existing) {
-    redirect(`/trips/${id}?reviewed=1`);
+    redirect(returnHref);
   }
 
   const subjectLabel = isGuest ? "your trip" : "your guest";
@@ -57,7 +59,7 @@ export default async function LeaveReviewPage({
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto max-w-[640px]">
         <Link
-          href={`/trips/${id}`}
+          href={backHref}
           className="mb-3 inline-block text-sm text-stone hover:text-charcoal"
         >
           ← Back to trip
@@ -69,7 +71,7 @@ export default async function LeaveReviewPage({
           Reviewing <strong className="text-charcoal">{booking.vanName}</strong>.
           Reviews stay hidden until both sides submit, or after 14 days — whichever comes first.
         </p>
-        <ReviewForm bookingId={id} role={role} vanName={booking.vanName} />
+        <ReviewForm bookingId={id} role={role} vanName={booking.vanName} returnHref={returnHref} />
       </div>
     </main>
   );

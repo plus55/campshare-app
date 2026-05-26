@@ -5,7 +5,8 @@ import { stripe } from "@/lib/stripe";
 import { sendPaymentCapturedEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { expireBookingRequest } from "@/lib/booking-expiry";
-import type { Booking, HostProfile } from "@/lib/types";
+import { isInsuranceCurrent } from "@/lib/insurance";
+import type { Booking, HostProfile, InsuranceStatus } from "@/lib/types";
 
 function bad(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -33,6 +34,15 @@ export async function POST(
   if (booking.expiresAt < nowSec) {
     await expireBookingRequest(booking, nowSec);
     return bad("Booking request has expired");
+  }
+
+  // Host hire insurance must be verified and in-date before money moves.
+  const hostInsurance = await db()
+    .prepare("SELECT insuranceStatus, insuranceExpiryDate FROM host_profile WHERE userId = ?")
+    .bind(booking.hostUserId)
+    .first<{ insuranceStatus: InsuranceStatus; insuranceExpiryDate: number | null }>();
+  if (!isInsuranceCurrent(hostInsurance, nowSec)) {
+    return bad("Your hire insurance is not verified or has expired. Renew it on your profile before accepting bookings.", 403);
   }
 
   const conflict = await db()
@@ -171,7 +181,7 @@ export async function POST(
   await createNotification({
     userId: booking.guestUserId,
     type: "booking_accepted",
-    payload: { bookingId: id, vanName: listing?.name ?? "" },
+    payload: { bookingId: id, vanName: listing?.name ?? "", recipientRole: "guest" },
   });
 
   return NextResponse.json({ ok: true });

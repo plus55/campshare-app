@@ -7,6 +7,7 @@ import StatTile from "@/components/ui/StatTile";
 import EmptyState from "@/components/ui/EmptyState";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { fmtNzd } from "@/lib/money";
 import type { VanListing } from "@/lib/types";
 import {
   CalendarDays,
@@ -42,10 +43,6 @@ function fmtDate(ms: number) {
   return new Date(ms).toLocaleDateString("en-NZ", {
     day: "numeric", month: "short", timeZone: "Pacific/Auckland",
   });
-}
-
-function fmtNzd(cents: number) {
-  return `$${Math.round(cents / 100).toLocaleString("en-NZ")}`;
 }
 
 const statusPill: Record<string, string> = {
@@ -249,7 +246,7 @@ export default async function DashboardPage() {
                         href={`/dashboard/listings/${l.id}`}
                         className="flex items-center gap-3 border-b border-border py-2.5 no-underline last:border-b-0 hover:opacity-90"
                       >
-                        <div className="size-12 h-10 w-12 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-muted">
+                        <div className="size-12 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-muted">
                           {imgUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={imgUrl} alt={l.name} className="size-full object-cover" />
@@ -269,7 +266,7 @@ export default async function DashboardPage() {
                           <span className={statusPill[l.status] ?? statusPill.rejected}>
                             {l.status === "pending_review" ? "in review" : l.status}
                           </span>
-                          <p className="mt-1 text-xs text-muted-foreground">${(l.nightlyRate / 100).toFixed(0)}/night</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{fmtNzd(l.nightlyRate)}/night</p>
                         </div>
                       </Link>
                     );

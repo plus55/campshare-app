@@ -17,6 +17,7 @@ import WishlistHeart from "@/components/WishlistHeart";
 import HostBadges from "@/components/HostBadges";
 import { getBadgesForHost, isInstantBookEligible } from "@/lib/badges";
 import { REGION_COORDS } from "@/lib/constants";
+import { fmtNzd } from "@/lib/money";
 
 interface ListingWithHost extends VanListing {
   hostFirstName: string;
@@ -114,7 +115,7 @@ export default async function VanPage({
   let features: string[] = [];
   try { features = JSON.parse(listing.features) as string[]; } catch { features = []; }
 
-  const nightlyDollars = Math.round(listing.nightlyRate / 100);
+  const nightlyRate = fmtNzd(listing.nightlyRate);
   const publicPickupCoords = REGION_COORDS[listing.region];
 
   const galleryPhotos = photosResult.results
@@ -240,7 +241,7 @@ export default async function VanPage({
             <div className="surface-card" id="book-form">
               <div className="mb-4 flex items-baseline justify-between">
                 <p className="m-0 text-[22px] font-bold text-charcoal">
-                  ${nightlyDollars}
+                  {nightlyRate}
                   <span className="ml-1 text-sm font-normal text-stone">/night</span>
                 </p>
                 <p className="m-0 text-xs text-stone">

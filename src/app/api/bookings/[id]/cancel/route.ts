@@ -5,6 +5,7 @@ import { stripe } from "@/lib/stripe";
 import { computeRefundCents } from "@/lib/cancellation";
 import { sendBookingCancelledEmail, sendRefundProcessedEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { canSelfCancelBooking } from "@/lib/booking-status";
 import type { Booking } from "@/lib/types";
 
 function bad(message: string, status = 400) {
@@ -31,8 +32,7 @@ export async function POST(
   const isHost  = booking.hostUserId  === session.user.id;
   if (!isGuest && !isHost) return bad("Forbidden", 403);
 
-  const cancellable = ["requested", "accepted"].includes(booking.status);
-  if (!cancellable) return bad("Booking cannot be cancelled in its current state");
+  if (!canSelfCancelBooking(booking.status)) return bad("Booking cannot be cancelled in its current state");
 
   const nowSec = Math.floor(Date.now() / 1000);
   const nowMs  = nowSec * 1000;
@@ -50,8 +50,8 @@ export async function POST(
   const current = await db()
     .prepare("SELECT status FROM booking WHERE id = ?")
     .bind(id)
-    .first<{ status: string }>();
-  if (!current || !["requested", "accepted"].includes(current.status)) {
+    .first<{ status: Booking["status"] }>();
+  if (!current || !canSelfCancelBooking(current.status)) {
     await db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id).run();
     return bad("Booking cannot be cancelled in its current state");
   }
@@ -75,7 +75,7 @@ export async function POST(
         return bad("Could not release the payment authorization. Please try again.", 502);
       }
     } else {
-      // accepted or in_progress — PI was captured; issue a refund per policy
+      // Accepted bookings were captured; issue a refund per policy.
       // Host cancellation always gives 100% back; guest follows platform policy
       if (isHost) {
         refundCents = booking.totalCents;
@@ -124,7 +124,7 @@ export async function POST(
       .bind(newStatus, nowSec, nowSec, id),
     db().prepare("DELETE FROM booking_transition_lock WHERE bookingId = ?").bind(id),
   ];
-  if (booking.status === "accepted" || booking.status === "in_progress") {
+  if (booking.status === "accepted") {
     stmts.push(
       db().prepare("DELETE FROM availability_block WHERE bookingId = ?").bind(id)
     );
@@ -176,7 +176,11 @@ export async function POST(
   await createNotification({
     userId: notifyUserId,
     type: "booking_cancelled",
-    payload: { bookingId: id, vanName: listing?.name ?? "" },
+    payload: {
+      bookingId: id,
+      vanName: listing?.name ?? "",
+      recipientRole: isGuest ? "host" : "guest",
+    },
   });
 
   return NextResponse.json({ ok: true });

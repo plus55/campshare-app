@@ -21,7 +21,10 @@
   ],
 
   "r2_buckets": [
-    { "binding": "PHOTOS", "bucket_name": "campshare-photos" }
+    { "binding": "PHOTOS", "bucket_name": "campshare-photos" },
+    // Private bucket for host documents (insurance certificates). Must NOT be
+    // public-read. Create with: wrangler r2 bucket create campshare-host-docs
+    { "binding": "HOST_DOCS", "bucket_name": "campshare-host-docs" }
   ],
 
   "vars": {

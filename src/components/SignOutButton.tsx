@@ -1,19 +1,19 @@
 "use client";
 
-import { signOut } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useSignOutAction } from "@/lib/use-sign-out";
 
 export default function SignOutButton() {
-  const router = useRouter();
+  const { isSigningOut, performSignOut } = useSignOutAction();
   return (
     <Button
       type="button"
       variant="outline"
       size="sm"
-      onClick={() => signOut({ fetchOptions: { onSuccess: () => router.push("/login") } })}
+      disabled={isSigningOut}
+      onClick={() => void performSignOut()}
     >
-      Sign out
+      {isSigningOut ? "Signing out..." : "Sign out"}
     </Button>
   );
 }

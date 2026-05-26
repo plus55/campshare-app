@@ -2,13 +2,18 @@ import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { BookingStatusBadge } from "@/components/BookingStatusBadge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { expireBookingRequest } from "@/lib/booking-expiry";
+import { isActiveBooking } from "@/lib/booking-status";
+import { fmtNzd } from "@/lib/money";
 import type { Booking } from "@/lib/types";
 
 interface BookingRow extends Booking {
   vanName: string;
   vanSlug: string;
   guestName: string;
+  unreadMessageCount: number;
 }
 
 function fmtDate(ms: number) {
@@ -24,7 +29,11 @@ export default async function DashboardBookingsPage() {
   const result = await database
     .prepare(
       `SELECT b.*, vl.name AS vanName, vl.slug AS vanSlug,
-              u.name AS guestName
+              u.name AS guestName,
+              (SELECT COUNT(*) FROM booking_message bm
+               WHERE bm.bookingId = b.id
+                 AND bm.senderUserId != ?
+                 AND bm.readAt IS NULL) AS unreadMessageCount
        FROM booking b
        JOIN van_listing vl ON vl.id = b.vanListingId
        JOIN user u ON u.id = b.guestUserId
@@ -34,7 +43,7 @@ export default async function DashboardBookingsPage() {
          b.expiresAt ASC,
          b.startDate DESC`
     )
-    .bind(session.user.id)
+    .bind(session.user.id, session.user.id)
     .all<BookingRow>();
 
   const rows = result.results;
@@ -48,8 +57,8 @@ export default async function DashboardBookingsPage() {
   rows.forEach((r) => { if (expiredIds.includes(r.id)) r.status = "expired"; });
 
   const pending  = rows.filter((r) => r.status === "requested");
-  const active   = rows.filter((r) => r.status === "accepted");
-  const archived = rows.filter((r) => !["requested", "accepted"].includes(r.status));
+  const active   = rows.filter((r) => r.status !== "requested" && isActiveBooking(r.status));
+  const archived = rows.filter((r) => !isActiveBooking(r.status));
 
   function Section({ title, items }: { title: string; items: BookingRow[] }) {
     if (items.length === 0) return null;
@@ -72,13 +81,22 @@ export default async function DashboardBookingsPage() {
                 <tr key={b.id} className="hover:bg-muted">
                   <td className="py-2.5 pr-3"><BookingStatusBadge status={b.status} /></td>
                   <td className="py-2.5 pr-3 text-xs text-muted-foreground">{b.vanName}</td>
-                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">{b.guestName}</td>
+                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">
+                    {b.guestName}
+                    {b.unreadMessageCount > 0 && (
+                      <span className="ml-2 inline-flex rounded-full bg-clay/10 px-2 py-0.5 text-[11px] font-medium text-clay-deep">
+                        {b.unreadMessageCount} unread message{b.unreadMessageCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2.5 pr-3 text-xs text-muted-foreground">
                     {fmtDate(b.startDate)} → {fmtDate(b.endDate)}
                   </td>
-                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">${(b.totalCents / 100).toFixed(0)}</td>
-                  <td className="py-2.5">
-                    <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-clay hover:text-clay-deep">View →</Link>
+                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">{fmtNzd(b.totalCents)}</td>
+                  <td className="py-2.5 text-right">
+                    <Link href={`/dashboard/bookings/${b.id}`} className={cn(buttonVariants({ variant: "outline", size: "xs" }))}>
+                      Details
+                    </Link>
                   </td>
                 </tr>
               ))}

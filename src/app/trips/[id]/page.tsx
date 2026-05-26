@@ -9,6 +9,8 @@ import DateChangeForm from "./DateChangeForm";
 import DisputeForm from "@/components/DisputeForm";
 import type { Booking, BookingMessage } from "@/lib/types";
 import { expireBookingRequest } from "@/lib/booking-expiry";
+import { canMessageOnBooking } from "@/lib/booking-status";
+import { fmtNzd } from "@/lib/money";
 
 const DISPUTE_WINDOW_SEC = 7 * 24 * 3600;
 
@@ -94,9 +96,18 @@ export default async function TripDetailPage({
   const msgs = msgsResult;
   const bookingAddons = addonsResult.results;
 
-  const isActive = ["requested", "accepted", "in_progress"].includes(booking.status);
-
   const nowSec = Math.floor(Date.now() / 1000);
+  await database.batch([
+    database
+      .prepare("UPDATE booking_message SET readAt = ? WHERE bookingId = ? AND senderUserId != ? AND readAt IS NULL")
+      .bind(nowSec, id, session.user.id),
+    database
+      .prepare("UPDATE notification SET readAt = ? WHERE userId = ? AND type = 'message' AND readAt IS NULL AND json_extract(payload, '$.bookingId') = ?")
+      .bind(nowSec, session.user.id, id),
+  ]);
+
+  const isMessageable = canMessageOnBooking(booking.status);
+
   const anchorSec = booking.completedAt ?? Math.floor(booking.endDate / 1000);
   const canDispute = booking.status === "completed" && !openDispute && nowSec - anchorSec < DISPUTE_WINDOW_SEC;
 
@@ -129,12 +140,12 @@ export default async function TripDetailPage({
             </div>
             <div>
               <p className={detailLabel}>Total paid</p>
-              <p className="mt-0.5 text-sm font-semibold text-charcoal">${(booking.totalCents / 100).toFixed(0)} NZD</p>
+              <p className="mt-0.5 text-sm font-semibold text-charcoal">{fmtNzd(booking.totalCents)} NZD</p>
               {booking.serviceFeeCents != null && (
-                <p className="text-xs text-stone">incl. ${((booking.serviceFeeCents + (booking.gstOnFeeCents ?? 0)) / 100).toFixed(0)} service fee</p>
+                <p className="text-xs text-stone">incl. {fmtNzd(booking.serviceFeeCents + (booking.gstOnFeeCents ?? 0))} service fee</p>
               )}
               {bookingAddons.map((a) => (
-                <p key={a.id} className="text-xs text-stone">+ {a.name} (${(a.priceNZDCents / 100).toFixed(0)})</p>
+                <p key={a.id} className="text-xs text-stone">+ {a.name} ({fmtNzd(a.priceNZDCents)})</p>
               ))}
             </div>
             <div>
@@ -213,7 +224,7 @@ export default async function TripDetailPage({
             <p className="text-sm text-stone">No messages yet.</p>
           )}
 
-          {isActive && <MessageSendForm bookingId={id} />}
+          {isMessageable && <MessageSendForm bookingId={id} />}
         </div>
       </div>
     </main>

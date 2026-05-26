@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BookingStatus } from "@/lib/types";
+import { canSelfCancelBooking } from "@/lib/booking-status";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const errorCls = "rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive";
 
@@ -35,6 +37,18 @@ export function BookingActions({ bookingId, status, viewerRole }: Props) {
         const d = await res.json().catch(() => ({})) as { error?: string };
         setError(d.error ?? "Something went wrong");
       } else {
+        if (viewerRole === "host" && endpoint === "accept") {
+          toast.success("Booking accepted and payment captured.");
+          router.replace("/dashboard/bookings");
+          router.refresh();
+          return;
+        }
+        if (viewerRole === "host" && endpoint === "decline") {
+          toast.success("Booking declined.");
+          router.replace("/dashboard/bookings");
+          router.refresh();
+          return;
+        }
         router.refresh();
       }
     } catch {
@@ -96,7 +110,7 @@ export function BookingActions({ bookingId, status, viewerRole }: Props) {
     );
   }
 
-  if ((status === "accepted" || status === "in_progress") && (viewerRole === "guest" || viewerRole === "host")) {
+  if (status !== "requested" && canSelfCancelBooking(status) && (viewerRole === "guest" || viewerRole === "host")) {
     return (
       <div>
         {error && <p className={errorCls}>{error}</p>}

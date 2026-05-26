@@ -65,18 +65,32 @@ export default function PhotoManager({ listingId, initialPhotos }: Props) {
   }
 
   async function deletePhoto(photoId: string) {
-    const res = await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
-    if (res.ok) setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-    else setError("Couldn't delete photo.");
+    setError(null);
+    try {
+      const res = await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
+      if (res.ok) setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      else setError("Couldn't delete photo.");
+    } catch {
+      setError("Network error. Photo was not deleted.");
+    }
   }
 
   async function updateCaption(photoId: string, caption: string) {
-    await fetch(`/api/photos/${photoId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ caption }),
-    });
-    setPhotos((prev) => prev.map((p) => p.id === photoId ? { ...p, caption } : p));
+    setError(null);
+    try {
+      const res = await fetch(`/api/photos/${photoId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ caption }),
+      });
+      if (!res.ok) {
+        setError("Couldn't save caption.");
+        return;
+      }
+      setPhotos((prev) => prev.map((p) => p.id === photoId ? { ...p, caption } : p));
+    } catch {
+      setError("Network error. Caption was not saved.");
+    }
   }
 
   const [dragIdx, setDragIdx] = useState<number | null>(null);

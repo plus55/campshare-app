@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import type { HostProfile } from "@/lib/types";
 import EditProfileForm from "./EditProfileForm";
 import KycCard from "./KycCard";
+import InsuranceCard from "./InsuranceCard";
 
 type KycStatus = "unverified" | "pending" | "verified" | "failed";
 
@@ -32,6 +33,17 @@ export default async function ProfilePage() {
         <p className="mb-6 text-muted-foreground">Your public host information shown on listing pages.</p>
         <div className="flex flex-col gap-4">
           <KycCard kycStatus={kycStatus} />
+          {profile && (
+            <InsuranceCard
+              status={profile.insuranceStatus ?? "none"}
+              provider={profile.insuranceProvider}
+              policyNumber={profile.insurancePolicyNumber}
+              coverType={profile.insuranceCoverType}
+              expiryDate={profile.insuranceExpiryDate}
+              adminNote={profile.insuranceAdminNote}
+              hasDoc={Boolean(profile.insuranceDocR2Key)}
+            />
+          )}
           <EditProfileForm profile={profile} />
         </div>
       </div>

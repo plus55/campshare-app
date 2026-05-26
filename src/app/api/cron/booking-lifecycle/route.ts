@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
-import { sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail, sendSavedSearchAlertEmail } from "@/lib/email";
+import { sendBrandedEmail, sendDepositHoldEmail, sendDepositReleasedEmail, sendPayoutSentEmail, sendReviewPromptEmail, sendSavedSearchAlertEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { syncIcalFeed } from "@/lib/ical";
 import { expireBookingRequest } from "@/lib/booking-expiry";
@@ -69,13 +69,61 @@ export async function GET(req: Request) {
   // Pass 4: iCal feed sync — refresh all imported calendars
   const icalSynced = await runIcalSync();
 
+  // Pass 5: insurance expiry — mark lapsed policies and pause affected listings
+  const insuranceExpired = await expireLapsedInsurance(nowSec);
+
   return NextResponse.json({
     expired,
     started: toStart.results.length,
     completed: toComplete.results.length,
     alertsSent,
     icalSynced,
+    insuranceExpired,
   });
+}
+
+interface ExpiringHostRow {
+  userId: string;
+  firstName: string;
+  email: string;
+}
+
+// Hosts whose hire insurance has lapsed: flag as expired, pause their live
+// listings so no uninsured van is bookable, and prompt them to renew.
+async function expireLapsedInsurance(nowSec: number): Promise<number> {
+  const lapsed = await db()
+    .prepare(
+      `SELECT hp.userId, hp.firstName, u.email
+       FROM host_profile hp JOIN user u ON u.id = hp.userId
+       WHERE hp.insuranceStatus = 'verified'
+         AND hp.insuranceExpiryDate IS NOT NULL
+         AND hp.insuranceExpiryDate <= ?`,
+    )
+    .bind(nowSec)
+    .all<ExpiringHostRow>();
+
+  const appUrl = process.env.BETTER_AUTH_URL ?? "https://app.campshare.co.nz";
+
+  for (const host of lapsed.results) {
+    await db().batch([
+      db()
+        .prepare("UPDATE host_profile SET insuranceStatus = 'expired', updatedAt = ? WHERE userId = ?")
+        .bind(nowSec, host.userId),
+      db()
+        .prepare("UPDATE van_listing SET status = 'paused', updatedAt = ? WHERE hostUserId = ? AND status = 'published'")
+        .bind(nowSec, host.userId),
+    ]);
+
+    await sendBrandedEmail({
+      to: host.email,
+      subject: "Your CampShare hire insurance has expired",
+      heading: "Renew your hire insurance",
+      intro: `Kia ora ${host.firstName}, your hire insurance has lapsed, so your listings have been paused. Upload a current policy to get them live again.`,
+      cta: { label: "Update insurance", href: `${appUrl}/dashboard/profile` },
+    }).catch((e) => console.error("Failed to send insurance expiry email", e));
+  }
+
+  return lapsed.results.length;
 }
 
 interface SavedSearchRow {
@@ -405,7 +453,7 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
       await createNotification({
         userId: booking.guestUserId,
         type: "review_prompt",
-        payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
+        payload: { bookingId: booking.id, vanName: listing?.name ?? "", recipientRole: "guest" },
       });
     }
     if (host) {
@@ -419,7 +467,7 @@ async function completeTrip(booking: Booking, nowSec: number): Promise<void> {
       await createNotification({
         userId: booking.hostUserId,
         type: "review_prompt",
-        payload: { bookingId: booking.id, vanName: listing?.name ?? "" },
+        payload: { bookingId: booking.id, vanName: listing?.name ?? "", recipientRole: "host" },
       });
     }
   }

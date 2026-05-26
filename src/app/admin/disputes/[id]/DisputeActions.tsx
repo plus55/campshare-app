@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { fmtNzd } from "@/lib/money";
 
 const selectCls =
   "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -47,7 +48,7 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
         if (depositAction === "split") {
           const cents = Math.round(Number(splitDollars) * 100);
           if (!Number.isFinite(cents) || cents < 0 || cents > depositCents) {
-            setErr(`Split amount must be between $0 and $${(depositCents / 100).toFixed(0)}`);
+            setErr(`Split amount must be between $0 and ${fmtNzd(depositCents)}`);
             setBusy(false);
             return;
           }
@@ -63,7 +64,16 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
         const b = (await res.json().catch(() => ({}))) as { error?: string };
         setErr(b.error ?? "Could not update dispute");
       } else {
-        router.refresh();
+        const b = (await res.json().catch(() => ({}))) as {
+          claim?: { status: string; reason?: string };
+        };
+        // Decision is saved either way. If the automatic deposit charge/transfer
+        // failed, keep the admin on the page and surface why.
+        if (b.claim?.status === "failed") {
+          setErr(`Decision saved, but the deposit payout failed: ${b.claim.reason ?? "unknown error"}`);
+        } else {
+          router.refresh();
+        }
       }
     } catch {
       setErr("Network error");
@@ -93,8 +103,8 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
             <label htmlFor="admin-deposit-action" className={labelCls}>Deposit action</label>
             <select id="admin-deposit-action" className={selectCls} value={depositAction} onChange={(e) => setDepositAction(e.target.value as DepositAction)}>
               <option value="">Choose…</option>
-              <option value="released_to_host">Release ${(depositCents / 100).toFixed(0)} to host</option>
-              <option value="returned_to_guest">Return ${(depositCents / 100).toFixed(0)} to guest</option>
+              <option value="released_to_host">Release {fmtNzd(depositCents)} to host</option>
+              <option value="returned_to_guest">Return {fmtNzd(depositCents)} to guest</option>
               <option value="split">Split — partial to host, rest to guest</option>
             </select>
           </div>
@@ -111,12 +121,13 @@ export default function DisputeActions({ disputeId, depositCents }: Props) {
                 onChange={(e) => setSplitDollars(e.target.value)}
               />
               <p className="text-[12px] text-muted-foreground">
-                Out of ${(depositCents / 100).toFixed(0)} held. Remainder returns to guest.
+                Out of {fmtNzd(depositCents)} held. Remainder returns to guest.
               </p>
             </div>
           )}
           <p className="text-[12px] text-muted-foreground">
-            Recording the decision only — execute the actual Stripe refund/transfer manually via dashboard.stripe.com.
+            Awarding the deposit to the host charges the guest&apos;s saved card and pays the host automatically.
+            Returning to the guest moves no money (the hold was already released).
           </p>
         </>
       )}

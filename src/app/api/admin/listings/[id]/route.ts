@@ -4,6 +4,8 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { sendBrandedEmail } from "@/lib/email";
 import { logAudit } from "@/lib/audit";
+import { isInsuranceCurrent } from "@/lib/insurance";
+import type { InsuranceStatus } from "@/lib/types";
 
 const schema = z.object({
   decision: z.enum(["approve", "reject"]),
@@ -41,14 +43,14 @@ export async function PATCH(
   const row = await db()
     .prepare(
       `SELECT vl.id, vl.name, vl.status,
-              hp.firstName, u.email
+              hp.firstName, hp.insuranceStatus, hp.insuranceExpiryDate, u.email
        FROM van_listing vl
        JOIN host_profile hp ON hp.userId = vl.hostUserId
        JOIN user u ON u.id = vl.hostUserId
        WHERE vl.id = ?`
     )
     .bind(id)
-    .first<{ id: string; name: string; status: string; firstName: string; email: string }>();
+    .first<{ id: string; name: string; status: string; firstName: string; insuranceStatus: InsuranceStatus; insuranceExpiryDate: number | null; email: string }>();
 
   if (!row) return bad("Listing not found", 404);
   if (row.status !== "pending_review") return bad("Listing is not pending review");
@@ -56,6 +58,9 @@ export async function PATCH(
   const appUrl = process.env.BETTER_AUTH_URL ?? "https://app.campshare.co.nz";
 
   if (decision === "approve") {
+    if (!isInsuranceCurrent(row)) {
+      return bad("Cannot publish: this host has no verified, in-date hire insurance on file.", 409);
+    }
     await db()
       .prepare(
         `UPDATE van_listing SET status = 'published', publishedAt = ?, adminNote = ?, updatedAt = ? WHERE id = ?`

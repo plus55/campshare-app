@@ -54,7 +54,7 @@ function fromListing(l: VanListing | null): FormState {
     name: l.name, vanType: l.vanType, year: String(l.year),
     sleeps: String(l.sleeps), seats: String(l.seats),
     fixedToilet: !!l.fixedToilet, petFriendly: !!l.petFriendly,
-    description: l.description, nightlyRate: String(Math.round(l.nightlyRate / 100)),
+    description: l.description, nightlyRate: String(l.nightlyRate / 100),
     minimumNights: String(l.minimumNights), instantBook: !!l.instantBook,
     minDriverAge: String(l.minDriverAge ?? 18),
     region: l.region, features, houseRules: l.houseRules,
@@ -162,29 +162,34 @@ export default function ListingForm({ listing }: { listing: VanListing | null })
       pickupLng: form.pickupLng ?? undefined,
     };
 
-    const res = await fetch(
-      isNew ? "/api/listings" : `/api/listings/${listing!.id}`,
-      {
-        method: isNew ? "POST" : "PATCH",
-        headers: {
-          "content-type": "application/json",
-          ...(isNew ? { "x-turnstile-token": turnstileToken ?? "" } : {}),
-        },
-        body: JSON.stringify(payload),
-      }
-    );
+    try {
+      const res = await fetch(
+        isNew ? "/api/listings" : `/api/listings/${listing!.id}`,
+        {
+          method: isNew ? "POST" : "PATCH",
+          headers: {
+            "content-type": "application/json",
+            ...(isNew ? { "x-turnstile-token": turnstileToken ?? "" } : {}),
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-    setSaving(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string };
-      setError(body.error ?? "Couldn't save listing.");
-      return;
-    }
-    if (isNew) {
-      const { id } = await res.json() as { id: string };
-      router.push(`/dashboard/listings/${id}`);
-    } else {
-      router.refresh();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(body.error ?? "Couldn't save listing.");
+        return;
+      }
+      if (isNew) {
+        const { id } = await res.json() as { id: string };
+        router.push(`/dashboard/listings/${id}`);
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setError("Network error. Listing was not saved.");
+    } finally {
+      setSaving(false);
     }
   }
 

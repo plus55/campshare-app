@@ -19,20 +19,23 @@ export default function ModerationButtons({ id, apiEndpoint }: Props) {
   async function send(decision: "approve" | "reject") {
     setBusy(decision);
     setError(null);
-
-    const res = await fetch(apiEndpoint, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ decision, note: note.trim() || null }),
-    });
-
-    setBusy(null);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string };
-      setError(body.error ?? "Couldn't update.");
-      return;
+    try {
+      const res = await fetch(apiEndpoint, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ decision, note: note.trim() || null }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(body.error ?? "Couldn't update.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setBusy(null);
     }
-    router.refresh();
   }
 
   return (

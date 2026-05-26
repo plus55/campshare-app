@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { notificationHref, notificationLabel } from "@/lib/notification-display";
 
 interface NotifItem {
   id: string;
@@ -11,46 +12,6 @@ interface NotifItem {
   payload: Record<string, unknown>;
   readAt: number | null;
   createdAt: number;
-}
-
-function notifLabel(type: string, payload: Record<string, unknown>): string {
-  const van = (payload.vanName as string) ?? "your van";
-  switch (type) {
-    case "booking_requested":  return `New booking request for ${van}`;
-    case "booking_accepted":   return `Your booking for ${van} was accepted`;
-    case "booking_declined":   return `Booking request for ${van} was declined`;
-    case "booking_cancelled":  return `Booking for ${van} was cancelled`;
-    case "review_prompt":      return `Time to review your trip in ${van}`;
-    case "review_received":    return `New review for ${van}`;
-    case "host_response":      return `Your host replied to your review for ${van}`;
-    case "message":            return `New message about ${van}`;
-    case "payout_sent":        return `Payout sent for ${van}`;
-    case "deposit_released":   return `Deposit released for ${van}`;
-    default:                   return "New notification";
-  }
-}
-
-function notifHref(type: string, payload: Record<string, unknown>): string {
-  const bookingId = payload.bookingId as string | undefined;
-  switch (type) {
-    case "booking_requested":
-    case "booking_accepted":
-    case "booking_declined":
-    case "booking_cancelled":
-    case "message":
-      return bookingId ? `/dashboard/bookings/${bookingId}` : "/dashboard/bookings";
-    case "review_prompt":
-      return bookingId ? `/trips/${bookingId}/review` : "/dashboard/reviews";
-    case "review_received":
-    case "host_response":
-      return "/dashboard/reviews";
-    case "payout_sent":
-      return "/dashboard/payouts";
-    case "deposit_released":
-      return bookingId ? `/trips/${bookingId}` : "/trips";
-    default:
-      return "/dashboard/notifications";
-  }
 }
 
 function relTime(sec: number): string {
@@ -65,19 +26,54 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<NotifItem[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [markReadError, setMarkReadError] = useState<string | null>(null);
   const fetchedRef = useRef(false);
+  const markingReadRef = useRef(false);
 
-  const handleOpenChange = async (next: boolean) => {
+  async function loadNotifications() {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch("/api/notifications?limit=10");
+      if (!res.ok) throw new Error("notification request failed");
+      const data = await res.json() as { items?: unknown };
+      if (!Array.isArray(data.items)) throw new Error("invalid notification response");
+      setItems(data.items as NotifItem[]);
+      fetchedRef.current = true;
+    } catch {
+      setLoadError("Could not load notifications.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function markNotificationsRead() {
+    if (markingReadRef.current) return;
+    markingReadRef.current = true;
+    setMarkReadError(null);
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error("mark read request failed");
+      setUnread(0);
+    } catch {
+      markingReadRef.current = false;
+      setMarkReadError("Could not mark notifications as read.");
+    }
+  }
+
+  const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (next && !fetchedRef.current) {
-      fetchedRef.current = true;
-      const res = await fetch("/api/notifications?limit=10");
-      const data = await res.json() as { items: NotifItem[] };
-      setItems(data.items);
+      void loadNotifications();
     }
     if (next && unread > 0) {
-      setUnread(0);
-      fetch("/api/notifications", { method: "PATCH", body: JSON.stringify({}) });
+      void markNotificationsRead();
     }
   };
 
@@ -114,7 +110,23 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
         </div>
 
         <div className="flex flex-col max-h-[360px] overflow-y-auto">
-          {items === null ? (
+          {markReadError && (
+            <p role="alert" aria-live="polite" className="m-0 border-b border-border bg-destructive/10 px-[14px] py-2 text-xs text-destructive">
+              {markReadError}
+            </p>
+          )}
+          {loadError ? (
+            <div role="alert" aria-live="polite" className="flex flex-col items-center gap-2 px-[14px] py-5 text-center text-[0.85rem] text-destructive">
+              <p className="m-0">{loadError}</p>
+              <button
+                type="button"
+                className="rounded-md border border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-clay focus-visible:outline-offset-2"
+                onClick={() => void loadNotifications()}
+              >
+                Try again
+              </button>
+            </div>
+          ) : loading || items === null ? (
             <p className="px-[14px] py-5 text-[0.85rem] text-muted-foreground text-center m-0">Loading…</p>
           ) : items.length === 0 ? (
             <p className="px-[14px] py-5 text-[0.85rem] text-muted-foreground text-center m-0">No notifications yet</p>
@@ -122,11 +134,11 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
             items.slice(0, 8).map((n) => (
               <Link
                 key={n.id}
-                href={notifHref(n.type, n.payload)}
+                href={notificationHref(n.type, n.payload)}
                 className={`block px-[14px] py-[10px] border-b border-border last:border-0 no-underline text-foreground hover:bg-muted transition-colors ${n.readAt === null ? "bg-clay/5" : ""}`}
                 onClick={() => setOpen(false)}
               >
-                <span className="block text-[0.85rem] leading-[1.4]">{notifLabel(n.type, n.payload)}</span>
+                <span className="block text-[0.85rem] leading-[1.4]">{notificationLabel(n.type, n.payload)}</span>
                 <span className="block text-[0.75rem] text-muted-foreground mt-[2px]">{relTime(n.createdAt)}</span>
               </Link>
             ))

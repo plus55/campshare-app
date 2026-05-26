@@ -102,7 +102,7 @@ export async function POST(
   await createNotification({
     userId: booking.guestUserId,
     type: "booking_declined",
-    payload: { bookingId: id, vanName: listing?.name ?? "" },
+    payload: { bookingId: id, vanName: listing?.name ?? "", recipientRole: "guest" },
   });
 
   return NextResponse.json({ ok: true });

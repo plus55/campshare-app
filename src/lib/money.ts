@@ -34,5 +34,9 @@ export function calcBookingTotals(
 }
 
 export function fmtNzd(cents: number): string {
-  return `$${(cents / 100).toFixed(0)}`;
+  const digits = cents % 100 === 0 ? 0 : 2;
+  return `$${(cents / 100).toLocaleString("en-NZ", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: 2,
+  })}`;
 }

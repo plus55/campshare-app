@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signOut } from "@/lib/auth-client";
+import { useSignOutAction } from "@/lib/use-sign-out";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function UserMenu({ name, email }: { name: string; email: string }) {
-  const router = useRouter();
+  const { isSigningOut, performSignOut } = useSignOutAction();
   const initial = (name || email || "?").trim().charAt(0).toUpperCase();
-
-  const handleSignOut = async () => {
-    await signOut({ fetchOptions: { onSuccess: () => router.push("/login") } });
-  };
 
   const menuItems = [
     { href: "/dashboard", label: "Dashboard" },
@@ -67,10 +62,12 @@ export default function UserMenu({ name, email }: { name: string; email: string 
         <DropdownMenuSeparator className="bg-border" />
 
         <DropdownMenuItem
-          onClick={handleSignOut}
+          closeOnClick={false}
+          disabled={isSigningOut}
+          onClick={() => void performSignOut()}
           className="text-muted-foreground hover:text-foreground cursor-pointer"
         >
-          Sign out
+          {isSigningOut ? "Signing out..." : "Sign out"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

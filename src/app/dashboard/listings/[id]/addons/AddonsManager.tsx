@@ -123,14 +123,14 @@ export default function AddonsManager({ listingId, catalogue, enabledMap }: Prop
       ))}
 
       {error && (
-        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
+        <p role="alert" aria-live="polite" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <div className="flex items-center gap-3 pt-2">
         <Button onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save add-ons"}
         </Button>
-        {saved && <span className="text-sm text-muted-foreground">Saved</span>}
+        {saved && <span aria-live="polite" className="text-sm text-muted-foreground">Saved</span>}
       </div>
     </div>
   );

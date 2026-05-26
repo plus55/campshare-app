@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { fmtNzd } from "@/lib/money";
 
 type CfEnv = { RESEND_API_KEY?: string; EMAIL_FROM?: string };
 
@@ -107,7 +108,7 @@ function fmtDate(ms: number): string {
 }
 
 function fmtDollars(cents: number): string {
-  return `$${(cents / 100).toFixed(0)}`;
+  return fmtNzd(cents);
 }
 
 const appUrl = () => process.env.BETTER_AUTH_URL ?? "https://app.campshare.co.nz";
@@ -375,7 +376,7 @@ export async function sendSavedSearchAlertEmail(opts: {
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid #e8dfd3;">
         <a href="${appUrl()}/vans/${escapeHtml(m.slug)}" style="color:#1a4332;text-decoration:none;font-weight:600;">${escapeHtml(m.name)}</a>
-        <div style="color:#6b5d4f;font-size:13px;margin-top:2px;">${escapeHtml(m.region)} · $${Math.round(m.nightlyRate / 100)}/night</div>
+        <div style="color:#6b5d4f;font-size:13px;margin-top:2px;">${escapeHtml(m.region)} · ${fmtNzd(m.nightlyRate)}/night</div>
       </td>
     </tr>`).join("");
 
